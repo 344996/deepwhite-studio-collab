@@ -1,0 +1,43 @@
+/* Reviewed deep graphite, warm gold and cream palette inherits the existing theme. */
+.studio-layout-0929 #canvasAssetToggle,.studio-layout-0929 #workflowTransferToggle,.studio-layout-0929 [data-open-workflows],.studio-layout-0929 [aria-label="项目资产"],.studio-layout-0929 #canvasLogToggle,.studio-layout-0929 .studio-audio-create-wrap,.studio-layout-0929 .studio-0929-legacy-actions{display:none!important}
+.studio-layout-0929 #canvasAssetPanel,.studio-layout-0929 #workflowTransferModal{display:none!important}
+.studio-layout-0929 .studio-canvas-corner-0929{position:fixed;left:20px;bottom:20px;z-index:45;display:flex;gap:8px;align-items:center}
+.studio-layout-0929 #studioGridLayoutTools{position:relative;inset:auto;display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 6px 24px #0002}
+.studio-layout-0929 #studioGridLayoutTools button{height:34px;padding:0 13px;white-space:nowrap;border:1px solid var(--line);border-radius:8px;color:var(--text);background:var(--panel);font-size:12px;cursor:pointer}
+.studio-layout-0929 #studioGridLayoutTools button:disabled{opacity:.4;cursor:default}
+.studio-layout-0929 #studioGridSettingsPopover{position:absolute;left:0;right:auto;bottom:60px;top:auto;width:310px;max-width:calc(100vw - 40px);box-sizing:border-box}
+.studio-arrange-menu-0929{position:relative}
+#studioArrangeOptions0929{position:absolute;left:0;bottom:46px;display:grid;gap:6px;width:145px;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:0 6px 24px #0003}
+#studioArrangeOptions0929[hidden]{display:none}
+.studio-layout-0929 .studio-history-button{position:static;padding:0 13px;min-height:34px;border-radius:9px;font-size:12px}
+.studio-layout-0929 .studio-history-button,.studio-layout-0929 .studio-job-state button{border:1px solid var(--line);background:var(--panel);color:var(--text);box-shadow:none}
+.studio-layout-0929 .studio-job-state,.studio-layout-0929 .studio-job-state p,.studio-layout-0929 .studio-job-state small{color:var(--text);font-size:12px}
+.studio-layout-0929 .studio-history{background:var(--panel);color:var(--text);border-color:var(--line)}
+.studio-layout-0929 .studio-history header,.studio-layout-0929 .studio-history article{border-color:var(--line)}
+.studio-layout-0929 .studio-history article>small{color:var(--muted)}
+.studio-layout-0929 .studio-history button{background:var(--card,var(--panel));color:var(--text);border-color:var(--line)}
+.studio-layout-0929 .studio-history-error{padding:9px 11px;border:1px solid var(--line);border-left:3px solid var(--strong,var(--text));border-radius:7px;color:var(--text);background:color-mix(in srgb,var(--panel) 94%,var(--text))}
+.studio-layout-0929 .studio-history-remote{font-weight:600;color:var(--text)}
+.studio-layout-0929 .studio-history-recovery-note{color:var(--text);font-size:13px;line-height:1.7}
+.studio-layout-0929 .node.studio-0929-node{height:auto!important;max-height:none}
+.studio-layout-0929 .studio-0929-node>.node-body{height:auto;max-height:none;overflow:visible}
+.studio-layout-0929 .studio-0929-node label,.studio-layout-0929 .studio-0929-node select,.studio-layout-0929 .studio-0929-node input,.studio-layout-0929 .studio-0929-node textarea{min-width:0;max-width:100%;box-sizing:border-box}
+.studio-layout-0929 .studio-0929-node textarea,.studio-layout-0929 .studio-0929-node p,.studio-layout-0929 .studio-0929-node pre{overflow-wrap:anywhere;white-space:pre-wrap}
+.studio-layout-0929 .studio-node-prompt{gap:8px;margin-bottom:12px}
+.studio-layout-0929 .studio-node-prompt textarea{min-height:96px;font-size:13px;line-height:1.7}
+.studio-layout-0929 .studio-upstream-preview{margin-top:2px}
+.studio-layout-0929 .studio-upstream-item p{max-height:52px}
+.studio-creative-modules{display:grid;gap:9px;margin:0 0 14px;padding:12px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel) 95%,var(--text));font:12px/1.5 system-ui,sans-serif;color:var(--text)}
+.studio-creative-modules>strong{font-size:11px;color:var(--muted)}
+.studio-creative-add{display:flex;flex-wrap:wrap;gap:7px}
+.studio-creative-add button{border:1px solid var(--line);border-radius:7px;padding:6px 11px;background:var(--panel);color:var(--text);font-size:12px;cursor:pointer}
+.studio-creative-add button:hover{border-color:var(--accent)}
+.studio-creative-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.studio-creative-cards>p{grid-column:1/-1;margin:0;font-size:11px;color:var(--muted)}
+.studio-creative-card{position:relative;display:grid;align-content:start;gap:5px;padding:10px 30px 10px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);min-width:0}
+.studio-creative-card strong{font-size:12px;overflow-wrap:anywhere}
+.studio-creative-card small{font-size:10px;color:var(--muted);overflow-wrap:anywhere}
+.studio-creative-card>button{position:absolute;right:6px;top:6px;padding:0;width:22px;height:22px;border:0;border-radius:5px;background:transparent;color:var(--muted);cursor:pointer}
+.studio-creative-card summary{cursor:pointer;font-size:10px;color:var(--muted)}
+.studio-creative-card pre{margin:5px 0 0;max-height:160px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.55 system-ui,sans-serif}
+@media(max-width:800px){.studio-layout-0929 .studio-canvas-corner-0929{left:10px;bottom:12px}.studio-layout-0929 #studioGridLayoutTools{gap:5px;padding:6px}.studio-layout-0929 #studioGridLayoutTools button{padding:0 9px}}

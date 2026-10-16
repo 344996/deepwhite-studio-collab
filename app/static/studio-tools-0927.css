@@ -1,0 +1,22 @@
+.studio-compare-node {
+  min-width: 360px;
+}
+
+.studio-compare-node .node-body {
+  min-height: 0;
+}
+
+.studio-compare-incomplete {
+  display: grid;
+  gap: 10px;
+}
+
+.studio-compare-incomplete select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--line, #94a3b8);
+  border-radius: 8px;
+  padding: 6px 9px;
+  background: var(--card-solid, #fff);
+  color: var(--text, #172033);
+}

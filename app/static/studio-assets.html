@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>项目资产 · 深白片场</title>
+  <link rel="stylesheet" href="/static/studio-assets.css?v=0.10.2-studio.10.1790254925">
+</head>
+<body>
+  <main class="asset-app">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">DW</div>
+      <div class="heading"><h1>项目资产</h1><p id="projectLabel">正在读取项目…</p></div>
+      <button id="closeBtn" class="icon-button" type="button" aria-label="关闭" title="关闭">×</button>
+    </header>
+    <section class="toolbar" aria-label="资产操作">
+      <label class="search"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="搜索名称或类别" autocomplete="off"></label>
+      <div class="filters" role="tablist" aria-label="资产状态">
+        <button type="button" class="filter active" data-status="all" role="tab" aria-selected="true">全部</button>
+        <button type="button" class="filter" data-status="candidate" role="tab" aria-selected="false">候选</button>
+        <button type="button" class="filter" data-status="confirmed" role="tab" aria-selected="false">正式</button>
+        <button type="button" class="filter" data-status="archived" role="tab" aria-selected="false">已归档</button>
+      </div>
+      <div class="toolbar-actions">
+        <button id="repairBtn" class="button subtle" type="button">检查文件</button>
+        <button id="registerBtn" class="button subtle" type="button">登记链接</button>
+        <button id="importBtn" class="button primary" type="button"><span aria-hidden="true">＋</span> 导入文件</button>
+        <input id="fileInput" type="file" hidden multiple>
+      </div>
+    </section>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section id="assetList" class="asset-list" aria-live="polite"></section>
+    <footer class="footer"><span id="countLabel"> </span><span>文件保存在项目资产目录</span><a id="openCanvasBtn" class="small-button" target="_blank" rel="noopener">打开项目画布 ↗</a></footer>
+  </main>
+  <dialog id="previewDialog" class="preview-dialog">
+    <div class="dialog-head"><div><strong id="previewTitle">预览</strong><small id="previewMeta"></small></div><button class="icon-button dialog-close" type="button" aria-label="关闭">×</button></div>
+    <div id="previewBody" class="preview-body"></div>
+    <div class="dialog-actions"><button class="button subtle dialog-close" type="button">关闭</button><a id="previewOpen" class="button primary" target="_blank" rel="noopener">打开原文件</a></div>
+  </dialog>
+  <dialog id="confirmDialog" class="form-dialog">
+    <form id="confirmForm" method="dialog">
+      <div class="dialog-head"><div><strong>确认正式资产</strong><small id="confirmSubtitle">将候选素材纳入项目资产</small></div><button class="icon-button dialog-close" type="button" aria-label="关闭">×</button></div>
+      <label>名称<input id="confirmName" name="name" required maxlength="160"></label>
+      <label>类别<select id="confirmCategory" name="category"><option value="character">人物</option><option value="scene">场景</option><option value="prop">道具</option><option value="image">图片</option><option value="video">视频</option><option value="audio">音频</option><option value="other">其他</option></select></label>
+      <label>归属资产<select id="confirmAsset" name="asset_id"><option value="">新建资产</option></select><small>选择已有资产后，此文件会作为它的新版本保留。</small></label>
+      <div class="dialog-actions"><button class="button subtle dialog-close" type="button">取消</button><button id="confirmSubmit" class="button primary" type="submit">确认为正式资产</button></div>
+    </form>
+  </dialog>
+  <script src="/static/studio-assets.js?v=0.10.2-studio.10.1790255390"></script>
+<script src="/static/studio-storage.js?v=0.10.2-studio.10.1790409534"></script>
+</body>
+</html>

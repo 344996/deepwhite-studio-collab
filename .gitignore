@@ -1,0 +1,16 @@
+/.git/
+/workspace/
+/logs/
+/private/
+/python/
+/.env
+/.env.*
+/.venv/
+/venv/
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+*.backup

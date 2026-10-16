@@ -1,0 +1,195 @@
+{
+  "data": [
+    {
+      "public_action": "",
+      "billing_sku": "midjourney-imagine",
+      "upstream_suffix": "",
+      "ref_type": "none",
+      "required_fields": [
+        "prompt"
+      ],
+      "sync": false,
+      "description": "Generate images from a text prompt"
+    },
+    {
+      "public_action": "imagine",
+      "billing_sku": "midjourney-imagine",
+      "upstream_suffix": "imagine",
+      "ref_type": "none",
+      "required_fields": [
+        "prompt"
+      ],
+      "sync": false,
+      "description": "Generate images from a text prompt"
+    },
+    {
+      "public_action": "blend",
+      "billing_sku": "midjourney-blend",
+      "upstream_suffix": "blend",
+      "ref_type": "images",
+      "required_fields": [
+        "image_urls"
+      ],
+      "sync": false,
+      "description": "Blend 2-4 reference images into one"
+    },
+    {
+      "public_action": "describe",
+      "billing_sku": "midjourney-describe",
+      "upstream_suffix": "describe",
+      "ref_type": "images",
+      "required_fields": null,
+      "sync": true,
+      "description": "Describe an image as text prompts (image_urls or image; may return synchronously)"
+    },
+    {
+      "public_action": "edits",
+      "billing_sku": "midjourney-edits",
+      "upstream_suffix": "edits",
+      "ref_type": "images",
+      "required_fields": [
+        "prompt",
+        "image_urls"
+      ],
+      "sync": false,
+      "description": "Edit an image guided by a text prompt"
+    },
+    {
+      "public_action": "upscale",
+      "billing_sku": "midjourney-upscale",
+      "upstream_suffix": "upscale",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "require_index_or_custom_id": true,
+      "sync": false,
+      "description": "Upscale a single grid tile to full resolution"
+    },
+    {
+      "public_action": "variation",
+      "billing_sku": "midjourney-variation",
+      "upstream_suffix": "variation",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "require_index_or_custom_id": true,
+      "sync": false,
+      "description": "Subtle variation of a single grid tile"
+    },
+    {
+      "public_action": "high-variation",
+      "billing_sku": "midjourney-high-variation",
+      "upstream_suffix": "high-variation",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "require_index_or_custom_id": true,
+      "sync": false,
+      "description": "Strong variation of an upscaled image"
+    },
+    {
+      "public_action": "low-variation",
+      "billing_sku": "midjourney-low-variation",
+      "upstream_suffix": "low-variation",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "require_index_or_custom_id": true,
+      "sync": false,
+      "description": "Subtle variation of an upscaled image"
+    },
+    {
+      "public_action": "reroll",
+      "billing_sku": "midjourney-reroll",
+      "upstream_suffix": "reroll",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "sync": false,
+      "description": "Regenerate a new grid with the same prompt"
+    },
+    {
+      "public_action": "zoom",
+      "billing_sku": "midjourney-zoom",
+      "upstream_suffix": "zoom",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "sync": false,
+      "description": "Zoom out / outpaint an upscaled image"
+    },
+    {
+      "public_action": "pan",
+      "billing_sku": "midjourney-pan",
+      "upstream_suffix": "pan",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "sync": false,
+      "description": "Pan outpaint an upscaled image (requires direction or custom_id)"
+    },
+    {
+      "public_action": "inpaint",
+      "billing_sku": "midjourney-inpaint",
+      "upstream_suffix": "inpaint",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "sync": false,
+      "description": "Start an inpaint (local repaint) session"
+    },
+    {
+      "public_action": "modal",
+      "billing_sku": "midjourney-modal",
+      "upstream_suffix": "modal",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id"
+      ],
+      "sync": false,
+      "description": "Submit inpaint follow-up parameters (mask_url / prompt)"
+    },
+    {
+      "public_action": "video",
+      "billing_sku": "midjourney-video",
+      "upstream_suffix": "video",
+      "ref_type": "none",
+      "required_fields": null,
+      "sync": false,
+      "description": "Image-to-video from a task_id or image"
+    },
+    {
+      "public_action": "remix-strong",
+      "billing_sku": "midjourney-remix-strong",
+      "upstream_suffix": "remix-strong",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id",
+        "index"
+      ],
+      "sync": false,
+      "description": "Strong reshape of a v8.1/v8.2 parent tile"
+    },
+    {
+      "public_action": "remix-subtle",
+      "billing_sku": "midjourney-remix-subtle",
+      "upstream_suffix": "remix-subtle",
+      "ref_type": "task_id",
+      "required_fields": [
+        "task_id",
+        "index"
+      ],
+      "sync": false,
+      "description": "Subtle reshape of a v8.1/v8.2 parent tile"
+    }
+  ],
+  "success": true
+}

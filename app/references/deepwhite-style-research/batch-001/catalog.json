@@ -1,0 +1,465 @@
+{
+  "items": [
+    {
+      "id": "DW-SREF-1376370611",
+      "source_site": "kajimelo",
+      "source_url": "https://www.kajimelo.com/midjourney-sref-library/sref1376370611",
+      "source_title": "MidJourney SREF 1376370611 – Cinematic Fantasy Realism with Glowing 3D Detail\n",
+      "code": "1376370611",
+      "copy_command": "--sref 1376370611",
+      "page_parameter_observations": {},
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/kajimelo-1376370611/01.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref1376370611/sref-1376370611-01.jpg.2315334f8424.webp",
+          "width": 1200,
+          "height": 800,
+          "sha256": "2315334f8424081f64b23199cd88444028b512193e0abf5f2ffa6d57cb8c33c3"
+        },
+        {
+          "local_path": "images/kajimelo-1376370611/02.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref1376370611/sref-1376370611-02.jpg.d4090aea825b.webp",
+          "width": 1200,
+          "height": 992,
+          "sha256": "d4090aea825bf91a679a7ee3afbc69b20112fb68396c669a9c51049b6de005dd"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "明亮奇幻三维",
+      "category_zh": "动画角色",
+      "editorial_note": "动物角色与奇幻环境；可研究动画短片的统一氛围。"
+    },
+    {
+      "id": "DW-SREF-1612682886",
+      "source_site": "kajimelo",
+      "source_url": "https://www.kajimelo.com/midjourney-sref-library/sref1612682886",
+      "source_title": "MidJourney SREF 1612682886 – Painterly Romantic Landscape Style",
+      "code": "1612682886",
+      "copy_command": "--sref 1612682886",
+      "page_parameter_observations": {},
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/kajimelo-1612682886/01.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref1612682886/sref-1612682886-01.jpg.bb772d6b6eeb.webp",
+          "width": 1200,
+          "height": 800,
+          "sha256": "bb772d6b6eeb3e55257a8bedd6335b47b96fc749be9f7a8ab2012b56b592661e"
+        },
+        {
+          "local_path": "images/kajimelo-1612682886/02.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref1612682886/sref-1612682886-02.jpg.f307f2f5d928.webp",
+          "width": 1200,
+          "height": 992,
+          "sha256": "f307f2f5d928989be52479b720726e23efc5fc1e163e9374d0d3296a4fccc81d"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "柔和油画田园",
+      "category_zh": "风格探索",
+      "editorial_note": "绘画笔触和田园色调；可研究场景美术方向。"
+    },
+    {
+      "id": "DW-SREF-2301579864",
+      "source_site": "kajimelo",
+      "source_url": "https://www.kajimelo.com/midjourney-sref-library/sref2301579864",
+      "source_title": "MidJourney SREF 2301579864 – Horror Realism and Dystopian Cinematic Style | Curated from the SREF Library",
+      "code": "2301579864",
+      "copy_command": "--sref 2301579864",
+      "page_parameter_observations": {},
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/kajimelo-2301579864/01.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref2301579864/sref-2301579864-01.jpg.957026c9d669.webp",
+          "width": 1200,
+          "height": 800,
+          "sha256": "957026c9d6695b3e6286c52ddece22ce44ccf8393a19d1deca4b48164f8d39c0"
+        },
+        {
+          "local_path": "images/kajimelo-2301579864/02.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref2301579864/sref-2301579864-02.jpg.c7f51aba36ed.webp",
+          "width": 1200,
+          "height": 992,
+          "sha256": "c7f51aba36eda43e11ead95d164ac8477a854636aa7b5bf58d67a6e529729081"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "冷暗末世写实",
+      "category_zh": "悬疑场景",
+      "editorial_note": "熊角色及暗调环境样例；不等于已验证真人角色。"
+    },
+    {
+      "id": "DW-SREF-2345517735",
+      "source_site": "kajimelo",
+      "source_url": "https://www.kajimelo.com/midjourney-sref-library/sref2345517735",
+      "source_title": "MidJourney SREF 2345517735 – Gritty Cinematic Documentary Photography Style | SREF Library by Kaji",
+      "code": "2345517735",
+      "copy_command": "--sref 2345517735",
+      "page_parameter_observations": {},
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/kajimelo-2345517735/01.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref2345517735/sref-2345517735-01.jpg.5add804e31de.webp",
+          "width": 1200,
+          "height": 800,
+          "sha256": "5add804e31de4fb62614b3ec17a75f5f7c3a091ab2cbfeb4476ced497c7cb2c5"
+        },
+        {
+          "local_path": "images/kajimelo-2345517735/02.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref2345517735/sref-2345517735-02.jpg.8c76c2e2fe7b.webp",
+          "width": 1200,
+          "height": 992,
+          "sha256": "8c76c2e2fe7b05dce6cf0c572ca4ccc121bb49e2018cc887bdbf4363e7669706"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "霓虹纪实电影感",
+      "category_zh": "写实电影",
+      "editorial_note": "夜景车辆、人物和环境拼图；可研究都市悬疑氛围。"
+    },
+    {
+      "id": "DW-SREF-3114264950",
+      "source_site": "kajimelo",
+      "source_url": "https://www.kajimelo.com/midjourney-sref-library/sref3114264950",
+      "source_title": "MidJourney Library SREF 3114264950 – Soft Ambient Minimalist Style",
+      "code": "3114264950",
+      "copy_command": "--sref 3114264950",
+      "page_parameter_observations": {},
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/kajimelo-3114264950/01.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref3114264950/sref-3114264950-01.jpg.fa427a6d1818.webp",
+          "width": 1200,
+          "height": 800,
+          "sha256": "fa427a6d18187bc7073a2c8da7cc8ee2ecfb507bb57c050f928e513cc1a14aa5"
+        },
+        {
+          "local_path": "images/kajimelo-3114264950/02.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref3114264950/sref-3114264950-02.jpg.d9d56df753ee.webp",
+          "width": 1200,
+          "height": 992,
+          "sha256": "d9d56df753ee881493021044e2c1522441e5710beadd99111ab50ffc1698206d"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "柔光极简空间",
+      "category_zh": "场景美术",
+      "editorial_note": "几何化空间、低饱和柔光；细节较少，适合概念探索。"
+    },
+    {
+      "id": "DW-SREF-3852948173",
+      "source_site": "kajimelo",
+      "source_url": "https://www.kajimelo.com/midjourney-sref-library/sref3852948173",
+      "source_title": "MidJourney SREF 3852948173 – Slice-of-Life Anime Cel Shading Style",
+      "code": "3852948173",
+      "copy_command": "--sref 3852948173",
+      "page_parameter_observations": {},
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/kajimelo-3852948173/01.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref3852948173/sref-3852948173-01.jpg.67b814e824e3.webp",
+          "width": 1200,
+          "height": 800,
+          "sha256": "67b814e824e3020d03f4ee38cbf2a5b70ddec15dccbcc27501a6632d13ac4686"
+        },
+        {
+          "local_path": "images/kajimelo-3852948173/02.webp",
+          "source_url": "https://www.kajimelo.com/assets/delivery/img/srefs/sref3852948173/sref-3852948173-02.jpg.f3bd7e8de38d.webp",
+          "width": 1200,
+          "height": 992,
+          "sha256": "f3bd7e8de38d23548e0406d55214dd6cf659d879f238bdee20df3538477e7ee0"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "清爽赛璐璐动画",
+      "category_zh": "动漫人物",
+      "editorial_note": "动物角色及环境拼图；真人身份保持尚无本地验证。"
+    },
+    {
+      "id": "DW-SREF-1648693186",
+      "source_site": "style-reference",
+      "source_url": "https://style-reference.com/sref/1648693186",
+      "source_title": "Midjourney --sref 1648693186 • Futuristic Serenity",
+      "code": "1648693186",
+      "copy_command": "--sref 1648693186",
+      "page_parameter_observations": {
+        "sv": [
+          "4"
+        ]
+      },
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/style-reference-1648693186/01.webp",
+          "source_url": "https://img.sref-midjourney.com/sref--1648693186-si2obl.webp",
+          "width": 360,
+          "height": 202,
+          "sha256": "312453004fa67035e58a28828720b07259abc61f203334666b42bed014a23f23"
+        },
+        {
+          "local_path": "images/style-reference-1648693186/02.webp",
+          "source_url": "https://img.sref-midjourney.com/sref--1648693186-si2obo.webp",
+          "width": 360,
+          "height": 202,
+          "sha256": "d8b30658d998fbd6da9ef3c74f4c2633b5f69c60c2c3041ac289e53ffc8c2f16"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "低饱和未来废土",
+      "category_zh": "科幻场景",
+      "editorial_note": "车辆环境与人物样例；灰绿低饱和、空旷空间。"
+    },
+    {
+      "id": "DW-SREF-1736491683",
+      "source_site": "style-reference",
+      "source_url": "https://style-reference.com/sref/1736491683",
+      "source_title": "Midjourney --sref 1736491683 • Velvet Lumen Nocturne",
+      "code": "1736491683",
+      "copy_command": "--sref 1736491683",
+      "page_parameter_observations": {
+        "sv": [
+          "6"
+        ]
+      },
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/style-reference-1736491683/01.webp",
+          "source_url": "https://img.sref-midjourney.com/2a6c4dba-8ed7-476b-adca-7de6c2543901-0.webp",
+          "width": 380,
+          "height": 800,
+          "sha256": "a2c4bd3d0fe399f10c9684fc837c06630f4a60be7a3616f1bb0ad98bd6cd1169"
+        },
+        {
+          "local_path": "images/style-reference-1736491683/02.webp",
+          "source_url": "https://img.sref-midjourney.com/2b7d5f8f-cbfc-4bea-8d89-9a2d3dbc1871-0.webp",
+          "width": 380,
+          "height": 800,
+          "sha256": "787e0d7eb298a4605d575b9de48053d8eaa68ed3b97d75a231d2a9fb910d5b36"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "暖光动漫人像",
+      "category_zh": "动漫人物",
+      "editorial_note": "本批样例主要为女性人像；尚不能推断男性或场景效果。"
+    },
+    {
+      "id": "DW-SREF-2749571961",
+      "source_site": "style-reference",
+      "source_url": "https://style-reference.com/sref/2749571961",
+      "source_title": "Midjourney --sref 2749571961 • Dystopian Shadows",
+      "code": "2749571961",
+      "copy_command": "--sref 2749571961",
+      "page_parameter_observations": {
+        "sv": [
+          "4"
+        ]
+      },
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/style-reference-2749571961/01.webp",
+          "source_url": "https://img.sref-midjourney.com/sref--2749571961-si2n8x.webp",
+          "width": 680,
+          "height": 680,
+          "sha256": "bfc63e02f13fb9f58f409215c1c1c9e08290b35f74ea3f51c947a54b33539e90"
+        },
+        {
+          "local_path": "images/style-reference-2749571961/02.webp",
+          "source_url": "https://img.sref-midjourney.com/sref--3518835920-2837013301-2749571961-1177177668-sl75u2.webp",
+          "width": 680,
+          "height": 680,
+          "sha256": "fc5236383e102fc184a16ef24c9152a30dcaa84ba94c71e5a532472de4dc959e"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "暗黑末世氛围",
+      "category_zh": "悬疑场景",
+      "editorial_note": "样例包含拼图与手机展示，不作为干净资产参考直接使用。"
+    },
+    {
+      "id": "DW-SREF-3563478172",
+      "source_site": "style-reference",
+      "source_url": "https://style-reference.com/sref/3563478172",
+      "source_title": "Midjourney --sref 3563478172 • Retro Japanese Monster Movie Poster",
+      "code": "3563478172",
+      "copy_command": "--sref 3563478172",
+      "page_parameter_observations": {
+        "sv": [
+          "4"
+        ],
+        "sw": [
+          "100"
+        ],
+        "ar": [
+          "4:5"
+        ],
+        "stylize": [
+          "300"
+        ]
+      },
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/style-reference-3563478172/01.webp",
+          "source_url": "https://img.sref-midjourney.com/5d758c58-e72b-4957-a240-b6f6b110d4cd-0.webp",
+          "width": 800,
+          "height": 800,
+          "sha256": "b1b4dd63b58b9ccaaa152d5fbe3660bbcc135ff313d55a6cd15dc1b835218759"
+        },
+        {
+          "local_path": "images/style-reference-3563478172/02.webp",
+          "source_url": "https://img.sref-midjourney.com/sref--3563478172-259501761-3519381489-sl75t9.webp",
+          "width": 640,
+          "height": 800,
+          "sha256": "665147be4bdf58ba89a1860595c53bdd9b7f016793477fdf6ce914100c67ee83"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "复古高对比海报",
+      "category_zh": "风格探索",
+      "editorial_note": "人像与文字海报差异明显；更适合方向探索，暂不作为正式人设推荐。"
+    },
+    {
+      "id": "DW-SREF-469710847",
+      "source_site": "style-reference",
+      "source_url": "https://style-reference.com/sref/469710847",
+      "source_title": "Midjourney --sref 469710847 • Ephemeral Cinematic",
+      "code": "469710847",
+      "copy_command": "--sref 469710847",
+      "page_parameter_observations": {
+        "sv": [
+          "4"
+        ],
+        "ar": [
+          "4:5"
+        ]
+      },
+      "version_status": "not_stated",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/style-reference-469710847/01.webp",
+          "source_url": "https://img.sref-midjourney.com/sref--469710847-si2ocx.webp",
+          "width": 360,
+          "height": 202,
+          "sha256": "3098135bf2a8a9eee3b703fb4222b7d83337218a591586912c1412e112c5eb9f"
+        },
+        {
+          "local_path": "images/style-reference-469710847/02.webp",
+          "source_url": "https://img.sref-midjourney.com/sref--469710847-si2ocz.webp",
+          "width": 360,
+          "height": 202,
+          "sha256": "1aea79570bef10dc20f1fce8bd99878f59048725a13b2a1e39e2428302f2861a"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "冷暗电影影像",
+      "category_zh": "写实电影",
+      "editorial_note": "人脸细节和城市夜景样例；关注低照度、颗粒与对比。"
+    },
+    {
+      "id": "DW-SREF-495247150",
+      "source_site": "style-reference",
+      "source_url": "https://style-reference.com/sref/495247150",
+      "source_title": "Midjourney --sref 495247150 • Pixar 3D Animation",
+      "code": "495247150",
+      "copy_command": "--sref 495247150",
+      "page_parameter_observations": {
+        "v": [
+          "7"
+        ],
+        "sv": [
+          "4",
+          "6"
+        ]
+      },
+      "version_status": "source_page_observation_only",
+      "parameters_note": "页面出现的参数，不表示两张样例共用，也未拼接成推荐配置。未出现的参数未补默认值。",
+      "images": [
+        {
+          "local_path": "images/style-reference-495247150/01.webp",
+          "source_url": "https://img.sref-midjourney.com/3c5455da-7b0d-4a25-890b-6e86af0728dd-0.webp",
+          "width": 800,
+          "height": 533,
+          "sha256": "00113f3ed6d5fc4ff1281ffa44de4f646e3b75c12e35c631aeb277d20f1e05b5"
+        },
+        {
+          "local_path": "images/style-reference-495247150/02.webp",
+          "source_url": "https://img.sref-midjourney.com/8d10bee4-2282-45ec-9c8f-8179fcb34385-0.webp",
+          "width": 800,
+          "height": 533,
+          "sha256": "1eb4b4e31281d8f71062095c207ef4bcf9988cda8e29fa716fd366ad3a3004cb"
+        }
+      ],
+      "retrieved_on": "2026-09-20",
+      "verification": "collected_not_generated",
+      "image_reuse_status": "commercial_redistribution_not_confirmed",
+      "production_enabled": false,
+      "classification_status": "visual_review_not_generation_test",
+      "name_zh": "温暖三维动画",
+      "category_zh": "动画角色",
+      "editorial_note": "圆润角色、柔和暖光；可研究动画人物与搭配场景。"
+    }
+  ],
+  "failures": []
+}

@@ -1,0 +1,129 @@
+/* Shared Studio V2 presentation for existing professional tools. Native media
+   geometry, color/mask values, model parameters and action handlers stay intact. */
+html.studio-v2 :is(.studio-content-library,.studio-library-preview,.dw-library){background:var(--dw-surface);color:var(--dw-ink);border-color:var(--dw-line-strong);border-radius:18px;box-shadow:0 24px 80px var(--dw-shadow);font:13px/1.6 'Segoe UI','Microsoft YaHei',sans-serif}
+html.studio-v2 :is(.studio-content-library,.studio-library-preview,.dw-library)::backdrop{background:var(--dw-scrim);backdrop-filter:blur(5px)}
+html.studio-v2 .studio-content-library{padding:24px;max-height:88vh;scroll-padding-top:66px}
+html.studio-v2 .studio-content-library>header{position:sticky;top:0;z-index:2;padding:16px 0 14px;margin:-8px 0 16px;background:var(--dw-surface);border-bottom:1px solid var(--dw-line)}
+html.studio-v2 .studio-content-library>header strong{font-size:18px;font-weight:600;letter-spacing:.01em}
+html.studio-v2 .studio-content-library p{color:var(--dw-muted);font-size:12px;line-height:1.7}
+html.studio-v2 .studio-content-library>header+p{margin:0 0 12px}
+html.studio-v2 :is(.studio-content-library,.studio-library-preview,.dw-library) :is(button,input,select){min-width:0;max-width:100%;font:inherit;color:var(--dw-ink);background:var(--dw-panel);border:1px solid var(--dw-line-strong);border-radius:9px;min-height:36px;padding:8px 12px}
+html.studio-v2 .studio-content-library .library-controls{justify-content:flex-start;gap:10px}
+html.studio-v2 .studio-content-library .library-controls>input[type=search]{flex:1 1 220px;width:220px}
+html.studio-v2 .studio-content-library .library-controls>select{max-width:230px}
+html.studio-v2 .studio-content-library .library-controls>button{margin-left:auto}
+html.studio-v2 .studio-content-library .library-grid{gap:16px}
+html.studio-v2 .studio-content-library .library-grid article{padding:11px;gap:9px;background:var(--dw-panel);border-color:var(--dw-line);border-radius:12px;min-width:0}
+html.studio-v2 .studio-content-library .library-grid article>strong{font-size:13px;font-weight:600;overflow-wrap:anywhere}
+html.studio-v2 .studio-content-library .library-grid article>p{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+html.studio-v2 .studio-content-library .library-grid article>button:last-child{color:var(--dw-gold);background:var(--dw-gold-soft);border-color:var(--dw-gold-line);font-size:12px;font-weight:600}
+html.studio-v2 .studio-content-library .library-grid article.selected{outline-color:var(--dw-gold-line);border-color:var(--dw-gold)}
+html.studio-v2 .studio-content-library .library-preview{padding:0;min-height:0;border:0;background:none;overflow:hidden}
+html.studio-v2 .studio-content-library .library-count{font-size:11px;color:var(--dw-faint);margin:13px 0}
+html.studio-v2 .studio-content-library :is(.library-compatibility,.library-inline-status){background:var(--dw-panel);border-color:var(--dw-gold-line);color:var(--dw-ink);border-radius:10px}
+html.studio-v2 .studio-content-library .library-compatibility p{color:var(--dw-muted)}
+html.studio-v2 .studio-content-library .library-vibe-apply{color:var(--dw-on-gold);background:var(--dw-gold);border-color:var(--dw-gold)}
+html.studio-v2 .studio-library-preview{padding:18px;max-height:90vh;background:var(--dw-canvas)}
+html.studio-v2 .studio-library-preview img{max-height:calc(90vh - 100px);object-fit:contain;border-radius:10px}
+html.studio-v2 :is(.studio-content-library,.studio-library-preview,.dw-library) button:hover{background:var(--dw-hover);border-color:var(--dw-gold-line)}
+html.studio-v2 :is(.studio-content-library,.dw-library) option{background:var(--dw-panel);color:var(--dw-ink)}
+html.studio-v2 .dw-library pre{color:var(--dw-ink);background:var(--dw-panel);border:1px solid var(--dw-line);border-radius:10px;padding:14px;overflow-wrap:anywhere}
+html.studio-v2 .dw-library :is(p,.dw-message){color:var(--dw-muted)}
+html.studio-v2 .dw-skill-row{border-color:var(--dw-line);min-width:0}html.studio-v2 .dw-skill-row>span{overflow-wrap:anywhere}
+
+/* Cropping and media viewers use a neutral stage. CSS never changes the pixels
+   of masks, annotation colors, canvases or comparison images. */
+html.studio-v2 :is(.image-edit-modal,.output-lightbox,.log-modal){background:var(--dw-scrim)}
+html.studio-v2 .image-edit-panel{background:var(--dw-surface);color:var(--dw-ink);border-color:var(--dw-line-strong);box-shadow:0 24px 80px var(--dw-shadow);border-radius:18px}
+html.studio-v2 .image-edit-title{color:var(--dw-ink);font-size:16px;font-weight:600}
+html.studio-v2 .image-edit-sub{color:var(--dw-muted);font-size:12px;font-weight:400;line-height:1.5}
+html.studio-v2 :is(.image-edit-mode,.image-edit-tools){background:var(--dw-panel);border-color:var(--dw-line-strong)}
+html.studio-v2 .image-edit-mode button{font-size:12px;font-weight:500;color:var(--dw-muted);background:transparent}
+html.studio-v2 .image-edit-mode button.active{color:var(--dw-on-gold);background:var(--dw-gold)}
+html.studio-v2 .image-edit-mode button:hover{color:var(--dw-ink);background:var(--dw-hover)}
+html.studio-v2 .image-edit-mode button.active:hover{color:var(--dw-on-gold);background:var(--dw-gold-hover)}
+html.studio-v2 .image-edit-tools :is(label,.grid-gap-control){font-size:12px;font-weight:500;color:var(--dw-muted)}
+html.studio-v2 .image-edit-tools :is(input[type=number],input[type=text],input[type=color],select,textarea){background:var(--dw-canvas);color:var(--dw-ink);border-color:var(--dw-line-strong);font-weight:500;font-size:12px}
+html.studio-v2 .image-edit-tools input[type=range]{accent-color:var(--dw-gold)}
+html.studio-v2 .image-edit-tools input[type=range]::-webkit-slider-runnable-track{background:var(--dw-line-strong)}
+html.studio-v2 .image-edit-tools input[type=range]::-webkit-slider-thumb{background:var(--dw-gold);border-color:var(--dw-panel);box-shadow:0 1px 4px var(--dw-shadow)}
+html.studio-v2 .image-edit-tools input[type=range]::-moz-range-track{background:var(--dw-line-strong)}
+html.studio-v2 .image-edit-tools input[type=range]::-moz-range-thumb{background:var(--dw-gold);border-color:var(--dw-panel)}
+html.studio-v2 .image-edit-stage{background:var(--dw-canvas);border-color:var(--dw-line);min-height:0}
+html.studio-v2 .crop-canvas img{background:var(--dw-canvas)}
+html.studio-v2 .crop-box{border-color:var(--dw-gold);box-shadow:0 0 0 9999px var(--dw-scrim),0 12px 30px var(--dw-shadow)}
+html.studio-v2 .crop-handle{background:var(--dw-gold);border-color:var(--dw-on-gold);box-shadow:0 3px 12px var(--dw-shadow)}
+html.studio-v2 :is(.crop-ratio-btn,.image-edit-btn.secondary){background:var(--dw-panel);color:var(--dw-muted);border-color:var(--dw-line-strong);font-size:12px;font-weight:500}
+html.studio-v2 :is(.crop-ratio-btn.active,.image-edit-btn.primary,.grid-gap-value){background:var(--dw-gold);color:var(--dw-on-gold);border-color:var(--dw-gold);font-size:12px;font-weight:600}
+html.studio-v2 .image-edit-actions{flex-wrap:wrap;flex-shrink:0}
+html.studio-v2 .image-edit-footer{flex-shrink:0}
+html.studio-v2 #imageEditZoomLabel{color:var(--dw-muted)!important;font-size:12px!important;font-weight:500!important}
+html.studio-v2 :is(.image-edit-panel,.log-panel,.output-lightbox-shell) .preview-icon-btn{background:var(--dw-panel);color:var(--dw-ink);border-color:var(--dw-line-strong)}
+html.studio-v2 :is(.image-edit-panel,.log-panel,.output-lightbox-shell) .preview-icon-btn:hover{background:var(--dw-hover);color:var(--dw-gold)}
+html.studio-v2 .output-lightbox-shell{max-height:94vh}
+html.studio-v2 .output-prompt-panel{background:var(--dw-surface);border-color:var(--dw-line-strong);box-shadow:0 16px 38px var(--dw-shadow);font-size:13px}
+html.studio-v2 .output-prompt-text{color:var(--dw-ink);font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+html.studio-v2 .output-resolution{color:var(--dw-ink);background:var(--dw-surface);border-color:var(--dw-line-strong);font-size:12px}
+html.studio-v2 .output-prompt-actions .preview-text-btn{background:var(--dw-gold);color:var(--dw-on-gold);font-size:12px;font-weight:600}
+html.studio-v2 .output-prompt-actions .preview-text-btn.secondary{background:var(--dw-panel);color:var(--dw-ink);border-color:var(--dw-line-strong)}
+
+/* Local log records retain their copy and media actions. */
+html.studio-v2 .log-panel{background:var(--dw-surface);color:var(--dw-ink);border-color:var(--dw-line-strong);box-shadow:0 24px 80px var(--dw-shadow);border-radius:18px}
+html.studio-v2 .log-head{border-color:var(--dw-line);flex-shrink:0}.studio-v2 .log-title{font-size:17px;font-weight:600}
+html.studio-v2 .log-item{background:var(--dw-panel);border-color:var(--dw-line);padding:13px}
+html.studio-v2 .log-item.failed{background:color-mix(in srgb,var(--dw-danger) 7%,var(--dw-panel));border-color:color-mix(in srgb,var(--dw-danger) 30%,var(--dw-line-strong))}
+html.studio-v2 .log-chip{font-size:11px;font-weight:500;background:var(--dw-surface);color:var(--dw-muted);border-color:var(--dw-line)}
+html.studio-v2 .log-chip.status-ok{background:color-mix(in srgb,var(--dw-success) 10%,var(--dw-panel));color:var(--dw-success);border-color:color-mix(in srgb,var(--dw-success) 30%,var(--dw-line))}
+html.studio-v2 .log-chip.status-failed{background:color-mix(in srgb,var(--dw-danger) 10%,var(--dw-panel));color:var(--dw-danger);border-color:color-mix(in srgb,var(--dw-danger) 30%,var(--dw-line))}
+html.studio-v2 .log-error{color:var(--dw-danger);background:color-mix(in srgb,var(--dw-danger) 8%,var(--dw-panel));border-color:color-mix(in srgb,var(--dw-danger) 24%,var(--dw-line));font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;max-height:150px;overflow:auto;text-overflow:clip}
+html.studio-v2 :is(.log-prompt,.log-subline){font-size:12px;line-height:1.6;font-weight:400;color:var(--dw-muted)}
+html.studio-v2 .log-prompt.copied{color:var(--dw-success)}
+
+/* Keep the original assistant sidebar and Skill multi-select, mapping its old
+   component variables to the same production palette used by both canvases. */
+html.studio-v2 .studio-agent-panel{--sap-bg:var(--dw-bg)!important;--sap-panel:var(--dw-surface)!important;--sap-soft:var(--dw-panel)!important;--sap-line:var(--dw-line-strong)!important;--sap-text:var(--dw-ink)!important;--sap-muted:var(--dw-muted)!important;--sap-gold:var(--dw-gold)!important;--sap-gold-soft:var(--dw-gold-soft)!important;--sap-error:var(--dw-danger)!important;font-family:'Segoe UI','Microsoft YaHei',sans-serif;box-shadow:-18px 0 54px var(--dw-shadow)}
+html.studio-v2 .studio-agent-panel :is(input,textarea,select,button){font-family:inherit}
+html.studio-v2 .studio-agent-panel :is(select,textarea){font-size:12px;background:var(--dw-surface);color:var(--dw-ink);border-color:var(--dw-line-strong)}
+html.studio-v2 .studio-agent-brand strong{font-size:16px;font-weight:600}.studio-v2 .studio-agent-brand small{font-size:11px;line-height:1.5}
+html.studio-v2 .studio-agent-messages{min-height:70px;flex:1 1 0;overflow:auto}
+html.studio-v2 .studio-agent-plan{flex:0 1 auto;min-height:80px;max-height:30vh}
+html.studio-v2 .studio-agent-options{flex:0 1 auto;min-height:100px;max-height:34vh}
+html.studio-v2 .studio-agent-composer{flex-shrink:0}
+html.studio-v2 .studio-agent-composer textarea{font-size:13px;line-height:1.7;min-height:72px}
+html.studio-v2 .studio-agent-panel :is(.studio-agent-bubble,.studio-agent-plan-node p,.studio-agent-message-error){overflow-wrap:anywhere}
+html.studio-v2 .studio-agent-plan-node p{font-size:12px;line-height:1.7}
+html.studio-v2 .studio-agent-panel .studio-agent-apply,html.studio-v2 .studio-agent-sendrow button{color:var(--dw-on-gold)!important;background:var(--dw-gold);border-color:var(--dw-gold);font-size:12px;font-weight:600;min-height:34px}
+html.studio-v2 .studio-agent-panel .studio-agent-apply:hover,html.studio-v2 .studio-agent-sendrow button:hover{background:var(--dw-gold-hover)}
+html.studio-v2 .studio-agent-attachrow button{font-size:12px;min-height:32px}
+@media(max-width:1350px){html.studio-v2 .image-edit-head{gap:8px}html.studio-v2 .image-edit-mode{gap:3px}html.studio-v2 .image-edit-mode button{padding:0 7px}html.studio-v2 .image-edit-title{font-size:15px}}
+
+/* Existing image/video parameter popovers share one palette and readable surface.
+   Native controls, custom-size rows, ranges and MJ grids keep their own handlers. */
+html.studio-v2-canvas .studio-image-settings-popup {box-sizing:border-box;width:min(360px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);padding:16px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--dw-line-strong) transparent;border:1px solid var(--dw-line-strong);border-radius:14px;background:var(--dw-surface);color:var(--dw-ink);box-shadow:0 16px 48px var(--dw-shadow);font:12px/1.6 'Segoe UI','Microsoft YaHei',sans-serif}
+html.studio-v2-canvas .studio-image-settings-popup>header {position:sticky;top:-16px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-16px -16px 14px;padding:12px 16px;background:var(--dw-surface);border-bottom:1px solid var(--dw-line)}
+html.studio-v2-canvas .studio-image-settings-popup>header strong {font-size:14px;font-weight:600;color:var(--dw-ink)}
+html.studio-v2-canvas .studio-image-settings-popup>header button {display:grid;place-items:center;flex:none;width:30px;height:30px;padding:0;border:1px solid var(--dw-line);border-radius:7px;background:var(--dw-panel);color:var(--dw-muted);font-size:21px;line-height:1;cursor:pointer}
+html.studio-v2-canvas .studio-image-settings-popup>header button:hover {background:var(--dw-hover);color:var(--dw-ink);border-color:var(--dw-gold-line)}
+html.studio-v2-canvas .studio-image-settings-popup :is(select,input:not([type=range]):not([type=checkbox]):not([type=radio]),textarea) {box-sizing:border-box;min-width:0;max-width:100%;min-height:34px;padding:7px 9px;border:1px solid var(--dw-line-strong);border-radius:7px;background:var(--dw-bg);color:var(--dw-ink);font:12px/1.5 'Segoe UI','Microsoft YaHei',sans-serif}
+html.studio-v2-canvas .studio-image-settings-popup select:not([hidden]) {width:100%;margin-top:5px}
+html.studio-v2-canvas .studio-image-settings-popup option {background:var(--dw-bg);color:var(--dw-ink)}
+html.studio-v2-canvas .studio-image-settings-popup :is(label,.setting-title) {color:var(--dw-ink);font-size:12px;line-height:1.5}
+html.studio-v2-canvas .studio-image-settings-popup .studio-basic-params {gap:14px}
+html.studio-v2-canvas .studio-image-settings-popup .studio-param-choices {gap:6px;margin-top:7px}
+html.studio-v2-canvas .studio-image-settings-popup .studio-param-choices button {min-width:0;min-height:34px;padding:7px 8px;border:1px solid var(--dw-line-strong);border-radius:7px;background:var(--dw-bg);color:var(--dw-ink);font-size:12px;line-height:1.5;cursor:pointer}
+html.studio-v2-canvas .studio-image-settings-popup .studio-param-choices button:hover {background:var(--dw-hover);border-color:var(--dw-gold-line)}
+html.studio-v2-canvas .studio-image-settings-popup .studio-param-choices button[aria-pressed=true] {background:var(--dw-gold-soft);border-color:var(--dw-gold);color:var(--dw-ink)}
+html.studio-v2-canvas .studio-image-settings-popup .studio-ratio-choices button {min-height:58px}
+html.studio-v2-canvas .studio-image-settings-popup :is(.studio-contract-note,.studio-sent,small) {color:var(--dw-muted);font-size:11px;line-height:1.65;overflow-wrap:anywhere}
+html.studio-v2-canvas .studio-image-settings-popup :is(input[type=range],input[type=checkbox],input[type=radio]) {accent-color:var(--dw-gold)}
+html.studio-v2-canvas .studio-image-settings-popup input[type=range] {width:100%;min-width:0}
+html.studio-v2-canvas .studio-image-settings-popup :is(button,input,textarea,select):focus-visible {outline:2px solid var(--dw-gold);outline-offset:2px}
+/* Override legacy dark-theme button colors only inside this parameter popover. */
+html.studio-v2.studio-v2-canvas .studio-image-settings-popup .setting-check {min-width:0;min-height:34px;height:auto;padding:7px 9px;border-radius:7px;background:var(--dw-bg)!important;border-color:var(--dw-line-strong)!important;color:var(--dw-ink)!important;font-size:12px;line-height:1.5;font-weight:500;white-space:normal;text-align:left}
+html.studio-v2.studio-v2-canvas .studio-image-settings-popup .setting-check:hover {background:var(--dw-hover)!important;border-color:var(--dw-gold-line)!important}
+html.studio-v2.studio-v2-canvas .studio-image-settings-popup :is(.setting-check.active,.setting-check[aria-pressed=true]) {background:var(--dw-gold-soft)!important;border-color:var(--dw-gold)!important;color:var(--dw-ink)!important}
+html.studio-v2-canvas .studio-image-settings-popup .studio-native-param-field {flex:1 1 94px;min-width:0;display:block}
+html.studio-v2-canvas .studio-image-settings-popup .studio-native-param-field>span {display:block;color:var(--dw-ink);font-size:11px;font-weight:600;line-height:1.5}
+html.studio-v2-canvas .studio-image-settings-popup.studio-universal-params .gen-settings {gap:12px;margin:0;padding:0;border:0;background:transparent;box-shadow:none}
+html.studio-v2-canvas .studio-image-settings-popup.studio-universal-params .gen-settings-row {gap:10px;align-items:flex-start}
+@media(prefers-reduced-motion:reduce) {html.studio-v2-canvas .studio-image-settings-popup,html.studio-v2-canvas .studio-image-settings-popup * {animation:none;transition:none}}

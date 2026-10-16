@@ -1,0 +1,44 @@
+/* Settings use the same palette as the approved home and canvas. */
+html.studio-v2-settings,html.studio-v2-settings body {--bg:var(--dw-bg);--ink:var(--dw-ink);background:var(--dw-bg);color:var(--dw-ink)}
+.studio-v2-settings .settings-top {background:var(--dw-bg);border-bottom:1px solid var(--dw-line);box-shadow:none}
+.studio-v2-settings header {height:72px;max-width:1080px;margin:auto;padding:16px 28px;border:0;background:transparent}
+.studio-v2-settings header img {width:32px;height:32px}
+.studio-v2-settings header strong {font-size:16px;letter-spacing:1px}
+.studio-v2-settings header strong span {color:var(--dw-muted);font-size:12px;font-weight:400;border-left:1px solid var(--dw-line-strong);margin-left:16px;padding-left:16px}
+.studio-v2-settings #closeSettings {padding:8px 14px;background:var(--dw-surface);border:1px solid var(--dw-line-strong);border-radius:8px;font-size:12px}
+.studio-v2-settings nav {max-width:1080px;margin:auto;padding:0 28px 15px;display:flex;gap:8px;flex-wrap:wrap;background:transparent;border:0}
+.studio-v2-settings nav button {padding:9px 15px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--dw-muted);font-size:12px}
+.studio-v2-settings nav button[aria-selected=true] {background:var(--dw-gold-soft);border-color:var(--dw-gold-line);color:var(--dw-gold)}
+.studio-v2-settings main {max-width:1080px;margin:auto;padding:30px 28px 56px}
+.studio-v2-settings .intro h1 {font-size:24px;font-weight:500;letter-spacing:1px;color:var(--dw-ink);margin:0 0 9px}
+.studio-v2-settings .intro p {font-size:13px;color:var(--dw-muted);line-height:1.7;margin:0}
+.studio-v2-settings .studio-connection-cards {margin:22px 0;gap:14px}
+.studio-v2-settings .studio-connection-cards button {min-height:84px;padding:18px;background:var(--dw-surface);border-color:var(--dw-line-strong);border-radius:12px}
+.studio-v2-settings .studio-connection-cards button:hover {background:var(--dw-raised);border-color:var(--dw-gold-line)}
+.studio-v2-settings .studio-connection-cards strong {font-size:13px;font-weight:500;color:var(--dw-ink)}
+.studio-v2-settings .studio-connection-cards small {font-size:11px;color:var(--dw-muted)}
+.studio-v2-settings :is(#apiForm,.control-card,.dreamina-card,#storageForm) {background:var(--dw-surface);border:1px solid var(--dw-line-strong);border-radius:13px;padding:22px}
+.studio-v2-settings :is(label,h2) {color:var(--dw-ink)}
+.studio-v2-settings label {font-size:12px;font-weight:400;gap:8px}
+.studio-v2-settings h2 {font-size:15px;font-weight:500}
+.studio-v2-settings :is(input,select,textarea) {background:var(--dw-bg);color:var(--dw-ink);border-color:var(--dw-line-strong);border-radius:7px;font:inherit;font-size:12px;min-height:38px;box-shadow:none}
+.studio-v2-settings input[type=checkbox] {accent-color:var(--dw-gold);min-height:0}
+.studio-v2-settings input:disabled {color:var(--dw-faint)}
+.studio-v2-settings button {color:var(--dw-ink);background:var(--dw-panel);border-color:var(--dw-line-strong);border-radius:7px;font-size:12px;box-shadow:none}
+.studio-v2-settings button:hover {background:var(--dw-raised);border-color:var(--dw-gold-line)}
+.studio-v2-settings :is(button.accent,button.primary) {background:var(--dw-gold);color:var(--dw-on-gold);border-color:var(--dw-gold)}
+.studio-v2-settings :is(button.accent,button.primary):hover {background:var(--dw-gold-hover)}
+.studio-v2-settings :is(.notice,.dreamina-result) {background:var(--dw-bg);color:var(--dw-muted);border-color:var(--dw-line-strong);font-size:12px;line-height:1.7}
+.studio-v2-settings .notice[data-error=true] {color:var(--dw-danger);border-color:var(--dw-danger)}
+.studio-v2-settings :is(small,.muted,.key-meta,.picker p,.control-card p,.dreamina-card p) {color:var(--dw-muted);line-height:1.7}
+.studio-v2-settings .picker {background:var(--dw-bg);border-color:var(--dw-line-strong);padding:16px;border-radius:10px}
+.studio-v2-settings #modelRows {max-height:330px;border-color:var(--dw-line-strong)}
+.studio-v2-settings .model-row {padding:12px 0;border-color:var(--dw-line)}
+.studio-v2-settings .model-row small {width:auto;font-size:10px}
+.studio-v2-settings .model-row label {min-width:0}
+.studio-v2-settings :is(details,footer) {border-color:var(--dw-line-strong)}
+.studio-v2-settings #apiForm>footer {background:var(--dw-surface);padding:15px 0 0;margin-top:12px}
+.studio-v2-settings .control-modes button[aria-pressed=true] {background:var(--dw-gold-soft);color:var(--dw-gold);border-color:var(--dw-gold-line)}
+.studio-v2-settings :is(.control-config,pre,.dreamina-account>div) {background:var(--dw-bg);color:var(--dw-muted);border-color:var(--dw-line-strong)}
+.studio-v2-settings .control-card-head {align-items:flex-start}
+@media(max-width:740px){.studio-v2-settings main{padding:22px 18px 42px}.studio-v2-settings header{padding:15px 18px}.studio-v2-settings nav{padding:0 18px 14px}.studio-v2-settings nav button{padding:8px 10px}.studio-v2-settings .studio-connection-cards{grid-template-columns:1fr}.studio-v2-settings :is(#apiForm,.control-card,.dreamina-card,#storageForm){padding:16px}.studio-v2-settings .grid{grid-template-columns:1fr}}

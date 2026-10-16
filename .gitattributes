@@ -1,0 +1,10 @@
+# Preserve imported third-party modules and historical recovery snapshots byte-for-byte.
+app/static/vendor/** -text -whitespace
+app/static/css/*.broken-before-* -text -whitespace
+app/static/css/*.mojibake-backup -text -whitespace
+app/static/js/*.broken-before-* -text -whitespace
+app/static/js/*.mojibake-backup -text -whitespace
+# Generated CSS is verified by byte hash on Windows as well as other checkouts.
+app/static/canvas-utilities.css text eol=lf
+app/static/canvas-utilities.manifest.json text eol=lf
+app/tools/vendor/tailwindcss-3.4.17/** text eol=lf

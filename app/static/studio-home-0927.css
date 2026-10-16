@@ -1,0 +1,12 @@
+.studio-home-views { display:flex; gap:6px; }
+.studio-home-views button,.studio-project-search { border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);padding:8px; }
+.studio-home-views button[aria-pressed="true"] { border-color:var(--accent);color:var(--accent); }
+.studio-project-search { margin:8px 12px;width:calc(100% - 24px); }
+.ws-project-row[hidden] { display:none; }
+.studio-home-list .ws-board-world { grid-template-columns:1fr;gap:9px; }
+.studio-home-list .ws-card { display:grid;grid-template-columns:70px 100px minmax(120px,1fr) 210px;align-items:center;min-height:75px;border-radius:12px; }
+.studio-home-list .home-canvas-cover { height:58px;border-radius:8px; }
+.studio-home-list .home-canvas-cover small { display:none; }
+.studio-home-list .ws-card:hover { transform:none; }
+.studio-home-list .ws-card-meta { justify-content:flex-end; }
+@media(max-width:1100px){.home-section-title{flex-wrap:wrap;gap:10px}.studio-home-list .ws-card{grid-template-columns:55px 85px minmax(100px,1fr)}.studio-home-list .ws-card-meta{grid-column:3;font-size:11px}}

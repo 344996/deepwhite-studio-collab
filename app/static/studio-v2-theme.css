@@ -1,0 +1,39 @@
+/* Shared production palette. Studio V2 defaults match the reviewed prototype.
+   Existing light / dark / milk choices remain usable; components contain no palette. */
+:root {
+  --dw-bg:#20231f; --dw-canvas:#1b201c; --dw-surface:#2a3029; --dw-panel:#30362e;
+  --dw-raised:#383f35; --dw-hover:#414939; --dw-ink:#eeeade; --dw-muted:#aeb5a5; --dw-faint:#818c7a;
+  --dw-gold:#e3bd83; --dw-gold-hover:#efd1a5; --dw-gold-soft:#e3bd8314; --dw-gold-line:#e3bd8359; --dw-on-gold:#30291d;
+  --dw-line:#e0e8cf13; --dw-line-strong:#e0e8cf29; --dw-success:#a9c9b1; --dw-danger:#e6a093;
+  --dw-scrim:#090e0bab; --dw-shadow:#050b0860; --dw-grid:#cad6c915; --dw-blue:#a4bebf;
+  --dw-fast:150ms; --dw-ease:220ms; --dw-radius:12px; --dw-media-scheme:dark;
+}
+html.studio-v2.studio-milk,
+html.studio-v2:not(.studio-graphite):not(.theme-dark):not(.studio-theme-dark) {
+  --dw-bg:#f5f3ec; --dw-canvas:#eeeee6; --dw-surface:#fffef7; --dw-panel:#f5f3e9;
+  --dw-raised:#e8e9dd; --dw-hover:#e0e3d5; --dw-ink:#283229; --dw-muted:#596653; --dw-faint:#6e7865;
+  --dw-gold:#8b622c; --dw-gold-hover:#a47433; --dw-gold-soft:#8b622c12; --dw-gold-line:#8b622c66; --dw-on-gold:#fff9ed;
+  --dw-line:#35452f19; --dw-line-strong:#35452f33; --dw-success:#426d4e; --dw-danger:#b24738;
+  --dw-shadow:#16251b12; --dw-grid:#35452f20; --dw-blue:#416b70; --dw-media-scheme:light;
+}
+html.studio-v2:not(.studio-graphite):not(.studio-milk).theme-dark,
+html.studio-v2:not(.studio-graphite):not(.studio-milk).studio-theme-dark {
+  --dw-bg:#191e22; --dw-canvas:#151a1e; --dw-surface:#252c31; --dw-panel:#2c3439;
+  --dw-raised:#343e44; --dw-hover:#3e4a50; --dw-ink:#eeeade; --dw-muted:#b0bbc0; --dw-faint:#86959b;
+}
+html.studio-v2, html.studio-v2 body, html.studio-v2 #shell {
+  --page:var(--dw-bg)!important; --panel:var(--dw-surface)!important; --card:var(--dw-panel)!important;
+  --card-solid:var(--dw-surface)!important; --soft:var(--dw-bg)!important; --soft-2:var(--dw-raised)!important;
+  --text:var(--dw-ink)!important; --muted:var(--dw-muted)!important; --faint:var(--dw-faint)!important;
+  --line:var(--dw-line)!important; --line-2:var(--dw-line-strong)!important; --accent:var(--dw-gold)!important;
+  --strong:var(--dw-gold)!important; --strong-text:var(--dw-on-gold)!important; --shadow:var(--dw-shadow)!important;
+}
+html.studio-v2 body {color:var(--dw-ink);font-family:'Segoe UI','Microsoft YaHei',sans-serif;-webkit-font-smoothing:antialiased}
+html.studio-v2 :is(button,input,textarea,select,summary):focus-visible {outline:2px solid var(--dw-gold);outline-offset:3px}
+html.studio-v2 :is(button,a) {transition:background var(--dw-fast),border-color var(--dw-fast),color var(--dw-fast),box-shadow var(--dw-fast)}
+html.studio-v2 dialog::backdrop {background:var(--dw-scrim);backdrop-filter:blur(3px)}
+html.studio-v2 dialog {color:var(--dw-ink);background:var(--dw-surface);border:1px solid var(--dw-line-strong);border-radius:16px;box-shadow:0 24px 80px var(--dw-shadow)}
+html.studio-v2 [hidden] {display:none!important}
+@media(prefers-reduced-motion:reduce) {
+  html.studio-v2 *,html.studio-v2 *::before,html.studio-v2 *::after {animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}

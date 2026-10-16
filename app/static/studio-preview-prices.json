@@ -1,0 +1,773 @@
+{
+  "source": "https://api.deepwhiteai.com/api/pricing",
+  "fetched_date": "2026-09-17",
+  "pricing_version": "6c56c67114164e8fb0fbc4e1cd30b5aa",
+  "price_estimates": {
+    "deepwhiteai-image-g-v2-lowprice": {
+      "entries": [
+        {
+          "params": {
+            "resolution": "1k"
+          },
+          "price_cny": 0.04813483146067416,
+          "low_cny": 0.04813483146067416,
+          "high_cny": 0.04813483146067416,
+          "sample_count": 41031,
+          "last_seen_at": 1789609444,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "resolution": "2k"
+          },
+          "price_cny": 0.11325842696629214,
+          "low_cny": 0.11325842696629214,
+          "high_cny": 0.11325842696629214,
+          "sample_count": 7295,
+          "last_seen_at": 1789609295,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "resolution": "4k"
+          },
+          "price_cny": 0.1698876404494382,
+          "low_cny": 0.1698876404494382,
+          "high_cny": 0.1698876404494382,
+          "sample_count": 1674,
+          "last_seen_at": 1789609444,
+          "confidence": "high"
+        }
+      ],
+      "price_min": 0.04813483146067416,
+      "price_max": 0.1698876404494382,
+      "active_features": [
+        "resolution"
+      ],
+      "sample_count": 50000,
+      "validation_mape": 0,
+      "status": "ready",
+      "trained_at": 1789609446,
+      "profile_version": 10008
+    },
+    "deepwhiteai-image-g-v2.5-flare": {
+      "entries": [
+        {
+          "params": {
+            "input_image_count": "0",
+            "quality": "medium"
+          },
+          "price_cny": 0.11533200000000002,
+          "low_cny": 0.09294600000000001,
+          "high_cny": 0.151032,
+          "sample_count": 31,
+          "last_seen_at": 1789574126,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "1",
+            "quality": "low"
+          },
+          "price_cny": 0.154308,
+          "low_cny": 0.087843,
+          "high_cny": 0.16422,
+          "sample_count": 142,
+          "last_seen_at": 1789574052,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "1",
+            "quality": "medium"
+          },
+          "price_cny": 0.19070099999999998,
+          "low_cny": 0.16846199999999997,
+          "high_cny": 0.249333,
+          "sample_count": 20,
+          "last_seen_at": 1789545550,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "3",
+            "quality": "low"
+          },
+          "price_cny": 0.230286,
+          "low_cny": 0.20867699999999997,
+          "high_cny": 0.41693399999999997,
+          "sample_count": 8,
+          "last_seen_at": 1789564920,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "0",
+            "quality": "high"
+          },
+          "price_cny": 0.274974,
+          "low_cny": 0.27371399999999996,
+          "high_cny": 0.37711799999999995,
+          "sample_count": 96,
+          "last_seen_at": 1789460738,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "2",
+            "quality": "medium"
+          },
+          "price_cny": 0.278838,
+          "low_cny": 0.246204,
+          "high_cny": 0.384237,
+          "sample_count": 27,
+          "last_seen_at": 1789588250,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "3",
+            "quality": "medium"
+          },
+          "price_cny": 0.384153,
+          "low_cny": 0.31909499999999996,
+          "high_cny": 0.39435900000000007,
+          "sample_count": 10,
+          "last_seen_at": 1789588252,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "1",
+            "quality": "high"
+          },
+          "price_cny": 0.42440999999999995,
+          "low_cny": 0.383964,
+          "high_cny": 0.676389,
+          "sample_count": 54,
+          "last_seen_at": 1789573131,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "4",
+            "quality": "medium"
+          },
+          "price_cny": 0.491421,
+          "low_cny": 0.480711,
+          "high_cny": 0.538629,
+          "sample_count": 4,
+          "last_seen_at": 1789274811,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "3",
+            "quality": "high"
+          },
+          "price_cny": 0.530628,
+          "low_cny": 0.530544,
+          "high_cny": 1.24803,
+          "sample_count": 6,
+          "last_seen_at": 1789402696,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "2",
+            "quality": "high"
+          },
+          "price_cny": 0.566769,
+          "low_cny": 0.50169,
+          "high_cny": 1.044897,
+          "sample_count": 27,
+          "last_seen_at": 1789536185,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "4",
+            "quality": "auto"
+          },
+          "price_cny": 0.677691,
+          "low_cny": 0.46307100000000007,
+          "high_cny": 1.1394389999999999,
+          "sample_count": 39,
+          "last_seen_at": 1789496931,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "4",
+            "quality": "high"
+          },
+          "price_cny": 0.71127,
+          "low_cny": 0.71127,
+          "high_cny": 1.4004480000000001,
+          "sample_count": 3,
+          "last_seen_at": 1789317146,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "1",
+            "quality": "xhigh"
+          },
+          "price_cny": 0.756063,
+          "low_cny": 0.64491,
+          "high_cny": 2.2490789999999996,
+          "sample_count": 4,
+          "last_seen_at": 1789481992,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "8",
+            "quality": "auto"
+          },
+          "price_cny": 0.8148420000000001,
+          "low_cny": 0.715449,
+          "high_cny": 0.8183699999999999,
+          "sample_count": 3,
+          "last_seen_at": 1789291781,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "7",
+            "quality": "auto"
+          },
+          "price_cny": 0.815094,
+          "low_cny": 0.8122379999999999,
+          "high_cny": 2.976015,
+          "sample_count": 6,
+          "last_seen_at": 1789502304,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "5",
+            "quality": "auto"
+          },
+          "price_cny": 0.9826530000000001,
+          "low_cny": 0.7350419999999999,
+          "high_cny": 1.943445,
+          "sample_count": 14,
+          "last_seen_at": 1789452326,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "6",
+            "quality": "auto"
+          },
+          "price_cny": 0.987294,
+          "low_cny": 0.758121,
+          "high_cny": 2.417961,
+          "sample_count": 16,
+          "last_seen_at": 1789501877,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "0",
+            "quality": "max"
+          },
+          "price_cny": 3.37218,
+          "low_cny": 1.4000699999999997,
+          "high_cny": 4.448094,
+          "sample_count": 5,
+          "last_seen_at": 1789449967,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "1",
+            "quality": "max"
+          },
+          "price_cny": 3.4686329999999996,
+          "low_cny": 1.534092,
+          "high_cny": 6.099449999999999,
+          "sample_count": 25,
+          "last_seen_at": 1789483963,
+          "confidence": "medium"
+        }
+      ],
+      "price_min": 0.087843,
+      "price_max": 6.099449999999999,
+      "active_features": [
+        "quality",
+        "input_image_count"
+      ],
+      "sample_count": 1806,
+      "validation_mape": 0,
+      "status": "ready",
+      "trained_at": 1789609446,
+      "profile_version": 785
+    },
+    "seedream-v5-pro-t2i": {
+      "entries": [
+        {
+          "params": {
+            "resolution": "1k"
+          },
+          "price_cny": 0.28836,
+          "low_cny": 0.28836,
+          "high_cny": 0.28836,
+          "sample_count": 56,
+          "last_seen_at": 1789608110,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "resolution": "2k"
+          },
+          "price_cny": 0.57672,
+          "low_cny": 0.57672,
+          "high_cny": 0.57672,
+          "sample_count": 81,
+          "last_seen_at": 1789576638,
+          "confidence": "high"
+        }
+      ],
+      "price_min": 0.28836,
+      "price_max": 0.57672,
+      "active_features": [
+        "resolution"
+      ],
+      "sample_count": 369,
+      "validation_mape": 0,
+      "status": "ready",
+      "trained_at": 1789608149,
+      "profile_version": 613
+    },
+    "seedream-v5-pro-i2i": {
+      "entries": [
+        {
+          "params": {
+            "input_image_count": "1",
+            "resolution": "1k"
+          },
+          "price_cny": 0.28836,
+          "low_cny": 0.28836,
+          "high_cny": 0.28836,
+          "sample_count": 145,
+          "last_seen_at": 1789584019,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "1",
+            "resolution": "custom"
+          },
+          "price_cny": 0.28836,
+          "low_cny": 0.28836,
+          "high_cny": 0.28836,
+          "sample_count": 4,
+          "last_seen_at": 1789407488,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "2",
+            "resolution": "1k"
+          },
+          "price_cny": 0.30794,
+          "low_cny": 0.30794,
+          "high_cny": 0.30794,
+          "sample_count": 80,
+          "last_seen_at": 1789569168,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "3",
+            "resolution": "1k"
+          },
+          "price_cny": 0.32752000000000003,
+          "low_cny": 0.32752000000000003,
+          "high_cny": 0.32752000000000003,
+          "sample_count": 30,
+          "last_seen_at": 1789593237,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "4",
+            "resolution": "1k"
+          },
+          "price_cny": 0.34532,
+          "low_cny": 0.34532,
+          "high_cny": 0.34532,
+          "sample_count": 6,
+          "last_seen_at": 1789469913,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "5",
+            "resolution": "1k"
+          },
+          "price_cny": 0.36489999999999995,
+          "low_cny": 0.36489999999999995,
+          "high_cny": 0.36489999999999995,
+          "sample_count": 4,
+          "last_seen_at": 1789531793,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "6",
+            "resolution": "1k"
+          },
+          "price_cny": 0.38448,
+          "low_cny": 0.38448,
+          "high_cny": 0.38448,
+          "sample_count": 3,
+          "last_seen_at": 1788920827,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "7",
+            "resolution": "1k"
+          },
+          "price_cny": 0.40406,
+          "low_cny": 0.40406,
+          "high_cny": 0.40406,
+          "sample_count": 3,
+          "last_seen_at": 1789450955,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "1",
+            "resolution": "2k"
+          },
+          "price_cny": 0.57672,
+          "low_cny": 0.57672,
+          "high_cny": 0.57672,
+          "sample_count": 423,
+          "last_seen_at": 1789609065,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "2",
+            "resolution": "2k"
+          },
+          "price_cny": 0.5963,
+          "low_cny": 0.5963,
+          "high_cny": 0.5963,
+          "sample_count": 1470,
+          "last_seen_at": 1789607595,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "3",
+            "resolution": "2k"
+          },
+          "price_cny": 0.61588,
+          "low_cny": 0.61588,
+          "high_cny": 0.61588,
+          "sample_count": 639,
+          "last_seen_at": 1789563524,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "4",
+            "resolution": "2k"
+          },
+          "price_cny": 0.63368,
+          "low_cny": 0.63368,
+          "high_cny": 0.63368,
+          "sample_count": 725,
+          "last_seen_at": 1789601053,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "5",
+            "resolution": "2k"
+          },
+          "price_cny": 0.65326,
+          "low_cny": 0.65326,
+          "high_cny": 0.65326,
+          "sample_count": 140,
+          "last_seen_at": 1789565251,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "6",
+            "resolution": "2k"
+          },
+          "price_cny": 0.67284,
+          "low_cny": 0.67284,
+          "high_cny": 0.67284,
+          "sample_count": 69,
+          "last_seen_at": 1789575994,
+          "confidence": "high"
+        },
+        {
+          "params": {
+            "input_image_count": "7",
+            "resolution": "2k"
+          },
+          "price_cny": 0.69242,
+          "low_cny": 0.69242,
+          "high_cny": 0.69242,
+          "sample_count": 16,
+          "last_seen_at": 1789577144,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "input_image_count": "8",
+            "resolution": "2k"
+          },
+          "price_cny": 0.7120000000000001,
+          "low_cny": 0.7120000000000001,
+          "high_cny": 0.7120000000000001,
+          "sample_count": 5,
+          "last_seen_at": 1789578911,
+          "confidence": "medium"
+        }
+      ],
+      "price_min": 0.28836,
+      "price_max": 0.7120000000000001,
+      "active_features": [
+        "input_image_count",
+        "resolution"
+      ],
+      "sample_count": 4860,
+      "validation_mape": 0,
+      "status": "ready",
+      "trained_at": 1789609242,
+      "profile_version": 4058
+    },
+    "seedance-2.0-fast-t2v": {
+      "entries": [],
+      "price_min": 0,
+      "price_max": 0,
+      "active_features": [],
+      "sample_count": 37,
+      "validation_mape": 0,
+      "status": "insufficient_history",
+      "trained_at": 1789536732,
+      "profile_version": 159
+    },
+    "seedance-2.0-fast-i2v": {
+      "entries": [
+        {
+          "params": {
+            "resolution": "480p"
+          },
+          "price_cny": 2.2261292307692306,
+          "low_cny": 2.2261292307692306,
+          "high_cny": 3.549378461538461,
+          "sample_count": 34,
+          "last_seen_at": 1789551882,
+          "confidence": "medium"
+        }
+      ],
+      "price_min": 2.2261292307692306,
+      "price_max": 3.549378461538461,
+      "active_features": [
+        "resolution"
+      ],
+      "sample_count": 57,
+      "validation_mape": 0,
+      "status": "ready",
+      "trained_at": 1789551889,
+      "profile_version": 194
+    },
+    "seedance-2.0-mini-t2v": {
+      "entries": [],
+      "price_min": 0,
+      "price_max": 0,
+      "active_features": [
+        "resolution"
+      ],
+      "sample_count": 83,
+      "validation_mape": 0,
+      "status": "insufficient_history",
+      "trained_at": 1789598262,
+      "profile_version": 314
+    },
+    "seedance-2.0-mini-i2v": {
+      "entries": [
+        {
+          "params": {
+            "duration_seconds": "4",
+            "generate_audio": "true",
+            "resolution": "480p"
+          },
+          "price_cny": 0.6166285714285714,
+          "low_cny": 0.5883428571428572,
+          "high_cny": 0.6166285714285714,
+          "sample_count": 9,
+          "last_seen_at": 1789365532,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "5",
+            "generate_audio": "false",
+            "resolution": "480p"
+          },
+          "price_cny": 0.7693714285714285,
+          "low_cny": 0.7354285714285715,
+          "high_cny": 0.7693714285714285,
+          "sample_count": 13,
+          "last_seen_at": 1789530692,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "6",
+            "generate_audio": "false",
+            "resolution": "480p"
+          },
+          "price_cny": 0.8806285714285715,
+          "low_cny": 0.8806285714285715,
+          "high_cny": 0.8806285714285715,
+          "sample_count": 3,
+          "last_seen_at": 1789463161,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "7",
+            "generate_audio": "false",
+            "resolution": "480p"
+          },
+          "price_cny": 1.0258285714285715,
+          "low_cny": 1.0258285714285715,
+          "high_cny": 1.0258285714285715,
+          "sample_count": 8,
+          "last_seen_at": 1788946182,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "4",
+            "generate_audio": "true",
+            "resolution": "720p"
+          },
+          "price_cny": 1.3256571428571429,
+          "low_cny": 1.3256571428571429,
+          "high_cny": 1.3256571428571429,
+          "sample_count": 24,
+          "last_seen_at": 1789548931,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "4",
+            "generate_audio": "false",
+            "resolution": "720p"
+          },
+          "price_cny": 1.3256571428571429,
+          "low_cny": 1.3256571428571429,
+          "high_cny": 1.3256571428571429,
+          "sample_count": 4,
+          "last_seen_at": 1788871872,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "5",
+            "generate_audio": "true",
+            "resolution": "720p"
+          },
+          "price_cny": 1.6537714285714287,
+          "low_cny": 1.6537714285714287,
+          "high_cny": 1.6537714285714287,
+          "sample_count": 11,
+          "last_seen_at": 1789607940,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "5",
+            "generate_audio": "false",
+            "resolution": "720p"
+          },
+          "price_cny": 1.6537714285714287,
+          "low_cny": 1.6537714285714287,
+          "high_cny": 1.6537714285714287,
+          "sample_count": 11,
+          "last_seen_at": 1789531022,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "7",
+            "generate_audio": "true",
+            "resolution": "720p"
+          },
+          "price_cny": 2.308114285714286,
+          "low_cny": 2.308114285714286,
+          "high_cny": 2.308114285714286,
+          "sample_count": 3,
+          "last_seen_at": 1789411472,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "8",
+            "generate_audio": "true",
+            "resolution": "720p"
+          },
+          "price_cny": 2.6362285714285716,
+          "low_cny": 2.6362285714285716,
+          "high_cny": 2.6362285714285716,
+          "sample_count": 5,
+          "last_seen_at": 1789607002,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "10",
+            "generate_audio": "true",
+            "resolution": "720p"
+          },
+          "price_cny": 3.292457142857143,
+          "low_cny": 3.292457142857143,
+          "high_cny": 3.3132,
+          "sample_count": 25,
+          "last_seen_at": 1789536202,
+          "confidence": "medium"
+        },
+        {
+          "params": {
+            "duration_seconds": "15",
+            "generate_audio": "true",
+            "resolution": "720p"
+          },
+          "price_cny": 4.933028571428571,
+          "low_cny": 4.933028571428571,
+          "high_cny": 4.933028571428571,
+          "sample_count": 12,
+          "last_seen_at": 1789531951,
+          "confidence": "medium"
+        }
+      ],
+      "price_min": 0.5883428571428572,
+      "price_max": 4.933028571428571,
+      "active_features": [
+        "duration_seconds",
+        "resolution",
+        "generate_audio"
+      ],
+      "sample_count": 252,
+      "validation_mape": 0,
+      "status": "ready",
+      "trained_at": 1789609343,
+      "profile_version": 346
+    }
+  }
+}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>节点交互稿 · DeepWhite Studio</title>
+  <link rel="icon" href="/static/studio-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/studio-preview.css?v=0.10.2-studio.10.1789609291">
+  <script src="/static/vendor/js/lucide.js?v=0.10.2-studio.10.1785996049"></script>
+</head>
+<body>
+  <header class="preview-header"><a class="brand" href="/"><img src="/static/studio-mark.svg" alt=""><span>DeepWhite <b>Studio</b></span></a><span class="header-divider"></span><span class="page-name">节点交互稿</span><span class="preview-label"><span></span>预览 · 不调用模型</span><a class="back-link" href="/">打开基础画布 <i data-lucide="arrow-up-right"></i></a></header>
+  <main id="previewCanvas" aria-label="节点交互预览画布">
+    <nav class="type-rail" aria-label="添加节点"><button data-add="text" title="添加文本节点" aria-label="添加文本节点"><i data-lucide="type"></i></button><button data-add="image" title="添加图片节点" aria-label="添加图片节点"><i data-lucide="image"></i></button><button data-add="video" title="添加视频节点" aria-label="添加视频节点"><i data-lucide="video"></i></button><button data-add="audio" title="添加音频节点" aria-label="添加音频节点"><i data-lucide="audio-lines"></i></button></nav>
+    <div class="intro"><p class="eyebrow">一个节点，一段创作</p><h1>选模型，调参数，开始创作。</h1><p>双击空白处添加节点，或点选左侧类型。<br>选中节点后，在下方编辑提示词和参数。</p></div>
+    <div id="previewNodes"></div>
+    <aside class="review-note"><span class="note-index">01 / 交互确认</span><h2>先把一个节点做顺手</h2><p>模型、参数、参考素材和费用放在同一个操作区。</p><ul><li>无参考图 → 文字生成图片</li><li>有参考图 → 参考图生成</li><li>参数变化 → 更新预估费用</li></ul><p class="muted">价格来自 DeepWhite 公开数据快照；本页不保存画布、不提交生成任务。</p></aside>
+    <footer class="preview-footer"><span><i data-lucide="mouse-pointer-2"></i> 双击添加 · 拖动节点标题移动</span><button id="resetPreview">重置预览</button></footer>
+  </main>
+  <div id="addMenu" class="add-menu" hidden role="menu" aria-label="添加节点"><div class="menu-label">添加节点</div><button role="menuitem" data-add="text"><i data-lucide="type"></i>文本</button><button role="menuitem" data-add="image"><i data-lucide="image"></i>图片</button><button role="menuitem" data-add="video"><i data-lucide="video"></i>视频</button><button role="menuitem" data-add="audio"><i data-lucide="audio-lines"></i>音频</button><div class="menu-divider"></div><div class="menu-label">添加资源</div><button role="menuitem" id="uploadResource"><i data-lucide="upload"></i>上传</button><button role="menuitem" id="importWorks"><i data-lucide="folder"></i>从作品导入</button></div>
+  <input id="resourceFile" type="file" accept="image/*,video/*,audio/*" hidden>
+  <dialog id="previewDialog"><h2 id="dialogTitle"></h2><p id="dialogBody"></p><button id="closeDialog">知道了</button></dialog>
+  <div id="toast" role="status"></div>
+  <script src="/static/studio-preview.js?v=0.10.2-studio.10.1789609872"></script>
+</body></html>

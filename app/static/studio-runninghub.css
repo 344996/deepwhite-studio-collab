@@ -1,0 +1,3 @@
+.studio-rh-manager{width:min(850px,90vw);max-height:85vh;overflow:auto;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text);padding:24px}
+.studio-rh-manager::backdrop{background:#0009}.studio-rh-manager button,.studio-rh-manager input,.studio-rh-manager select,.studio-rh-status button{background:var(--card);color:var(--text);border:1px solid var(--line);padding:9px;border-radius:8px;margin:5px}
+.studio-rh-library{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:15px}.studio-rh-library article{padding:16px;border:1px solid var(--line);border-radius:12px}.studio-rh-manager p,.studio-rh-status{font-size:12px;overflow-wrap:anywhere}

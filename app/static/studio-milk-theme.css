@@ -1,0 +1,28 @@
+
+/* All overrides are opt-in; original light and dark rules remain untouched. */
+html.studio-milk,html.studio-milk body,html.studio-milk #shell{color-scheme:light;--page:#f8fafa;--panel:#fcfdfd;--panel-solid:#fcfdfd;--card:#fcfdfd;--card-solid:#fcfdfd;--soft:#edf1f2;--soft-2:#e8edef;--line:#dce3e6;--line-2:#c1ccd2;--text:#454d52;--muted:#68767f;--faint:#91a2ad;--strong:#607989;--strong-text:#fff;--accent:#829dac;--grid:transparent;--shadow:#34445212;--shadow-strong:#34445224}
+html.studio-milk .board{background:#f8fafa!important}
+html.studio-milk .board:before{content:'';position:absolute;inset:0;pointer-events:none;background:url('/static/design-review/assets/linen-charcoal-v1.png') repeat;background-size:520px;filter:invert(1) grayscale(1);opacity:.16;mix-blend-mode:multiply}
+html.studio-milk #nodes .node{background:linear-gradient(145deg,#fff,#f2f5f6);border:1px solid #fff;border-radius:22px;box-shadow:inset 0 1px #fff,0 2px 3px #3444520b,0 16px 30px #34445222;color:#454d52}
+html.studio-milk #nodes .node.selected{border-color:#a6b4bd;outline-color:#a6b4bd;box-shadow:0 0 0 3px #a6b4bd12,inset 0 1px white,0 18px 32px #34445224}
+html.studio-milk #nodes textarea{background:linear-gradient(145deg,#edf1f2,#fafcfc);color:#454d52;border-color:#c7d0d555;box-shadow:inset 0 2px 5px #33445508}
+html.studio-milk #nodes .node-header{background:transparent;border-color:#dce3e655;color:#66727a}
+html.studio-milk #nodes .gen-settings,html.studio-milk #nodes .studio-image-footer{background:transparent;border-color:#dce3e655}
+html.studio-milk #nodes .gen-btn{background:linear-gradient(#edf2f5,#bccbd4);color:#536570;box-shadow:inset 0 1px white,0 3px 8px #3344551c}
+html.studio-milk .toolbar-fixed,html.studio-milk .create-menu,html.studio-milk .studio-image-settings-popup,html.studio-milk .studio-input-popover{background:#fcfdfdf5;color:#627580;border-color:#dce3e6;box-shadow:inset 0 1px white,0 10px 25px #33445518}
+html.studio-milk .tool-btn,html.studio-milk #nodes select{background:#f2f5f6;color:#64737d;border-color:#d4dfe5}
+html.studio-milk .link:not(.knife-trail){stroke:#a4b6c2;filter:drop-shadow(0 2px 2px #40556814)}
+html.studio-milk .link.link-active,html.studio-milk .link.temp{stroke:#6f8b9e}
+html.studio-milk #nodes .studio-magnetic-port::after{background:#f6f9fa;color:#8195a1;border-color:#aabcc7;box-shadow:0 2px 5px #3344551a}
+
+/* Actual canvas uses node-head, not node-header. Keep styling isolated. */
+html.studio-milk #nodes .node{background:linear-gradient(145deg,#fff 0%,#f3f6f7 100%)!important;border-radius:22px!important;border-color:#fff!important;box-shadow:inset 0 1px white,0 3px 6px #3444520c,0 18px 35px #34445222!important}
+html.studio-milk #nodes .node.selected{border-color:#a6b4bd!important;outline:1px solid #a6b4bd!important;outline-offset:2px;box-shadow:inset 0 1px white,0 5px 10px #34445210,0 22px 38px #34445228!important}
+html.studio-milk #nodes .node-head{background:linear-gradient(#ffffffa8,#f4f7f855)!important;border-bottom:1px solid #dce3e650!important;padding:13px 16px!important;color:#66727a!important;border-radius:21px 21px 0 0}
+html.studio-milk #nodes .node-title{color:#66727a!important;font-weight:500!important;letter-spacing:.2px}
+html.studio-milk #nodes .node-body{background:transparent!important;padding:14px 16px 20px!important}
+html.studio-milk #nodes textarea{border-radius:13px!important;background:linear-gradient(145deg,#edf1f2,#fafcfc)!important;border:1px solid #c7d0d555!important;box-shadow:inset 0 2px 5px #3344550b!important;color:#454d52!important}
+html.studio-milk #nodes .studio-image-footer{border-top:1px solid #dce3e655!important;padding-top:12px!important;padding-right:10px!important}
+html.studio-milk #nodes .studio-image-settings,html.studio-milk #nodes .studio-input-icon,html.studio-milk #nodes .gen-cascade-btn{background:linear-gradient(#fff,#e9edef)!important;border:1px solid #b5c0c744!important;color:#657078!important;box-shadow:inset 0 1px white,0 3px 7px #3344550c}
+html.studio-milk #nodes .studio-image-footer .gen-btn{background:linear-gradient(#edf2f5,#bccbd4)!important;color:#536570!important;box-shadow:inset 0 1px white,0 3px 8px #3344551c!important}
+html.studio-milk #nodes .node-resize-handle{opacity:.4}

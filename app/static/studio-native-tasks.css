@@ -1,0 +1,28 @@
+/* Native task receipts share the Studio palette; edit areas retain their layout. */
+.studio-native-task-list{display:flex;flex-direction:column;gap:8px;min-width:0;margin:10px 0 0;color:var(--dw-ink,var(--text));font-size:12px;line-height:1.5}
+.studio-native-task{min-width:0;padding:10px 12px;border:1px solid var(--dw-line-strong,var(--line));border-radius:10px;background:var(--dw-panel,var(--panel));overflow-wrap:anywhere}
+.studio-native-task>span{display:block;font-weight:600;color:var(--dw-ink,var(--text))}
+.studio-native-task>p{margin:6px 0 0;color:var(--dw-muted,var(--muted));white-space:pre-wrap;line-height:1.6}
+.studio-native-task-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.studio-native-task-actions button,.studio-native-result-dialog button{min-height:32px;padding:6px 10px;border:1px solid var(--dw-line-strong,var(--line));border-radius:8px;background:var(--dw-surface,var(--panel));color:var(--dw-ink,var(--text));font:inherit;font-size:12px;line-height:1.4;cursor:pointer}
+.studio-native-task-actions button:hover,.studio-native-result-dialog button:hover{background:var(--dw-hover,var(--soft));border-color:var(--dw-gold,var(--strong))}
+.studio-native-task-actions button:focus-visible,.studio-native-result-dialog :is(button,textarea):focus-visible{outline:2px solid var(--dw-gold,var(--strong));outline-offset:3px}
+.studio-native-task-actions button:disabled,.studio-native-result-dialog button:disabled{opacity:.6;cursor:wait}
+/* Smart nodes have a fixed world rectangle: receipts scroll rather than cover input. */
+.prompt-smart-node>.node-body>.studio-native-task-list,.prompt-node-card>.studio-native-task-list{flex:0 1 auto;min-height:60px;max-height:160px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;margin-top:0;padding:2px;scrollbar-color:var(--dw-line-strong,var(--line)) transparent}
+.studio-native-result-dialog{box-sizing:border-box;width:min(640px,calc(100vw - 48px));max-height:calc(100vh - 48px);overflow:auto;margin:auto;padding:24px;border:1px solid var(--dw-line-strong,var(--line));border-radius:16px;background:var(--dw-surface,var(--panel));color:var(--dw-ink,var(--text));box-shadow:0 20px 64px var(--dw-shadow,var(--shadow));font-size:13px;line-height:1.6}
+.studio-native-result-dialog::backdrop{background:var(--dw-scrim)}
+.studio-native-result-dialog h3{margin:0 0 10px;font-size:18px;line-height:1.4}
+.studio-native-result-dialog p{margin:0 0 16px;color:var(--dw-muted,var(--muted));overflow-wrap:anywhere}
+.studio-native-result-dialog textarea{display:block;box-sizing:border-box;width:100%;min-height:180px;max-height:50vh;padding:12px;resize:vertical;border:1px solid var(--dw-line-strong,var(--line));border-radius:10px;background:var(--dw-panel,var(--panel));color:var(--dw-ink,var(--text));font:inherit;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.studio-native-result-dialog>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:16px}
+.studio-native-task-list details{min-width:0}
+.studio-native-task-list summary,.studio-native-result-dialog summary{padding:7px 2px;color:var(--dw-muted,var(--muted));font-size:12px;cursor:pointer}
+.studio-native-task-list details .studio-native-task{margin-top:7px}
+.studio-native-task-list summary:focus-visible,.studio-native-result-dialog :is(summary,a):focus-visible{outline:2px solid var(--dw-gold,var(--strong));outline-offset:2px}
+.studio-native-result-dialog video{display:block;width:100%;max-height:45vh;object-fit:contain;border-radius:10px;background:var(--dw-canvas,var(--panel))}
+.studio-native-result-dialog>a{display:inline-block;margin:10px 0 14px;color:var(--dw-gold,var(--strong));overflow-wrap:anywhere;text-decoration:underline;text-underline-offset:3px}
+/* Media receipts use node-body; prompt receipts remain inside their edit card. */
+.image-node>.node-body:has(>.studio-native-task-list){flex-direction:column;gap:8px;align-items:stretch;justify-content:flex-start;max-height:100%;overflow:auto;overscroll-behavior:contain}
+.prompt-node-card:has(>.studio-native-task-list){overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.image-node>.node-body>.studio-native-task-list{flex-shrink:0;width:100%;box-sizing:border-box}

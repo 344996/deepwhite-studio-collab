@@ -1,0 +1,4 @@
+#quickToolbar [data-canvas-tool="edit"] { display:none !important; }
+.studio-capture-frame { margin:8px; padding:8px 14px; border:1px solid var(--line); border-radius:9px; background:var(--panel); color:var(--text); cursor:pointer; }
+.studio-capture-frame:disabled { opacity:.65; cursor:wait; }
+.studio-capture-frame[hidden] { display:none; }

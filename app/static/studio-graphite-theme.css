@@ -1,0 +1,23 @@
+@import url("/static/studio-workspace-theme.css");
+
+/* Fourth, independent theme. No default light/dark or milk selectors. */
+html.studio-graphite,html.studio-graphite body,html.studio-graphite #shell{color-scheme:dark;--page:var(--dw-canvas-background);--panel:var(--dw-canvas-panel);--panel-solid:var(--dw-canvas-panel);--card:var(--dw-canvas-panel);--card-solid:var(--dw-canvas-panel);--soft:var(--dw-tone-003);--soft-2:var(--dw-tone-004);--line:var(--dw-tone-005);--line-2:var(--dw-tone-006);--text:var(--dw-canvas-text);--muted:var(--dw-tone-008);--faint:var(--dw-tone-009);--strong:var(--dw-accent);--strong-text:var(--dw-tone-011);--accent:var(--dw-accent-secondary);--grid:var(--dw-tone-013);--shadow:var(--dw-tone-014);--shadow-strong:var(--dw-tone-015)}
+html.studio-graphite .board{background:radial-gradient(ellipse at 65% 0,var(--dw-tone-016),transparent 55%),var(--dw-canvas-background)!important}
+html.studio-graphite .board:before{content:'';position:absolute;inset:0;pointer-events:none;background:url('/static/design-review/assets/linen-charcoal-v1.png') repeat;background-size:520px;opacity:.12}
+html.studio-graphite #nodes .node{background:linear-gradient(145deg,var(--dw-tone-017),var(--dw-tone-018))!important;border:1px solid var(--dw-tone-005)!important;border-radius:22px!important;color:var(--dw-canvas-text);box-shadow:inset 0 1px var(--dw-tone-019),0 3px 5px var(--dw-tone-020),0 20px 32px var(--dw-tone-021)!important}
+html.studio-graphite #nodes .node.selected{border-color:var(--dw-tone-022)!important;outline:1px solid var(--dw-tone-022)!important;outline-offset:2px;box-shadow:inset 0 1px var(--dw-tone-019),0 3px 10px var(--dw-tone-020),0 22px 36px var(--dw-tone-015)!important}
+html.studio-graphite #nodes .node-head{background:linear-gradient(var(--dw-tone-023),transparent)!important;border-bottom:1px solid var(--dw-tone-024)!important;padding:13px 16px!important;border-radius:21px 21px 0 0}
+html.studio-graphite #nodes .node-title{color:var(--dw-tone-025)!important;font-weight:500!important;letter-spacing:.2px}
+html.studio-graphite #nodes .node-body{background:transparent!important;padding:14px 16px 20px!important}
+html.studio-graphite #nodes textarea{background:linear-gradient(145deg,var(--dw-tone-026),var(--dw-tone-027))!important;color:var(--dw-tone-028)!important;border:1px solid var(--dw-tone-029)!important;border-radius:13px!important;box-shadow:inset 0 2px 6px var(--dw-tone-030)!important}
+html.studio-graphite #nodes textarea::placeholder{color:var(--dw-tone-031)}
+html.studio-graphite #nodes .gen-settings,html.studio-graphite #nodes .studio-image-footer{background:transparent!important;border-color:var(--dw-tone-029)!important}
+html.studio-graphite #nodes .studio-image-footer{padding-top:12px!important;padding-right:10px!important}
+html.studio-graphite #nodes select,html.studio-graphite #nodes input{background:var(--dw-tone-032);color:var(--dw-tone-033);border-color:var(--dw-tone-005)}
+html.studio-graphite #nodes .studio-image-settings,html.studio-graphite #nodes .studio-input-icon,html.studio-graphite #nodes .gen-cascade-btn{background:linear-gradient(var(--dw-tone-034),var(--dw-tone-035))!important;color:var(--dw-tone-036)!important;border:1px solid var(--dw-tone-037)!important;box-shadow:inset 0 1px var(--dw-tone-024),0 3px 7px var(--dw-tone-030)}
+html.studio-graphite #nodes .gen-btn{background:linear-gradient(var(--dw-tone-038),var(--dw-tone-039))!important;color:var(--dw-tone-040)!important;box-shadow:inset 0 1px var(--dw-tone-041),0 4px 10px var(--dw-tone-020)!important}
+html.studio-graphite .toolbar-fixed,html.studio-graphite .create-menu,html.studio-graphite .studio-image-settings-popup,html.studio-graphite .studio-input-popover{background:var(--dw-tone-042);color:var(--dw-tone-033);border-color:var(--dw-tone-005);box-shadow:inset 0 1px var(--dw-tone-043),0 12px 25px var(--dw-tone-044)}
+html.studio-graphite .tool-btn{background:var(--dw-tone-045);color:var(--dw-tone-046);border-color:var(--dw-tone-047)}
+html.studio-graphite .link:not(.knife-trail){stroke:var(--dw-tone-048);filter:drop-shadow(0 2px 3px var(--dw-tone-014))}
+html.studio-graphite .link.link-active,html.studio-graphite .link.temp{stroke:var(--dw-tone-049)}
+html.studio-graphite #nodes .studio-magnetic-port::after{background:var(--dw-tone-050);color:var(--dw-tone-051);border-color:var(--dw-tone-052);box-shadow:0 3px 7px var(--dw-tone-020)}
