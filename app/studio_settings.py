@@ -39,11 +39,10 @@ def resolve_key(payload):
     explicit = validate_key(payload.api_key or '')
     if explicit:
         return explicit
-    saved = next((p for p in core.load_api_providers() if p['id'] == payload.provider_id), None)
-    if saved and core.provider_env_key_value(saved['id']):
-        if models_url(saved['base_url']) != models_url(payload.base_url):
-            raise HTTPException(400, 'API 地址已改变，请重新填写该地址的密钥后测试。')
-        return validate_key(core.provider_env_key_value(saved['id']))
+    key = core.provider_env_key_value(payload.provider_id)
+    if key:
+        core.assert_saved_provider_address(payload.provider_id, payload.base_url)
+        return validate_key(key)
     raise HTTPException(400, '请先填写 API Key；已保存的密钥可以留空使用。')
 
 
@@ -168,12 +167,12 @@ def install(app):
         async with save_lock:
             providers = core.load_api_providers()
             saved = next((p for p in providers if p['id'] == payload.id), None)
-            if saved and core.provider_env_key_value(saved['id']) and not payload.api_key and not payload.clear_key:
-                if models_url(saved['base_url']) != models_url(payload.base_url):
-                    raise HTTPException(400, 'API 地址已改变，请重新填写密钥，或勾选清除旧密钥。')
             # Reuse normalization, storage and live reload without rewriting other providers.
             merged = {**(saved or {}), **payload.model_dump(exclude_unset=True, exclude={'api_key'})}
             provider = core.normalize_provider(merged)
+            if provider['protocol'] != 'openai':
+                raise HTTPException(400, '此页用于 OpenAI 兼容平台；其他协议请使用原版高级设置。')
+            core.validate_provider_credential_update(provider, payload, providers)
             providers = [p for p in providers if p['id'] != provider['id']]
             if provider.get('primary'):
                 providers = [{**p, 'primary': False} for p in providers]

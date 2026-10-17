@@ -14,3 +14,4 @@ __pycache__/
 *.sqlite3
 *.bak
 *.backup
+/.test-runtime/

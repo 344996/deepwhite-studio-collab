@@ -15282,6 +15282,9 @@ function cloneNode(n, dx, dy){
     return copy;
 }
 function duplicateNodesForAltDrag(node, preserveConnections=false){
+    // The drag-layout listener intentionally skips Alt copies. Capture before
+    // adding any cloned nodes/edges so copy plus movement is one undo action.
+    pushUndo();
     const copy = cloneNode(node, 0, 0);
     const sourceIds = new Set([node.id]);
     const idMap = new Map([[node.id, copy.id]]);

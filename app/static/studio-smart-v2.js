@@ -191,6 +191,7 @@
   function sync(){empty.hidden=nodes.length>0;zoom.querySelector('span').textContent=Math.round(viewport.scale*100)+'%';if(search.open)renderSearch();}
   const nativeRender=render;render=function(...args){checkHistory();const result=nativeRender.apply(this,args);if(!historyChanging&&redoStack.length)checkHistory();sync();requestOverlayLayout();return result;};
   const nativeViewport=applyViewport;applyViewport=function(...args){if(!fittingView)fitDock=null;const result=nativeViewport.apply(this,args);syncOverlayScale();sync();requestOverlayLayout();return result;};
-  window.addEventListener('studio-save-state',e=>{if(e.detail?.canvasId!==canvas?.id)return;const data=e.detail;status.dataset.state=data.ok?'saved':data.code==='busy'?'saving':'error';status.textContent=data.ok?'已保存':data.code==='busy'?'保存进行中':'保存失败，请重试';});
+  window.addEventListener('studio-save-pending',e=>{if(e.detail?.canvasId!==canvas?.id)return;status.dataset.state='saving';status.textContent='修改待保存';});
+  window.addEventListener('studio-save-state',e=>{if(e.detail?.canvasId!==canvas?.id)return;const data=e.detail,pending=data.pending||data.code==='busy';status.dataset.state=pending?'saving':data.ok?'saved':'error';status.textContent=pending?'最新修改保存中':data.ok?'已保存':'保存失败，请重试';});
   window.StudioSmartV2={fit,sync};sync();syncOverlayScale();requestOverlayLayout();refreshIcons();
 })();

@@ -1,0 +1,30 @@
+{
+  "verified_on": "2026-10-17",
+  "baseline": "d59a0225f5a0329e5dee7e888b96cbab71b0621e",
+  "version": "0.10.2-studio.11",
+  "backend": {
+    "passed": true,
+    "tests": 279,
+    "failures": [],
+    "errors": [],
+    "skipped": 0
+  },
+  "interaction_groups": 17,
+  "save_groups": {
+    "controlled": 5,
+    "browser": 3
+  },
+  "existing_browser_groups": {
+    "canvas": 14,
+    "pointer": 31,
+    "save": 13,
+    "drafts": 38,
+    "history": 71
+  },
+  "verification_scope": "isolated local runtime and mock upstream, no paid generation, no real accounts",
+  "source_tests": [
+    "app/tests/run-phase1-backend.py",
+    "app/tests/check-phase1-interactions.cjs",
+    "app/tests/check-phase1-save.cjs"
+  ]
+}

@@ -1,3 +1,19 @@
+# 深白片场 DeepWhite Studio
+
+本仓库是 `344996/deepwhite-studio-collab` 的开发副本，来源于 [aslancootl/deepwhite-studio-collab](https://github.com/aslancootl/deepwhite-studio-collab)，原始导入提交为 `d59a0225f5a0329e5dee7e888b96cbab71b0621e`。原仓库保持不变。
+
+当前基线为 **0.10.2-studio.11**，已迁入第一批安全、保存和画布操作修复。后续按 2026-10-16 的《画布项目合作说明》开发。
+
+- [需求与进度](docs/requirements-2026-10.md)
+- [第一批可复查测试摘要](docs/phase1-verification.json)
+- [第一批修改说明](第一批修复说明.md)
+- [当前累计功能与缺口](app/docs/releases/0.10.2-studio.11-status.md)
+- [开发步骤](tasks/plan.md)
+
+这是源码仓库，测试数据、账号凭据、运行日志和本机 Python 不随源码上传。原许可证及第三方署名完整保留，使用范围见 [app/LICENSE](app/LICENSE)。
+
+以下保留原始交接背景，历史状态不代表当前交付状态。
+
 # 深白片场源码交接副本
 
 本目录是从 Git 当前跟踪源码生成的源码交接副本，不包含 Git 历史、运行数据、密钥和备份。它供技术评估、整理和修复使用。

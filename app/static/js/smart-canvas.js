@@ -1196,9 +1196,30 @@ function canvasListUrlForProject(projectId){
     const pid = rememberCanvasListProject(projectId);
     return `/static/canvas-list.html?project=${encodeURIComponent(pid)}`;
 }
-function backToCanvasList(){
-    savePromptDraftForCurrent();
-    window.location.href = canvasListUrlForProject(canvas?.project || sourceProjectId || 'default');
+let smartBackInProgress=false;
+async function backToCanvasList(){
+    if(smartBackInProgress)return false;
+    const origin=canvas,id=origin?.id;
+    if(!id||id!==canvasId){toast('画布尚未就绪，请稍后再返回列表。');return false;}
+    const projectId=origin.project||sourceProjectId||'default';
+    const button=document.querySelector('.smart-back');
+    smartBackInProgress=true;if(button)button.disabled=true;
+    try{
+        savePromptDraftForCurrent();
+        const revision=smartSaveRevisions.get(origin)||0;
+        const result=await saveCanvas();
+        if(canvas!==origin||canvasId!==id)return false;
+        if(!result?.ok){toast(result?.error||'保存尚未完成，编辑已保留，请重试后再返回列表。');return false;}
+        if(result.pending||(smartSaveRevisions.get(origin)||0)!==revision||saveTimer||canvasSyncInFlight||smartQueuedSave===origin){
+            toast('返回期间有新的修改，已留在当前画布；请等待保存完成后再次点击返回列表。');
+            return false;
+        }
+        window.location.href=canvasListUrlForProject(projectId);
+        return true;
+    }catch(error){
+        if(canvas===origin)toast(error.message||'保存失败，编辑已保留，请重试后再返回列表。');
+        return false;
+    }finally{smartBackInProgress=false;if(button?.isConnected)button.disabled=false;}
 }
 function promptPlainText(){
     return originalPromptTextFromParts(collectPromptParts());
@@ -5190,6 +5211,8 @@ function handleAssetLibraryUpdatedMessage(data={}){
 // 服务器广播 canvas_updated 时带回 client_id，自己发的就忽略，避免自我刷新。
 const smartClientId = `canvas_smart_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 let canvasSyncInFlight = false;
+let smartQueuedSave = null;
+const smartSaveRevisions = new WeakMap();
 let canvasSyncTimer = null;
 let canvasMetaPollTimer = null;
 let connectionLayerRaf = 0;
@@ -6066,7 +6089,11 @@ async function loadCanvas(){
     } catch(e) { toast(tr('smart.toastCanvasFail')); }
 }
 function scheduleSave(){
-    if(canvas?.id)studioSmartCaptureDraft();
+    if(canvas?.id){
+        smartSaveRevisions.set(canvas,(smartSaveRevisions.get(canvas)||0)+1);
+        studioSmartCaptureDraft();
+        window.dispatchEvent(new CustomEvent('studio-save-pending',{detail:{canvasId:canvas.id}}));
+    }
     clearTimeout(saveTimer);
     const origin=canvas;
     saveTimer=setTimeout(()=>{saveTimer=null;if(canvas===origin)saveCanvas();},450);
@@ -6078,10 +6105,14 @@ function studioCanvasSaveResult(result){
 }
 async function saveCanvas(){
     const origin=canvas,id=origin?.id;
-    const done=(ok,code,error='',saved)=>studioCanvasSaveResult({ok,canvasId:id||'',code,error,...(saved?{canvas:saved}:{})});
+    const done=(ok,code,error='',saved,pending=false)=>studioCanvasSaveResult({ok,canvasId:id||'',code,error,pending,...(saved?{canvas:saved}:{})});
     if(!id||!origin||id!==canvasId)return done(false,'unavailable','画布尚未就绪，未保存。');
-    if(canvasSyncInFlight)return done(false,'busy','正在保存，请稍后重试。');
+    if(canvasSyncInFlight){smartQueuedSave=origin;return done(false,'busy','正在保存，最新修改已排队。',undefined,true);}
     const current=()=>canvas===origin&&canvas.id===id&&canvasId===id;
+    clearTimeout(saveTimer);saveTimer=null;
+    if(smartQueuedSave===origin)smartQueuedSave=null;
+    const sentRevision=smartSaveRevisions.get(origin)||0;
+    let failed=false;
     canvasSyncInFlight=true;
     try{
         savePromptDraftForCurrent();
@@ -6121,11 +6152,22 @@ async function saveCanvas(){
         if(!data.canvas||data.canvas.id!==id)throw Error('服务器未确认画布保存，手写内容仍保留，请重试。');
         origin.updated_at=data.canvas.updated_at;
         window.StudioCanvasDrafts?.ack(draftToken,data.canvas);
-        return done(true,'saved','',data.canvas);
+        const pending=(smartSaveRevisions.get(origin)||0)!==sentRevision||smartQueuedSave===origin;
+        if(pending)smartQueuedSave=origin;
+        return done(true,'saved','',data.canvas,pending);
     }catch(e){
+        failed=true;
         if(current())window.StudioCanvasDrafts?.failed('服务器保存失败，编辑仍保留。',id);
         return done(false,current()?'failed':'target-changed',current()?(e.message||'保存失败，手写内容仍保留，请重试。'):'画布已切换，原保存未完成。');
-    }finally{canvasSyncInFlight=false;}
+    }finally{
+        canvasSyncInFlight=false;
+        const queued=smartQueuedSave;
+        smartQueuedSave=null;
+        if(queued&&canvas===queued&&canvasId===queued.id&&!(failed&&queued===origin)){
+            clearTimeout(saveTimer);
+            saveTimer=setTimeout(()=>{saveTimer=null;if(canvas===queued&&canvasId===queued.id)saveCanvas();},0);
+        }
+    }
 }
 
 function imageMetaFromNode(node){
@@ -18322,16 +18364,34 @@ window.onmouseup = e => {
     }
 };
 shell.addEventListener('wheel', e => {
+    if(!canvas || isEditableTarget(e.target) || e.target.closest('audio,video,dialog,[role="dialog"],[popover]:popover-open')) return;
     if(e.target.closest('.composer,.smart-back,.image-edit-modal,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.workflow-transfer-panel,.log-modal,.shortcut-modal,.prompt-node-segments,.prompt-node-text,.prompt-node-llm,.smart-group-list,.minimax-library-list,.minimax-ref-track,[data-thumb-scroll]')) return;
+    for(let element=e.target;element && element!==shell;element=element.parentElement){
+        const style=getComputedStyle(element);
+        if(/auto|scroll/.test(style.overflowY) && element.scrollHeight>element.clientHeight+1
+            || /auto|scroll/.test(style.overflowX) && element.scrollWidth>element.clientWidth+1) return;
+    }
+    // Match classic canvas without guessing whether the device is a touchpad:
+    // vertical wheel zooms; Shift/horizontal input pans; Ctrl/Meta always zooms.
+    const unit=e.deltaMode===1?16:e.deltaMode===2?Math.max(1,shell.clientHeight):1;
+    const dx=e.deltaX*unit,dy=e.deltaY*unit;
+    if(!Number.isFinite(dx) || !Number.isFinite(dy) || (!dx && !dy)) return;
     e.preventDefault();
-    const rect = shell.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-    const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
-    const factor = Math.exp(-e.deltaY * 0.001);
-    viewport.scale = safeScale(viewport.scale * factor);
-    viewport.x = sx - before.x * viewport.scale;
-    viewport.y = sy - before.y * viewport.scale;
+    if(!e.ctrlKey && !e.metaKey && (e.shiftKey || dx)){
+        viewport.x-=dx||(e.shiftKey?dy:0);
+        viewport.y-=e.shiftKey?0:dy;
+    }else{
+        if(!dy) return;
+        const rect = shell.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+        const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
+        const factor = Math.exp(Math.max(-4,Math.min(4,-dy*.002)));
+        // Retain the same usable range as this canvas's zoom buttons.
+        viewport.scale = Math.max(.06,Math.min(2,safeScale(viewport.scale)*factor));
+        viewport.x = sx - before.x * viewport.scale;
+        viewport.y = sy - before.y * viewport.scale;
+    }
     applyViewport();
     scheduleSave();
 }, {passive:false});

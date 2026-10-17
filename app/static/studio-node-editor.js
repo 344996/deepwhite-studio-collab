@@ -91,8 +91,16 @@
     for(const event of ['pointerdown','mousedown','click','dblclick','keydown'])list.addEventListener(event,e=>e.stopPropagation());
     list.addEventListener('wheel',event=>event.stopPropagation(),{passive:true});
     upstream.append(heading,list);
-    input.addEventListener('focus',()=>pushUndo());
-    input.addEventListener('input',()=>{node.studioPrompt=input.value;scheduleSave();renderComposerPreview(node,wrap);});
+    // Merely visiting an editor must not add an empty undo step or discard redo.
+    // Save the pre-edit value once, on the first actual change in this session.
+    let recordedEdit=false;
+    input.addEventListener('blur',()=>{recordedEdit=false;});
+    input.addEventListener('input',()=>{
+      if(input.value===node.studioPrompt)return;
+      if(!recordedEdit){pushUndo();recordedEdit=true;}
+      node.studioPrompt=input.value;scheduleSave();renderComposerPreview(node,wrap);
+    });
+    input.addEventListener('wheel',event=>event.stopPropagation(),{passive:true});
     for(const event of ['pointerdown','mousedown','click','dblclick','keydown'])input.addEventListener(event,e=>e.stopPropagation());
     label.append(title,input,hint,upstream);wrap.prepend(label);
     renderComposerPreview(node,wrap);

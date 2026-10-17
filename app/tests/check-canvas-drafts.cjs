@@ -13,7 +13,7 @@ async function main(){
  let server,browser,log='',profile={},late=null,readLate=null;const pageErrors=[],generated=[],external=[],canvasPosts=[];
  const api=async(route,method='GET',body)=>{const r=await fetch(base+route,{method,headers:{'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});assert(r.ok,await r.clone().text());return r.json();};
  try{
-  server=spawn(path.join(root,'python/python.exe'),[path.join(root,'tests/catalog-browser-server.py')],{cwd:root,windowsHide:true,env:{...process.env,DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,DEEPWHITE_STUDIO_PORT:String(port),PYTHONUTF8:'1'}});server.stdout.on('data',d=>log+=d);server.stderr.on('data',d=>log+=d);
+  server=spawn(process.env.PYTHON_EXECUTABLE||path.join(root,'python/python.exe'),['-B',path.join(root,'tests/catalog-browser-server.py')],{cwd:root,windowsHide:true,env:{...process.env,DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,DEEPWHITE_STUDIO_PORT:String(port),PYTHONUTF8:'1'}});server.stdout.on('data',d=>log+=d);server.stderr.on('data',d=>log+=d);
   let ready=false;for(let i=0;i<120;i++){try{await api('/api/studio/health');ready=true;break;}catch{await sleep(200);}}assert(ready,log);
   await api('/api/studio/settings/sync-models','POST',{id:'offline',name:'Offline draft fixture',base_url:'https://api.deepwhiteai.com/v1',api_key:'mock-drafts-only',enabled:true,primary:true});
   browser=await chromium.launch({headless:true,executablePath});

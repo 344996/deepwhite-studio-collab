@@ -278,7 +278,7 @@
   }
   function help(){
     const d=el('dialog','v2-help-dialog');d.setAttribute('aria-label','画布快捷键');const head=el('header'),title=el('strong','','更顺手地创作');head.append(title,button('关闭快捷键','x',()=>d.close()));d.append(head);
-    const rows=[['空白处拖动','框选节点'],['Shift + 框选','追加选择'],['空格 / 鼠标中键 + 拖动','平移画布'],['鼠标滚轮','以指针为中心缩放'],['V / H','选择 / 移动工具'],['双击空白处','在当前位置新建节点'],['Ctrl + K','查找节点'],['F / Shift + 1','定位选中 / 适应全部'],['Ctrl + D','复制选中节点'],['Ctrl + G / Ctrl + Shift + G','创作分组 / 解组'],['Ctrl + Z / Ctrl + Shift + Z','撤销 / 重做'],['按住 X 拖动','断开经过的连线']];
+    const rows=[['空白处拖动','框选节点'],['Shift + 框选','追加选择'],['空格 / 鼠标中键 + 拖动','平移画布'],['纵向滚轮 / Ctrl 或 ⌘ + 滚轮 / 捏合','以指针为中心缩放'],['Shift + 纵向滚轮','水平平移'],['含横向位移的触控板滑动','按滑动方向平移'],['V / H','选择 / 移动工具'],['双击空白处','在当前位置新建节点'],['Ctrl + K','查找节点'],['F / Shift + 1','定位选中 / 适应全部'],['Ctrl + D','复制选中节点'],['Ctrl + G / Ctrl + Shift + G','创作分组 / 解组'],['Ctrl + Z / Ctrl + Shift + Z','撤销 / 重做'],['按住 X 拖动','断开经过的连线']];
     const list=el('dl');for(const [key,label]of rows)list.append(el('dt','',key),el('dd','',label));d.append(list,el('p','v2-help-note','输入文字时保留编辑快捷键。选择节点和连线不会提交生成。'));escapeCloses(d);d.onclose=()=>d.remove();document.body.append(d);d.showModal();
   }
   function initialize(){
@@ -352,10 +352,32 @@
   for(const type of ['pointerdown','mousedown'])window.addEventListener(type,e=>{
     if(board.contains(e.target)||document.getElementById('minimap')?.contains(e.target))cancelAnimation();
   },true);
+  const scrollableControl=target=>{
+    if(editable(target)||target?.closest?.('audio,video'))return true;
+    for(let element=target?.nodeType===1?target:target?.parentElement;element&&element!==board;element=element.parentElement){
+      const style=getComputedStyle(element);
+      if(/auto|scroll/.test(style.overflowY)&&element.scrollHeight>element.clientHeight+1
+        ||/auto|scroll/.test(style.overflowX)&&element.scrollWidth>element.clientWidth+1)return true;
+    }
+    return false;
+  };
   board.onwheel=e=>{
-    if(!canvas)return;e.preventDefault();cancelAnimation();const point=screenToWorld(e.clientX,e.clientY),rect=board.getBoundingClientRect();
-    viewport.scale=Math.max(.06,Math.min(2.5,viewport.scale*(e.deltaY>0?.92:1.08)));
-    viewport.x=e.clientX-rect.left-point.x*viewport.scale;viewport.y=e.clientY-rect.top-point.y*viewport.scale;
+    if(!canvas||activeDialog()||scrollableControl(e.target))return;
+    // WheelEvent does not reliably identify the physical input device. Keep
+    // vertical-wheel zoom compatible and use explicit modifiers/axes for pan.
+    const unit=e.deltaMode===1?16:e.deltaMode===2?Math.max(1,board.clientHeight):1;
+    const dx=e.deltaX*unit,dy=e.deltaY*unit;
+    if(!Number.isFinite(dx)||!Number.isFinite(dy)||(!dx&&!dy))return;
+    e.preventDefault();cancelAnimation();
+    if(!e.ctrlKey&&!e.metaKey&&(e.shiftKey||dx)){
+      viewport.x-=dx||(e.shiftKey?dy:0);viewport.y-=e.shiftKey?0:dy;
+    }else{
+      if(!dy)return;
+      const point=screenToWorld(e.clientX,e.clientY),rect=board.getBoundingClientRect();
+      const factor=Math.exp(Math.max(-4,Math.min(4,-dy*.002)));
+      viewport.scale=Math.max(.06,Math.min(2.5,viewport.scale*factor));
+      viewport.x=e.clientX-rect.left-point.x*viewport.scale;viewport.y=e.clientY-rect.top-point.y*viewport.scale;
+    }
     applyViewport();renderSelectionHub();scheduleViewportSave();
   };
 

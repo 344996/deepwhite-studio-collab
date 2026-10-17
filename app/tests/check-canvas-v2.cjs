@@ -17,7 +17,7 @@ async function idleSave(id){const expected=(await snapshot()).nodes;const fields
 async function main(){
  const socket=net.createServer();await new Promise(r=>socket.listen(0,'127.0.0.1',r));const port=socket.address().port;await new Promise(r=>socket.close(r));base='http://127.0.0.1:'+port;
  try{
-  child=spawn(path.join(root,'python/python.exe'),[path.join(root,'tests/catalog-browser-server.py')],{cwd:root,windowsHide:true,env:{...process.env,DEEPWHITE_STUDIO_PORT:String(port),DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,PYTHONUTF8:'1'}});child.stdout.on('data',d=>log+=d);child.stderr.on('data',d=>log+=d);
+  child=spawn(process.env.PYTHON_EXECUTABLE||path.join(root,'python/python.exe'),['-B',path.join(root,'tests/catalog-browser-server.py')],{cwd:root,windowsHide:true,env:{...process.env,DEEPWHITE_STUDIO_PORT:String(port),DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,PYTHONUTF8:'1'}});child.stdout.on('data',d=>log+=d);child.stderr.on('data',d=>log+=d);
   let ready=false;for(let i=0;i<100;i++){try{await api('/api/studio/health');ready=true;break;}catch{await delay(200);}}assert(ready,log);
   await api('/api/studio/settings/sync-models','POST',{id:'deepwhite',name:'V2 offline fixture',base_url:'https://api.deepwhiteai.com/v1',api_key:'offline-v2-test',enabled:true,primary:true});
   const empty=(await api('/api/canvases','POST',{title:'V2 空白项目',kind:'classic'})).canvas;

@@ -75,6 +75,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def local_connection_error(connection):
+    """Apply the same local boundary to HTTP and WebSocket handshakes."""
+    if connection.url.hostname not in ("127.0.0.1", "localhost", "testserver"):
+        return "请通过本机地址打开 DeepWhite Studio。"
+    origin = connection.headers.get("origin")
+    expected = str(connection.base_url).rstrip("/")
+    if expected.startswith("ws://"):
+        expected = "http://" + expected[5:]
+    elif expected.startswith("wss://"):
+        expected = "https://" + expected[6:]
+    # Native local clients may omit Origin; browser WebSockets always send it.
+    if origin and origin != expected:
+        return "请求来源不匹配。"
+    return ""
+
+
 # --- WebSocket 状态管理器 ---
 class ConnectionManager:
     def __init__(self):
@@ -200,6 +217,9 @@ async def startup_event():
 
 @app.websocket("/ws/stats")
 async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
+    if local_connection_error(websocket):
+        await websocket.close(code=1008)
+        return
     await manager.connect(websocket, client_id)
     try:
         while True:
@@ -3608,21 +3628,105 @@ def normalize_canvas_kind(kind="classic"):
 PROJECTS_PATH = os.path.join(DATA_DIR, "projects.json")
 DEFAULT_PROJECT_ID = "default"
 
+def _project_index_validate(data):
+    projects = data.get("projects") if isinstance(data, dict) else data
+    if not isinstance(projects, list):
+        raise ValueError("项目列表格式无效")
+    ids = set()
+    for project in projects:
+        if not isinstance(project, dict) or not isinstance(project.get("id"), str) or not project["id"]:
+            raise ValueError("项目编号缺失或格式无效")
+        if project["id"] in ids:
+            raise ValueError("项目编号重复")
+        ids.add(project["id"])
+    return projects
+
+
+def _project_index_read(path):
+    with open(path, 'rb') as stream:
+        raw = stream.read()
+    return _project_index_validate(json.loads(raw.decode('utf-8-sig'))), raw
+
+
+def _project_index_error():
+    return HTTPException(status_code=503, headers={'X-Project-Index-Recovery': 'required'}, detail=(
+        "项目索引无法读取，已停止写入以保护原数据。请先备份项目数据；"
+        "如需恢复上一版有效索引，可向本机服务发送 POST /api/projects/recovery/restore。"
+        f"备份文件：{PROJECTS_PATH}.bak；恢复会保留损坏文件，未包含的最新项目需核对。"))
+
+
+def _atomic_write_bytes(path, raw):
+    """Replace one local file only after its full contents reach a flushed temp file."""
+    directory = os.path.dirname(os.path.abspath(path))
+    os.makedirs(directory, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=os.path.basename(path) + '.', suffix='.tmp', dir=directory)
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def load_projects():
     try:
-        with open(PROJECTS_PATH, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        projects = data.get("projects") if isinstance(data, dict) else data
-        if isinstance(projects, list):
-            return [p for p in projects if isinstance(p, dict) and p.get("id")]
-    except Exception:
-        pass
-    return []
+        return _project_index_read(PROJECTS_PATH)[0]
+    except FileNotFoundError:
+        if not os.path.exists(PROJECTS_PATH + '.bak'):
+            return []
+        raise _project_index_error() from None
+    except (OSError, ValueError, UnicodeError):
+        raise _project_index_error() from None
+
 
 def save_projects(projects):
+    try:
+        _project_index_validate(projects)
+        raw = json.dumps({"projects": projects}, ensure_ascii=False, indent=2, allow_nan=False).encode('utf-8')
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise HTTPException(status_code=400, detail="项目列表无效，未修改原索引。") from exc
     with CANVAS_LOCK:
-        with open(PROJECTS_PATH, 'w', encoding='utf-8') as f:
-            json.dump({"projects": projects}, f, ensure_ascii=False, indent=2)
+        try:
+            # Never replace a corrupt/missing existing index with an empty default.
+            load_projects()
+            previous = _project_index_read(PROJECTS_PATH)[1] if os.path.exists(PROJECTS_PATH) else raw
+            _atomic_write_bytes(PROJECTS_PATH + '.bak', previous)
+            _atomic_write_bytes(PROJECTS_PATH, raw)
+        except OSError as exc:
+            raise HTTPException(status_code=507, detail="项目索引保存失败，原索引和有效备份已保留，请检查磁盘空间与权限。") from exc
+
+
+def restore_projects_backup():
+    with CANVAS_LOCK:
+        try:
+            _project_index_read(PROJECTS_PATH)
+        except (OSError, ValueError, UnicodeError):
+            pass
+        else:
+            raise HTTPException(status_code=409, detail="当前项目索引可正常读取，未覆盖为旧备份。")
+        try:
+            projects, raw = _project_index_read(PROJECTS_PATH + '.bak')
+        except (OSError, ValueError, UnicodeError):
+            raise HTTPException(status_code=503, detail="没有可读取的有效项目索引备份，原文件未修改，请从其他备份恢复。") from None
+        preserved = ''
+        try:
+            if os.path.exists(PROJECTS_PATH):
+                preserved = PROJECTS_PATH + '.corrupt-' + uuid.uuid4().hex
+                with open(PROJECTS_PATH, 'rb') as stream:
+                    _atomic_write_bytes(preserved, stream.read())
+            _atomic_write_bytes(PROJECTS_PATH, raw)
+        except OSError as exc:
+            raise HTTPException(status_code=507, detail="恢复项目索引失败，原文件和备份仍保留，请检查磁盘空间与权限。") from exc
+        return {"ok": True, "projects": projects, "preserved_path": preserved,
+                "message": "已恢复上一版有效项目索引；请核对最近新增或修改的项目，画布和媒体文件未改动。"}
+
+
+@app.post('/api/projects/recovery/restore')
+def recover_project_index():
+    return restore_projects_backup()
 
 def project_record(p):
     return {
@@ -13277,17 +13381,87 @@ async def ai_models():
 async def api_providers():
     return {"providers": public_api_providers()}
 
+
+def provider_credential_address(base_url, protocol="openai"):
+    """Canonical model endpoint used only to bind saved credentials to an address."""
+    base = str(base_url or "").strip().rstrip("/")
+    try:
+        parts = urllib.parse.urlsplit(upstream_models_url(base, protocol))
+        if (parts.scheme not in ("https", "http") or not parts.hostname
+                or parts.username or parts.password or parts.query or parts.fragment):
+            raise ValueError("invalid API address")
+        port = parts.port if parts.port is not None else (443 if parts.scheme == "https" else 80)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="API 地址格式不正确，请填写完整的 API 基础地址。")
+    return parts.scheme, parts.hostname.lower(), port, parts.path
+
+
+def assert_saved_provider_address(provider_id, base_url, providers=None):
+    """Never send a stored (including orphaned) credential to an unbound address."""
+    records = load_api_providers() if providers is None else providers
+    saved = next((p for p in records if p["id"] == provider_id), None)
+    if saved:
+        previous = str(saved.get("base_url") or "").strip().rstrip("/")
+        requested = str(base_url or "").strip().rstrip("/")
+        if not previous and not requested:
+            return saved
+        protocol = saved.get("protocol") or "openai"
+        if provider_credential_address(previous, protocol) == provider_credential_address(requested, protocol):
+            return saved
+    raise HTTPException(status_code=400, detail="API 地址已改变或未绑定，请重新填写该地址的密钥，或清除旧密钥。")
+
+
+def provider_credential_origins(provider):
+    base_url = provider.get("base_url") or ""
+    origins = {provider_credential_address(base_url)[:3]} if base_url else set()
+    for field in ("image_generation_endpoint", "image_edit_endpoint"):
+        endpoint = str(provider.get(field) or "").strip()
+        if endpoint.lower().startswith(("https://", "http://")):
+            # Full endpoints may legitimately carry API-version query parameters.
+            # Only their origin binds credentials; base URLs keep stricter rules.
+            try:
+                parts = urllib.parse.urlsplit(endpoint)
+                if (parts.scheme not in ("https", "http") or not parts.hostname
+                        or parts.username is not None or parts.password is not None):
+                    raise ValueError("invalid custom endpoint")
+                port = parts.port if parts.port is not None else (443 if parts.scheme == "https" else 80)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="自定义接口地址格式不正确，不能包含用户名或密码。")
+            origins.add((parts.scheme, parts.hostname.lower(), port))
+    return origins
+
+
+def validate_provider_credential_update(provider, payload, providers=None):
+    """A replacement for one key must not silently move the other stored keys."""
+    provider_id = provider["id"]
+    credentials = [(provider_env_key_value(provider_id), "api_key", "clear_key")]
+    if provider_id == "runninghub":
+        credentials.append((runninghub_wallet_key_value(), "wallet_api_key", "clear_wallet_key"))
+    if provider_id == "volcengine":
+        credentials.extend([
+            (volcengine_access_key_value(), "volcengine_access_key_id", "clear_volcengine_access_key_id"),
+            (volcengine_secret_key_value(), "volcengine_secret_access_key", "clear_volcengine_secret_access_key"),
+        ])
+    for saved_key, key_field, clear_field in credentials:
+        replacement = str(getattr(payload, key_field, "") or "").strip()
+        if saved_key and not replacement and not getattr(payload, clear_field, False):
+            saved = assert_saved_provider_address(provider_id, provider.get("base_url"), providers)
+            if not provider_credential_origins(provider) <= provider_credential_origins(saved):
+                raise HTTPException(status_code=400, detail="自定义接口地址已改变，请重新填写密钥，或清除旧密钥。")
+
+
 @app.put("/api/providers")
 async def save_providers(payload: List[ApiProviderPayload]):
     providers = []
     env_updates = {}
+    saved_providers = load_api_providers()
     # 收集每个 item 的 primary 字段
     raw_primary_flags = [bool(getattr(item, "primary", False)) for item in payload]
     for item in payload:
-        provider = normalize_provider(item.dict(exclude={"api_key"}))
+        provider = normalize_provider(item.model_dump(exclude={"api_key"}))
+        validate_provider_credential_update(provider, item, saved_providers)
         if provider["id"] == "runninghub":
             provider = preserve_runninghub_hidden_overrides(provider)
-            prune_runninghub_workflow_store_for_provider(provider)
         if any(existing["id"] == provider["id"] for existing in providers):
             raise HTTPException(status_code=400, detail=f"API 平台 ID 重复：{provider['id']}")
         providers.append(provider)
@@ -13332,6 +13506,9 @@ async def save_providers(payload: List[ApiProviderPayload]):
         winner = primary_indices[-1]
         for i, p in enumerate(providers):
             p["primary"] = (i == winner)
+    for provider in providers:
+        if provider["id"] == "runninghub":
+            prune_runninghub_workflow_store_for_provider(provider)
     save_api_providers(providers)
     runninghub_provider = next((item for item in providers if item.get("id") == "runninghub"), None)
     if runninghub_provider:
@@ -13389,14 +13566,24 @@ def api_key_from_payload(payload, protocol: str = ""):
         return explicit
     if provider_id:
         if provider_id == "runninghub":
-            value = os.getenv(runninghub_wallet_key_env(), "")
+            value = runninghub_wallet_key_value()
             if value:
+                assert_saved_provider_address(provider_id, payload.base_url or RUNNINGHUB_DEFAULT_BASE_URL)
                 return value
         value = provider_env_key_value(provider_id)
         if value:
+            assert_saved_provider_address(provider_id, payload.base_url or (RUNNINGHUB_DEFAULT_BASE_URL if provider_id == "runninghub" else ""))
             return value
+    if protocol == "runninghub":
+        value = runninghub_wallet_key_value() or provider_env_key_value("runninghub")
+        if value:
+            assert_saved_provider_address("runninghub", payload.base_url or RUNNINGHUB_DEFAULT_BASE_URL)
+        return value
     if protocol == "volcengine":
-        return volcengine_provider_api_key("")
+        value = volcengine_provider_api_key("")
+        if value:
+            assert_saved_provider_address("volcengine", payload.base_url)
+        return value
     return ""
 
 def upstream_models_url(base_url: str, protocol: str):
@@ -13623,7 +13810,8 @@ async def test_provider_connection(payload: TestConnectionPayload):
             "raw": status.get("raw"),
         }
     if protocol == "runninghub":
-        provider = {"id": "runninghub", "name": "RunningHub", "base_url": (payload.base_url or RUNNINGHUB_DEFAULT_BASE_URL).strip().rstrip("/"), "protocol": "runninghub", "api_key": api_key_from_payload(payload, protocol)}
+        probe_key = api_key_from_payload(payload, protocol)
+        provider = {"id": "runninghub", "name": "RunningHub", "base_url": (payload.base_url or RUNNINGHUB_DEFAULT_BASE_URL).strip().rstrip("/"), "protocol": "runninghub", "api_key": probe_key, "wallet_api_key": probe_key}
         payload_models = await runninghub_models_payload(provider)
         return {
             "ok": True,
@@ -13890,7 +14078,7 @@ async def fetch_models_from_upstream(base_url: str, api_key: str, protocol: str 
             "all": [*JIMENG_DEFAULT_IMAGE_MODELS, *JIMENG_DEFAULT_VIDEO_MODELS],
         }
     if protocol == "runninghub":
-        provider = {"id": "runninghub", "name": "RunningHub", "base_url": base_url or RUNNINGHUB_DEFAULT_BASE_URL, "protocol": "runninghub", "api_key": api_key}
+        provider = {"id": "runninghub", "name": "RunningHub", "base_url": base_url or RUNNINGHUB_DEFAULT_BASE_URL, "protocol": "runninghub", "api_key": api_key, "wallet_api_key": api_key}
         return await runninghub_models_payload(provider)
     base_url = (base_url or "").strip().rstrip("/")
     if not base_url:
@@ -14013,7 +14201,7 @@ async def fetch_upstream_models(provider_id: str):
         return await fetch_models_from_upstream("", "", "codex", provider.get("image_request_mode") or "openai")
     if is_gemini_cli_provider(provider):
         return await fetch_models_from_upstream("", "", "gemini-cli", provider.get("image_request_mode") or "openai")
-    api_key = os.getenv(runninghub_wallet_key_env(), "") if provider["id"] == "runninghub" else ""
+    api_key = runninghub_wallet_key_value() if provider["id"] == "runninghub" else ""
     if not api_key:
         api_key = provider_env_key_value(provider["id"])
     if not api_key:
@@ -16217,7 +16405,6 @@ async def delete_project(project_id: str):
     if not any(p.get("id") == project_id for p in projects):
         raise HTTPException(status_code=404, detail="项目不存在")
     projects = [p for p in projects if p.get("id") != project_id]
-    save_projects(projects)
     # 把该项目下的画布迁回默认项目
     moved = 0
     with CANVAS_LOCK:
@@ -16232,9 +16419,14 @@ async def delete_project(project_id: str):
                 continue
             if str(data.get("project") or "") == project_id:
                 data["project"] = DEFAULT_PROJECT_ID
-                with open(path, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
+                try:
+                    _atomic_write_bytes(path, json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8'))
+                except OSError as exc:
+                    raise HTTPException(status_code=507, detail="画布归属迁移保存失败，原画布仍保留，项目尚未删除；请检查磁盘空间与权限后重试。") from exc
                 moved += 1
+    # Keep the project discoverable if any canvas failed to migrate. Completed
+    # migrations stay intact, so a retry only moves the remaining canvases.
+    save_projects(projects)
     return {"ok": True, "moved": moved}
 
 @app.get("/api/canvases/trash")
@@ -16278,8 +16470,10 @@ async def update_canvas_meta(canvas_id: str, payload: CanvasMetaUpdate):
     if payload.board_y is not None:
         canvas["board_y"] = float(payload.board_y)
     with CANVAS_LOCK:
-        with open(canvas_path(canvas["id"]), 'w', encoding='utf-8') as f:
-            json.dump(canvas, f, ensure_ascii=False, indent=2)
+        try:
+            _atomic_write_bytes(canvas_path(canvas["id"]), json.dumps(canvas, ensure_ascii=False, indent=2).encode('utf-8'))
+        except OSError as exc:
+            raise HTTPException(status_code=507, detail="画布信息保存失败，原画布仍保留，请检查磁盘空间与权限后重试。") from exc
     return {"canvas": canvas_record(canvas)}
 
 @app.get("/api/canvases/{canvas_id}")

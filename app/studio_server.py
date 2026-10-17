@@ -66,11 +66,9 @@ VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 
 @app.middleware('http')
 async def studio_boundary(request: Request, call_next):
-    if request.url.hostname not in ('127.0.0.1', 'localhost', 'testserver'):
-        return JSONResponse({'detail': '请通过本机地址打开 DeepWhite Studio。'}, status_code=403)
-    origin = request.headers.get('origin')
-    if origin and origin != str(request.base_url).rstrip('/'):
-        return JSONResponse({'detail': '请求来源不匹配。'}, status_code=403)
+    boundary_error = core.local_connection_error(request)
+    if boundary_error:
+        return JSONResponse({'detail': boundary_error}, status_code=403)
     # An upstream in-place updater would overwrite this independent product.
     if request.url.path in ('/api/update-from-github', '/api/update-rollback'):
         return JSONResponse({'detail': 'DeepWhite Studio 使用独立版本更新。'}, status_code=409)

@@ -176,13 +176,41 @@ function onBoardWheel(e){
 function currentProject(){ return projects.find(p => p.id === currentProjectId) || projects[0] || null; }
 function canvasesInProject(pid){ return canvases.filter(c => (c.project || 'default') === pid); }
 
+function showProjectIndexError(detail){
+    let notice=document.getElementById('projectIndexError');
+    if(notice)return;
+    notice=document.createElement('div');notice.id='projectIndexError';notice.setAttribute('role','alert');
+    notice.style.cssText='margin:8px;padding:12px;border:1px solid #bd914e;border-radius:10px;overflow-wrap:anywhere;font-size:13px';
+    const text=document.createElement('p');
+    text.textContent=L('项目目录无法读取，已停止写入以保护原数据。可以恢复上一版有效索引，恢复后请核对最近的项目。','The project index cannot be read. Writes are stopped to protect your data. You can restore the previous valid index, then review recent projects.');
+    text.title=typeof detail==='string'?detail:'';
+    const restore=document.createElement('button');restore.type='button';restore.textContent=L('恢复上一版索引','Restore previous index');
+    restore.onclick=async()=>{
+        if(!confirm(L('恢复上一版索引可能不包含最近新增或修改的项目。损坏文件将保留，画布和素材不会改动。确定恢复？','The previous index may not include your latest project changes. The damaged file will be retained; canvases and media are unchanged. Restore?')))return;
+        restore.disabled=true;
+        try{
+            const response=await fetch('/api/projects/recovery/restore',{method:'POST'});
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok)throw Error(typeof data.detail==='string'?data.detail:L('索引恢复失败，原文件仍保留。','Index recovery failed; the original file is retained.'));
+            notice.remove();await loadAll();setStatus(L('已恢复上一版索引，请核对最近项目。','Previous index restored. Please review recent projects.'));
+        }catch(error){text.textContent=error.message;restore.disabled=false;}
+    };
+    notice.append(text,restore);projectListEl.before(notice);
+}
+
 async function loadAll(){
     try {
         const [pRes, cRes] = await Promise.all([
             fetch('/api/projects'),
             fetch('/api/canvases')
         ]);
-        const pData = pRes.ok ? await pRes.json() : { projects: [] };
+        const pData = await pRes.json().catch(()=>({}));
+        if(!pRes.ok){
+            if(pRes.headers.get('X-Project-Index-Recovery')==='required')showProjectIndexError(pData.detail);
+            setStatus(typeof pData.detail==='string'?pData.detail:L('项目加载失败，当前列表已保留。','Project loading failed; the current list is retained.'));
+            return;
+        }
+        document.getElementById('projectIndexError')?.remove();
         const cData = cRes.ok ? await cRes.json() : { canvases: [] };
         projects = (pData.projects || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
         if(!projects.length) projects = [{ id: 'default', name: L('默认项目','Default'), order: 0, canvas_count: 0 }];

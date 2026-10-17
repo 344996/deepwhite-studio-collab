@@ -13,7 +13,7 @@ import sqlite3
 import sys
 import tempfile
 import uuid
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -43,7 +43,8 @@ def root():
 
 def database():
     path = root() / "index.sqlite3"
-    with sqlite3.connect(path, timeout=30) as db:
+    # SQLite's transaction context commits/rolls back but does not close the file.
+    with closing(sqlite3.connect(path, timeout=30)) as db, db:
         db.row_factory = sqlite3.Row
         db.execute("""CREATE TABLE IF NOT EXISTS versions (
             version_id TEXT PRIMARY KEY, asset_id TEXT NOT NULL, project_id TEXT NOT NULL,
