@@ -1,8 +1,8 @@
-const { chromium } = require('data/local-path');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 (async () => {
- const browser = await chromium.launch({headless:true,executablePath:'data/local-path'});
+ const browser = await chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE ? {executablePath:process.env.CHROMIUM_EXECUTABLE} : {})});
  try {
   const page=await browser.newPage(),errors=[];let registration=null,verificationRequested=false;
   page.on('pageerror',e=>errors.push(e.message));
@@ -18,7 +18,7 @@ const path = require('node:path');
   });
   await page.goto('http://studio.test/');
   await page.addScriptTag({path:path.resolve('app/static/studio-account-skills.js')});
-  await page.getByRole('button',{name:'登录 / 账户'}).click();
+  await page.getByRole('button',{name:'登录 / 注册'}).click();
   await page.getByRole('button',{name:'创建 API 账户'}).click();
   await page.locator('[name=confirm_password]').waitFor();
   await page.locator('[name=username]').fill('sample_user');

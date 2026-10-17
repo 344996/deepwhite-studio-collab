@@ -1,8 +1,8 @@
 /* Shared production palette. Studio V2 defaults match the reviewed prototype.
    Existing light / dark / milk choices remain usable; components contain no palette. */
 :root {
-  --dw-bg:#20231f; --dw-canvas:#1b201c; --dw-surface:#2a3029; --dw-panel:#30362e;
-  --dw-raised:#383f35; --dw-hover:#414939; --dw-ink:#eeeade; --dw-muted:#aeb5a5; --dw-faint:#818c7a;
+  --dw-bg:#17181a; --dw-canvas:#121315; --dw-surface:#202226; --dw-panel:#292c31;
+  --dw-raised:#33363c; --dw-hover:#3b3f46; --dw-ink:#f1f0ec; --dw-muted:#b5b8bf; --dw-faint:#969ba4;
   --dw-gold:#e3bd83; --dw-gold-hover:#efd1a5; --dw-gold-soft:#e3bd8314; --dw-gold-line:#e3bd8359; --dw-on-gold:#30291d;
   --dw-line:#e0e8cf13; --dw-line-strong:#e0e8cf29; --dw-success:#a9c9b1; --dw-danger:#e6a093;
   --dw-scrim:#090e0bab; --dw-shadow:#050b0860; --dw-grid:#cad6c915; --dw-blue:#a4bebf;

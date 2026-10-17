@@ -1,0 +1,176 @@
+{
+  "date": "2026-10-18",
+  "version": "0.10.2-studio.12",
+  "repository": "344996/deepwhite-studio-collab",
+  "phase1_import_commit": "9e84b6a",
+  "tests": {
+    "backend": 279,
+    "workspace_browser_groups": 34,
+    "phase1_interaction_groups": 17,
+    "phase1_save_controlled_groups": 5,
+    "phase1_save_browser_groups": 3,
+    "existing_browser_groups": 167,
+    "account_registration_mock_flow": 1
+  },
+  "workspace_checks": {
+    "results": [
+      {
+        "name": "Local workspace exposes navigation, creation and optional account without login",
+        "passed": true
+      },
+      {
+        "name": "Create classic canvas while logged out",
+        "passed": true
+      },
+      {
+        "name": "Create smart canvas while logged out",
+        "passed": true
+      },
+      {
+        "name": "home: account and API settings keep the current page mounted",
+        "passed": true
+      },
+      {
+        "name": "classic: account and API settings keep the current page mounted",
+        "passed": true
+      },
+      {
+        "name": "smart: account and API settings keep the current page mounted",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 1440px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 1440px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 1440px",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 1024px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 1024px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 1024px",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 768px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 768px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 768px",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 390px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 390px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 390px",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 320px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 320px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 320px",
+        "passed": true
+      },
+      {
+        "name": "Reduced motion and isolated generation",
+        "passed": true
+      },
+      {
+        "name": "home: graphite appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "classic: graphite appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "smart: graphite appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "home: milk appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "classic: milk appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "smart: milk appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "home: light appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "classic: light appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "smart: light appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "home: dark appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "classic: dark appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "smart: dark appearance remains usable",
+        "passed": true
+      }
+    ],
+    "errors": [],
+    "external": [],
+    "paid": []
+  },
+  "clean_environment_smoke": {
+    "passed": true,
+    "version": "0.10.2-studio.12",
+    "python": "Python 3.12.7",
+    "checks": [
+      "fresh environment imports/startup",
+      "health version",
+      "classic create/read without login",
+      "smart create/read without login"
+    ],
+    "upstream": "mocked; no real generation"
+  },
+  "limits": [
+    "no real account login or email delivery",
+    "no paid provider generation or GPU",
+    "no complete Windows installer or update recovery validation",
+    "no power-loss or sustained large-canvas benchmark"
+  ]
+}

@@ -60,9 +60,9 @@
   }
   function paintAccount() {
     accountButton.replaceChildren();
-    accountButton.setAttribute('aria-label', account?.username || '登录 / 账户');
+    accountButton.setAttribute('aria-label', account?.username || '登录 / 注册');
     if (account) accountButton.append(avatar());
-    accountButton.append(document.createTextNode(account?.username || '登录 / 账户'));
+    accountButton.append(document.createTextNode(account?.username || '登录 / 注册'));
     wallet();
   }
   async function refresh() { try { account = await api('account'); } catch { account = null; } paintAccount(); }
@@ -93,6 +93,9 @@
     links.innerHTML = '<a href="https://api.deepwhiteai.com/" target="_blank" rel="noopener">充值 / 找回密码 / 网站验证 ↗</a>';
     d.append(links);
 
+    // Login is independent of optional provider balance requests and local editing.
+    if (!account) { showLogin(body, message, d); return; }
+
     if (account) {
       const identity = document.createElement('div'); identity.className = 'dw-account-identity';
       const name = document.createElement('strong'); name.textContent = account.username; identity.append(avatar(), name); body.append(identity);
@@ -116,13 +119,14 @@
       body.append(logout);
       return;
     }
-    showLogin(body, message, d);
   }
 
   function showLogin(body, message, dialogElement, initialMessage = '') {
     body.replaceChildren();
     const form = document.createElement('form');
-    form.innerHTML = '<input name="username" autocomplete="username" placeholder="API 网站用户名或邮箱" required maxlength="128"><input name="password" type="password" autocomplete="current-password" placeholder="密码" required maxlength="256"><input name="code" placeholder="两步验证码" autocomplete="one-time-code" hidden disabled><button type="submit">登录</button><p>使用 API 网站的同一账号。密码不保存；本次会话最多保留 12 小时，关闭后台后需重新登录。模型调用继续使用「设置 / API」中的密钥。</p>';
+    form.innerHTML = '<input name="username" autocomplete="username" placeholder="API 网站用户名或邮箱" required maxlength="128"><input name="password" type="password" autocomplete="current-password" placeholder="密码" required maxlength="256"><input name="code" placeholder="两步验证码" autocomplete="one-time-code" hidden disabled><button type="submit">登录</button><p>本地画布可直接使用，无需登录。登录使用 API 网站的同一账号。密码不保存；本次会话最多保留 12 小时，关闭后台后需重新登录。模型调用继续使用「设置 / API」中的密钥。</p>';
+    form.setAttribute('aria-label', 'API 网站登录');
+    for (const [name, label] of [['username','用户名'],['password','密码'],['code','两步验证码']]) form.elements[name].setAttribute('aria-label', label);
     const signup = document.createElement('button'); signup.type = 'button'; signup.className = 'dw-link-button'; signup.textContent = '创建 API 账户';
     signup.onclick = async () => { try { const caps = await api('account/capabilities'); if (!caps.registration_available) throw Error(caps.turnstile_check ? 'API 网站要求安全验证，请前往网站完成注册。' : 'API 网站当前未开放此注册方式。'); showRegistration(body, message, dialogElement, caps); } catch (error) { message.textContent = error.message; } };
     body.append(form, signup);
@@ -202,7 +206,7 @@
     try { await draw(); } catch (error) { msg.textContent = error.message; }
   }
 
-  const host = document.querySelector('#quickToolbar .toolbar-fixed') || document.querySelector('.ws-topbar-right');
+  const host = document.querySelector('#quickToolbar .toolbar-fixed') || document.querySelector('.ws-topbar-right') || document.querySelector('.sv2-header-tools');
   if (!host) return;
-  const accountButton = document.createElement('button'); accountButton.className = 'studio-settings-button'; accountButton.textContent = '登录 / 账户'; accountButton.onclick = openAccount; host.append(accountButton); refresh();
+  const accountButton = document.createElement('button'); accountButton.id = 'studioAccountButton'; accountButton.type = 'button'; accountButton.className = 'studio-settings-button'; accountButton.textContent = '登录 / 注册'; accountButton.onclick = openAccount; host.append(accountButton); refresh();
 })();

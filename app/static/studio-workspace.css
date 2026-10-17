@@ -1,0 +1,116 @@
+/* Layout and motion only: never animate canvas transforms or node coordinates. */
+.studio-workspace-refresh #studioAccountButton{background:var(--dw-ink)!important;color:var(--dw-bg)!important;border:1px solid transparent!important;font-size:12px;white-space:nowrap;padding:9px 12px;border-radius:8px;min-height:36px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.studio-workspace-refresh #studioSettingsButton{white-space:nowrap;font-size:12px;min-height:36px;padding:9px 12px;border:1px solid var(--dw-line-strong);border-radius:8px;background:var(--dw-surface);color:var(--dw-ink)}
+.studio-workspace-refresh .dw-library input{font-size:14px}
+.studio-v2-home.studio-workspace-refresh .home-intro{margin-top:100px;padding:0 36px}
+.studio-v2-home.studio-workspace-refresh .ws-board{margin:0 36px}
+.studio-v2-home .workspace-create-hero{min-height:200px;gap:24px;padding:32px;border:1px solid var(--dw-line-strong);border-radius:14px;background-color:var(--dw-surface);background-image:radial-gradient(var(--dw-grid) 1px,transparent 1px);background-size:20px 20px;margin-bottom:24px}
+.studio-v2-home .workspace-create-hero h1{font-size:28px;letter-spacing:0;margin:12px 0}
+.studio-v2-home .workspace-create-hero small{font-size:11px;letter-spacing:1px}
+.studio-v2-home .workspace-create-hero p{font-size:13px;max-width:32em}
+.studio-v2-home .workspace-create-hero #newCanvasBtn{height:50px;padding:0 24px;font-size:14px}
+.workspace-quickstart{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.workspace-quickstart button{display:flex;align-items:center;gap:14px;min-height:72px;padding:16px;border:1px solid var(--dw-line);border-radius:10px;background:var(--dw-surface);color:var(--dw-ink);font-size:13px;text-align:left}
+.workspace-quickstart svg{width:23px;height:23px;flex-shrink:0;color:var(--dw-muted)}
+.workspace-quickstart button:hover{background:var(--dw-panel);border-color:var(--dw-gold-line)}
+.workspace-local-note{font-size:12px;color:var(--dw-muted);line-height:1.8;margin:16px 0 32px}
+.workspace-nav{display:grid;gap:4px;padding:0 12px 24px}
+.workspace-nav button{display:flex;align-items:center;gap:12px;border:0;padding:12px;border-radius:8px;background:transparent;text-align:left;color:var(--dw-muted);font-size:13px}
+.workspace-nav svg{width:18px;height:18px}
+.workspace-nav button:hover,.workspace-nav button[aria-current=page]{color:var(--dw-ink);background:var(--dw-surface)}
+.studio-v2-home.studio-workspace-refresh .v2-workspace-title{padding:12px 24px 16px}
+.studio-v2-home.studio-workspace-refresh .ws-project-name{font-size:13px}
+.studio-v2-home.studio-workspace-refresh .ws-card-meta{font-size:11px}
+.studio-v2-home.studio-workspace-refresh .v2-home-footer{margin:24px 36px;font-size:11px;line-height:1.8}
+#workspaceMenuToggle{display:none}
+.workspace-sidebar-scrim{position:fixed;inset:68px 0 0;background:var(--dw-scrim);border:0;z-index:29}
+.workspace-canvas-tools{display:flex;align-items:center;gap:8px;pointer-events:auto}
+.studio-v2-canvas .workspace-canvas-tools{position:fixed;right:22px;top:17px;z-index:56}
+.workspace-canvas-tools>button,.workspace-canvas-tools summary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 12px;border:1px solid var(--dw-line-strong);border-radius:8px;background:var(--dw-surface);color:var(--dw-ink);font-size:12px;cursor:pointer;white-space:nowrap}
+.workspace-canvas-tools>button svg,.workspace-canvas-tools summary svg{width:16px;height:16px}
+.workspace-canvas-tools summary{list-style:none}.workspace-canvas-tools summary::-webkit-details-marker{display:none}
+#workspaceMoreTools{position:relative}
+.workspace-more-panel{position:absolute;top:46px;right:0;width:300px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 160px);overflow:auto;overscroll-behavior:contain;display:flex;flex-wrap:wrap;gap:10px;padding:16px;background:var(--dw-surface);border:1px solid var(--dw-line-strong);border-radius:12px;box-shadow:0 12px 40px var(--dw-shadow);z-index:80}
+html.studio-v2-canvas .workspace-more-panel .toolbar-fixed{position:static!important;display:flex!important;flex-wrap:wrap!important;gap:10px!important;max-width:none!important;width:100%!important;height:auto!important;margin:0!important;padding:0!important;transform:none!important;background:none!important;overflow:visible!important}
+.workspace-more-panel button,.workspace-more-panel select{min-height:36px;padding:8px 10px;border:1px solid var(--dw-line-strong);border-radius:8px;color:var(--dw-ink);background:var(--dw-panel);font-size:12px}
+.workspace-more-panel .studio-engine-toolbar{flex-wrap:wrap;max-width:none!important;overflow:visible!important}
+.studio-v2-smart.studio-workspace-refresh .sv2-header-tools{gap:8px}
+.studio-v2-smart.studio-workspace-refresh .sv2-header{padding:0 22px;gap:16px}
+.studio-v2-smart.studio-workspace-refresh #smartTitle{max-width:300px}
+.studio-v2-smart.studio-workspace-refresh .sv2-rail{box-shadow:none}
+@media(prefers-reduced-motion:no-preference){
+  .workspace-quickstart button{transition:background 150ms ease,border-color 150ms ease,transform 150ms ease}
+  .workspace-quickstart button:hover{transform:translateY(-2px)}
+  .workspace-quickstart button:active{transform:translateY(0)}
+  .studio-workspace-refresh dialog[open],#workspaceMoreTools[open] .workspace-more-panel{animation:workspace-appear 160ms ease-out}
+  .studio-workspace-refresh .workspace-canvas-tools>button:active{opacity:.8}
+  @keyframes workspace-appear{from{opacity:0}to{opacity:1}}
+}
+@media(max-width:1050px){
+  .studio-v2-home.studio-workspace-refresh .home-intro{padding:0 24px}
+  .studio-v2-home.studio-workspace-refresh .ws-board{margin:0 24px}
+  .workspace-quickstart{gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .studio-v2-home .workspace-create-hero{padding:24px;align-items:flex-start;flex-direction:column;gap:16px}
+  .studio-v2-home .workspace-create-hero h1{font-size:24px}
+  .studio-v2-home.studio-workspace-refresh .ws-topbar-left{display:none}
+  .studio-v2-home.studio-workspace-refresh .studio-brand-bar{flex:1}
+  .studio-v2-smart.studio-workspace-refresh #smartTitle{max-width:220px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-eyebrow{font-size:9px}
+  .workspace-canvas-tools>button:has(svg)>span{display:none}
+}
+@media(max-width:768px){
+  html.studio-workspace-refresh,html.studio-workspace-refresh body{min-width:0!important;overflow-x:clip}
+  .studio-v2-home.studio-workspace-refresh .ws-topbar{padding:0 12px!important;gap:8px!important}
+  .studio-v2-home.studio-workspace-refresh .ws-topbar-right{gap:6px!important}
+  .studio-v2-home.studio-workspace-refresh .studio-brand-bar{flex:1;min-width:0}
+  .studio-v2-home.studio-workspace-refresh .studio-brand-bar small,.studio-v2-home.studio-workspace-refresh #boardRefresh{display:none}
+  #workspaceMenuToggle{display:flex;align-items:center;justify-content:center;min-width:34px;height:36px;padding:6px}
+  #workspaceMenuToggle span{display:none}#workspaceMenuToggle svg{width:18px;height:18px}
+  html.studio-v2-home.studio-workspace-refresh .ws-sidebar{position:fixed;left:0;top:68px;bottom:0;padding-top:16px;z-index:30;transform:translateX(-100%);width:224px!important}
+  html.studio-v2-home.workspace-sidebar-open .ws-sidebar{transform:translateX(0)}
+  .studio-v2-home.studio-workspace-refresh .ws-main{width:100%;min-width:0}
+  .studio-v2-home.studio-workspace-refresh .home-intro{margin-top:88px;padding:0 16px}
+  .studio-v2-home.studio-workspace-refresh .ws-board{margin:0 16px}
+  .studio-v2-home.studio-workspace-refresh .ws-trash-panel{inset:84px 12px 16px}
+  .studio-v2-home.studio-workspace-refresh .v2-home-footer{margin:24px 16px}
+  .studio-v2-home .v2-home-controls{gap:12px}
+  .studio-v2-home .v2-home-search-tools{flex-wrap:wrap;width:100%}
+  .studio-v2-home .v2-home-search{flex:1;min-width:0}.studio-v2-home #homeSearch{width:100%}
+  .studio-v2-home .studio-home-views{margin-left:auto}
+  .studio-v2-home .ws-board-world{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  html.studio-v2-canvas.studio-workspace-refresh .topbar{height:64px;padding:0 12px;gap:12px;flex-direction:row;zoom:1!important}
+  html.studio-v2-canvas.studio-workspace-refresh .v2-brand{font-size:13px}.studio-v2-canvas .v2-brand small{display:none}
+  html.studio-v2-canvas.studio-workspace-refresh .canvas-nav{padding-left:12px;max-width:calc(100vw - 140px);min-width:0}
+  .studio-v2-canvas .workspace-canvas-tools{top:76px;right:12px;gap:6px}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar .toolbar-items{left:12px;top:132px;max-height:calc(100dvh - 220px);overflow-y:auto;scrollbar-width:thin}
+  html.studio-v2-canvas.studio-workspace-refresh .v2-board-empty{width:calc(100vw - 100px);left:56%}
+  html.studio-v2-canvas.studio-workspace-refresh .v2-navigation{bottom:12px;right:12px}
+  html.studio-v2-canvas.studio-workspace-refresh .studio-canvas-actions{left:12px;bottom:64px;max-width:calc(100vw - 24px)}
+  html.studio-v2-canvas.studio-workspace-refresh #minimap{display:none}
+  .studio-v2-smart.studio-workspace-refresh .sv2-header{height:124px;padding:12px;display:grid;align-content:start;gap:10px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-heading{gap:2px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-header-tools{width:calc(100vw - 24px);justify-content:flex-end;gap:6px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-save-status{position:absolute;right:12px;top:26px;max-width:96px;overflow:hidden;text-overflow:ellipsis}
+  .studio-v2-smart.studio-workspace-refresh #smartTitle{max-width:calc(100vw - 166px);font-size:14px}
+  .studio-v2-smart.studio-workspace-refresh #smartV2Save{padding:8px;min-width:32px}.studio-v2-smart.studio-workspace-refresh #smartV2Save span{display:none}
+  .studio-v2-smart.studio-workspace-refresh .sv2-rail{left:12px;top:144px;width:54px;max-height:calc(100dvh - 290px);gap:6px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-rail>button,.studio-v2-smart.studio-workspace-refresh .sv2-advanced>summary{width:44px;min-height:48px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-rail span{font-size:9px;white-space:nowrap}
+  .studio-v2-smart.studio-workspace-refresh .sv2-bottom{left:12px;right:12px;bottom:64px;justify-content:center;padding:4px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-bottom button{font-size:11px;padding:7px;gap:4px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-view{bottom:12px;right:12px}
+  .studio-v2-smart.studio-workspace-refresh .smart-minimap{display:none}
+  .studio-v2-smart.studio-workspace-refresh .sv2-empty{width:calc(100vw - 100px);left:56%}
+  .workspace-canvas-tools{gap:6px}.workspace-canvas-tools>button,.workspace-canvas-tools summary{padding:8px}
+  .workspace-canvas-tools summary span{display:none}
+}
+@media(max-width:420px){
+  .studio-v2-home.studio-workspace-refresh .studio-brand-bar>span{display:none}
+  .studio-v2-home .workspace-create-hero{padding:22px;min-height:220px}
+  .studio-v2-home .workspace-create-hero h1{font-size:22px}
+  .workspace-quickstart button{gap:10px;padding:12px;font-size:12px;min-height:62px}
+  .studio-v2-home .ws-board-world{grid-template-columns:1fr}
+  .studio-v2-home.studio-workspace-refresh .ws-card{min-height:230px}
+  .studio-workspace-refresh #studioSettingsButton,.studio-workspace-refresh #studioAccountButton{padding:8px;font-size:11px;max-width:100px}
+  .studio-v2-smart.studio-workspace-refresh .sv2-bottom .studio-canvas-actions button svg{display:none}
+}
