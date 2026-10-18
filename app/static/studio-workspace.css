@@ -1,4 +1,10 @@
 /* Layout and motion only: never animate canvas transforms or node coordinates. */
+#workspaceGalleryDialog{box-sizing:border-box;width:min(520px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 48px);overflow:auto;padding:24px;border:1px solid var(--dw-line-strong);border-radius:12px;background:var(--dw-surface);color:var(--dw-ink);font:14px/1.7 "Microsoft YaHei",sans-serif}
+#workspaceGalleryDialog::backdrop{background:var(--dw-scrim)}
+#workspaceGalleryDialog h2{margin:0 0 12px;font-size:21px}#workspaceGalleryDialog p{font-size:13px;line-height:1.8}#workspaceGalleryDialog label{display:block;margin-top:20px}
+#workspaceGalleryDialog input{box-sizing:border-box;width:100%;min-width:0;padding:10px 12px;margin-top:8px;background:var(--dw-panel);color:var(--dw-ink);border:1px solid var(--dw-line-strong);border-radius:8px}
+.workspace-gallery-note{color:var(--dw-muted)}.workspace-gallery-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;margin-top:20px}
+.workspace-gallery-actions button,.workspace-gallery-actions a{font:inherit;padding:8px 12px;border:1px solid var(--dw-line-strong);border-radius:8px;background:var(--dw-panel);color:var(--dw-ink);cursor:pointer;text-decoration:none}.workspace-gallery-actions [hidden]{display:none!important}
 .studio-workspace-refresh #studioAccountButton{background:var(--dw-ink)!important;color:var(--dw-bg)!important;border:1px solid transparent!important;font-size:12px;white-space:nowrap;padding:9px 12px;border-radius:8px;min-height:36px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
 .studio-workspace-refresh #studioSettingsButton{white-space:nowrap;font-size:12px;min-height:36px;padding:9px 12px;border:1px solid var(--dw-line-strong);border-radius:8px;background:var(--dw-surface);color:var(--dw-ink)}
 .studio-workspace-refresh .dw-library input{font-size:14px}

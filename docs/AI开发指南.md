@@ -74,6 +74,12 @@ python -m venv .venv
 
 运行数据默认分为 `data/canvases/`、`data/projects.json`、资产与生成目录，以及 `API/.env`。项目索引备份不是媒体备份。SQLite 连接必须关闭；JSON 修改使用已有原子写入函数；浏览器草稿不能替代服务端备份。
 
+## 公共画廊边界（0.10.2-studio.13）
+
+`app/studio_gallery.py` 仅保存本地网站入口（GET/PUT `/api/studio/gallery`），数据文件为运行目录下 `data/studio_gallery.json`。界面在共享 `studio-workspace.js` 中接入三页。弹窗阻止输入与滚轮传播到画布，开启新标签页时不携带本地凭据或素材。
+
+网站代码单独位于 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery)，其 README、开发和部署文档是网站的维护入口。不要把公共上传或登录接口装进本地画布服务，也不要为网站部署取消画布现有的本机 Host/Origin 限制。用户尚未确定画廊域名，不应硬编码未经确认的正式域名。微信继续暂缓。
+
 ## 推荐扩展步骤
 
 1. 读取 `app/AGENTS.md`、当前版本状态和相关测试，写清本次操作及验收条件。

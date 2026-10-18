@@ -50,6 +50,8 @@ import studio_canvas_concurrency
 studio_canvas_concurrency.install(core)
 import studio_control
 studio_control.install(app)
+import studio_gallery
+studio_gallery.install(app)
 
 # Migrate the product view only; saved enable/remove preferences remain intact.
 import studio_catalog

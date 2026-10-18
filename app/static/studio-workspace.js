@@ -16,6 +16,38 @@
     };
     const settings = document.getElementById('studioSettingsButton');
     if (settings) {settings.textContent = 'API / 设置'; settings.setAttribute('aria-label', 'API / 设置');}
+    let galleryDialog;
+    async function openGallery() {
+      if (!galleryDialog) {
+        galleryDialog = document.createElement('dialog'); galleryDialog.id = 'workspaceGalleryDialog';
+        galleryDialog.setAttribute('aria-labelledby', 'workspaceGalleryTitle');
+        galleryDialog.innerHTML = '<form><h2 id="workspaceGalleryTitle">公共画廊</h2><p>浏览和分享作品。发布时，在画廊登录并选择要公开的图片或视频。</p><label for="workspaceGalleryURL">画廊网站地址</label><input id="workspaceGalleryURL" type="url" maxlength="512" placeholder="https://你的画廊域名" autocomplete="off"><p class="workspace-gallery-note">域名尚未配置时可以先留空。此入口不会上传本机画布、素材或 API Key。</p><p id="workspaceGalleryMessage" role="status" aria-live="polite"></p><div class="workspace-gallery-actions"><button type="button" data-gallery-close>关闭</button><button type="submit">保存地址</button><a id="workspaceGalleryOpen" target="_blank" rel="noopener noreferrer" hidden>打开画廊 ↗</a></div></form>';
+        document.body.append(galleryDialog);
+        // Preserve canvas shortcuts and wheel/drag state while this modal owns input.
+        for (const type of ['keydown','keyup','pointerdown','mousedown','wheel']) galleryDialog.addEventListener(type, event => event.stopPropagation());
+        galleryDialog.querySelector('[data-gallery-close]').onclick = () => galleryDialog.close();
+        const input = galleryDialog.querySelector('input'), message = galleryDialog.querySelector('[role=status]'), link = galleryDialog.querySelector('a');
+        input.oninput = () => {link.hidden = true; message.textContent = '';};
+        galleryDialog.querySelector('form').onsubmit = async event => {
+          event.preventDefault(); const submit = event.submitter; submit.disabled = true;
+          try {
+            const reply = await fetch('/api/studio/gallery', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:input.value})});
+            const value = await reply.json(); if (!reply.ok) throw new Error(typeof value.detail === 'string' ? value.detail : '请检查地址后重试。');
+            input.value = value.url; link.href = value.url; link.hidden = !value.url; message.textContent = value.url ? '地址已保存。点击“打开画廊”继续。' : '画廊地址已清除。';
+          } catch (error) {message.textContent = error.message || '地址保存失败，请重试。';}
+          finally {submit.disabled = false;}
+        };
+      }
+      if (!galleryDialog.open) galleryDialog.showModal();
+      const input = galleryDialog.querySelector('input'), message = galleryDialog.querySelector('[role=status]'), link = galleryDialog.querySelector('a');
+      input.disabled = true; link.hidden = true; message.textContent = '正在读取地址…';
+      try {
+        const reply = await fetch('/api/studio/gallery'), value = await reply.json();
+        if (!reply.ok) throw new Error(value.detail || '配置读取失败。');
+        input.value = value.url; link.href = value.url; link.hidden = !value.url; message.textContent = value.url ? '' : '请先填写已部署的画廊网站地址。';
+      } catch (error) {message.textContent = error.message;}
+      finally {input.disabled = false; input.focus();}
+    }
     if (home) {
       const sidebar = document.querySelector('.ws-sidebar'), main = document.querySelector('.ws-main');
       const heading = document.querySelector('.v2-home-heading'); heading.classList.add('workspace-create-hero');
@@ -46,7 +78,7 @@
       for (const [label, icon, action] of [
         ['创作工作台', 'house', () => {main.scrollTo({top:0}); newCanvasBtn.focus();}],
         ['项目画布', 'panels-top-left', () => {document.getElementById('homeSearch').focus();}],
-        ['本地资产', 'folder-open', assets], ['API 服务', 'sliders-horizontal', () => settings.click()]
+        ['本地资产', 'folder-open', assets], ['公共画廊', 'images', openGallery], ['API 服务', 'sliders-horizontal', () => settings.click()]
       ]) nav.append(makeButton(label, icon, () => {setSidebar(false); action();}));
       nav.firstElementChild.setAttribute('aria-current', 'page'); sidebar.querySelector('.ws-side-head').before(nav);
       scrim.onclick = () => {setSidebar(false); menu.focus();};
@@ -59,6 +91,7 @@
       const more = document.createElement('details'); more.id = 'workspaceMoreTools';
       const summary = document.createElement('summary'); summary.innerHTML = '<i data-lucide="ellipsis" aria-hidden="true"></i><span>更多工具</span>'; more.append(summary);
       const panel = document.createElement('div'); panel.className = 'workspace-more-panel'; more.append(panel);
+      panel.append(makeButton('公共画廊', 'images', openGallery));
       const account = document.getElementById('studioAccountButton');
       const search = document.getElementById(smart ? 'smartV2Search' : 'studioV2Search');
       for (const element of [search, settings, account]) if (element) controls.append(element);

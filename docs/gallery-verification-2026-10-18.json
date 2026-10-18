@@ -1,0 +1,417 @@
+{
+  "date": "2026-10-18",
+  "canvas_version": "0.10.2-studio.13",
+  "canvas_backend": {
+    "passed": true,
+    "tests": 285,
+    "failures": [],
+    "errors": [],
+    "skipped": 0
+  },
+  "workspace_browser": {
+    "results": [
+      {
+        "name": "Local workspace exposes navigation, creation and optional account without login",
+        "passed": true
+      },
+      {
+        "name": "Create classic canvas while logged out",
+        "passed": true
+      },
+      {
+        "name": "Create smart canvas while logged out",
+        "passed": true
+      },
+      {
+        "name": "home: public gallery configuration persists without uploading canvas data",
+        "passed": true
+      },
+      {
+        "name": "classic: public gallery configuration persists without uploading canvas data",
+        "passed": true
+      },
+      {
+        "name": "smart: public gallery configuration persists without uploading canvas data",
+        "passed": true
+      },
+      {
+        "name": "home: account and API settings keep the current page mounted",
+        "passed": true
+      },
+      {
+        "name": "classic: account and API settings keep the current page mounted",
+        "passed": true
+      },
+      {
+        "name": "smart: account and API settings keep the current page mounted",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 1440px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 1440px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 1440px",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 1024px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 1024px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 1024px",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 768px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 768px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 768px",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 390px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 390px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 390px",
+        "passed": true
+      },
+      {
+        "name": "home: main controls fit 320px",
+        "passed": true
+      },
+      {
+        "name": "classic: main controls fit 320px",
+        "passed": true
+      },
+      {
+        "name": "smart: main controls fit 320px",
+        "passed": true
+      },
+      {
+        "name": "Reduced motion and isolated generation",
+        "passed": true
+      },
+      {
+        "name": "home: graphite appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "classic: graphite appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "smart: graphite appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "home: milk appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "classic: milk appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "smart: milk appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "home: light appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "classic: light appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "smart: light appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "home: dark appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "classic: dark appearance remains usable",
+        "passed": true
+      },
+      {
+        "name": "smart: dark appearance remains usable",
+        "passed": true
+      }
+    ],
+    "errors": [],
+    "external": [],
+    "paid": []
+  },
+  "interaction_browser": {
+    "passed": true,
+    "tests": 17,
+    "results": [
+      {
+        "name": "Alt drag is one undoable copy and redo restores its final position",
+        "passed": true
+      },
+      {
+        "name": "Focus without typing keeps the redo branch",
+        "passed": true
+      },
+      {
+        "name": "Alt Shift copy preserves incoming links and undo removes only the copy",
+        "passed": true
+      },
+      {
+        "name": "A real prompt editing session has one undo and can be redone",
+        "passed": true
+      },
+      {
+        "name": "Long prompt scrolling stays inside its textarea",
+        "passed": true
+      },
+      {
+        "name": "Scrollable upstream panel does not transform the canvas",
+        "passed": true
+      },
+      {
+        "name": "Horizontal and diagonal trackpad input pans without changing scale",
+        "passed": true
+      },
+      {
+        "name": "Shift vertical wheel pans horizontally without zoom",
+        "passed": true
+      },
+      {
+        "name": "Vertical wheel zoom magnitude follows delta and opposite deltas cancel",
+        "passed": true
+      },
+      {
+        "name": "Ctrl zoom preserves the pointer anchor and takes priority over pan",
+        "passed": true
+      },
+      {
+        "name": "Zero wheel delta does not zoom or dirty the view",
+        "passed": true
+      },
+      {
+        "name": "Wheel zoom bounds remain finite at both extremes",
+        "passed": true
+      },
+      {
+        "name": "Smart horizontal and diagonal wheel pans without changing scale",
+        "passed": true
+      },
+      {
+        "name": "Smart Shift wheel pans horizontally without zoom",
+        "passed": true
+      },
+      {
+        "name": "Smart Ctrl wheel retains its anchor and opposite deltas cancel",
+        "passed": true
+      },
+      {
+        "name": "Smart long text scroll remains isolated from the canvas",
+        "passed": true
+      },
+      {
+        "name": "Smart repeated zoom stays within usable finite bounds",
+        "passed": true
+      }
+    ],
+    "errors": [],
+    "external": [],
+    "generation": []
+  },
+  "save_recovery": {
+    "passed": true,
+    "groups": 8,
+    "timing_groups": 5,
+    "browser_flows": 3
+  },
+  "gallery": {
+    "date": "2026-10-18",
+    "version": "0.1.0",
+    "backend": {
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "command": "python -B -m unittest gallery.test_gallery"
+    },
+    "browser": {
+      "results": [
+        {
+          "name": "Public list, search and exact tag filtering",
+          "passed": true
+        },
+        {
+          "name": "Responsive layouts 1440, 768, 390 and 320 plus keyboard entry",
+          "passed": true
+        },
+        {
+          "name": "Login uses configured account site and exposes own workspace",
+          "passed": true
+        },
+        {
+          "name": "Explicit upload, prompt opt-in and pending privacy",
+          "passed": true
+        },
+        {
+          "name": "Private draft save and busy form prevent accidental changes",
+          "passed": true
+        },
+        {
+          "name": "Reviewer approves and visitor opens a direct sharing link",
+          "passed": true
+        },
+        {
+          "name": "Author withdraw revokes fresh public detail and media access",
+          "passed": true
+        },
+        {
+          "name": "Failed metadata save preserves draft and retry does not duplicate file",
+          "passed": true
+        },
+        {
+          "name": "Real MP4 upload, authorized playback and byte ranges",
+          "passed": true
+        },
+        {
+          "name": "Reviewer rejection, author correction and delete lifecycle",
+          "passed": true
+        },
+        {
+          "name": "Logout and two-factor login on narrow viewport",
+          "passed": true
+        },
+        {
+          "name": "No uncaught browser errors or external requests",
+          "passed": true
+        }
+      ],
+      "errors": [],
+      "external": []
+    },
+    "canvas_entry": {
+      "passed": true,
+      "canvas_version": "0.10.2-studio.13",
+      "gallery_version": "0.1.0",
+      "checks": [
+        "configured URL persisted",
+        "new gallery tab opened",
+        "local canvas remained mounted",
+        "opener isolated",
+        "default account website correct",
+        "no automatic upload",
+        "no external requests"
+      ],
+      "errors": [],
+      "external": []
+    },
+    "dependencies": {
+      "known_vulnerabilities": 0,
+      "packages": [
+        {
+          "name": "fastapi",
+          "version": "0.143.3"
+        },
+        {
+          "name": "starlette",
+          "version": "1.8.0"
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1"
+        },
+        {
+          "name": "pillow",
+          "version": "13.0.0"
+        },
+        {
+          "name": "pydantic",
+          "version": "2.14.1"
+        },
+        {
+          "name": "uvicorn",
+          "version": "0.54.0"
+        },
+        {
+          "name": "pydantic-core",
+          "version": "2.50.1"
+        },
+        {
+          "name": "anyio",
+          "version": "4.15.1"
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9"
+        },
+        {
+          "name": "annotated-doc",
+          "version": "0.0.5"
+        },
+        {
+          "name": "annotated-types",
+          "version": "0.8.0"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0"
+        },
+        {
+          "name": "idna",
+          "version": "3.20"
+        },
+        {
+          "name": "opentelemetry-api",
+          "version": "1.45.1"
+        },
+        {
+          "name": "typing-extensions",
+          "version": "4.16.0"
+        },
+        {
+          "name": "typing-inspection",
+          "version": "0.4.4"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22"
+        }
+      ]
+    },
+    "review": {
+      "required_findings_fixed": 4
+    },
+    "deployment": {
+      "compose_config_valid": true,
+      "docker_runtime_tested": false,
+      "public_deployed": false,
+      "real_account_tested": false
+    },
+    "media": "synthetic fixtures only"
+  },
+  "original_repository_modified": false
+}

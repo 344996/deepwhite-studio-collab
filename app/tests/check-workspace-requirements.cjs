@@ -60,6 +60,23 @@ async function visibleInViewport(selector) {
     const id=new URL(page.url()).searchParams.get('id');const result=await api('/api/canvases/'+id);
     assert.equal((result.canvas||result).kind,kind);await visibleInViewport('#studioAccountButton');
   });
+  for(const [name,url]of Object.entries(urls))await check(`${name}: public gallery configuration persists without uploading canvas data`,async()=>{
+    await page.setViewportSize({width:390,height:900});await go(url);const before=page.url();
+    if(name==='home')await page.locator('#workspaceMenuToggle').click();else await page.locator('#workspaceMoreTools summary').click();
+    await page.getByRole('button',{name:'公共画廊',exact:true}).click();await visibleInViewport('#workspaceGalleryDialog');
+    await page.waitForFunction(()=>!document.querySelector('#workspaceGalleryURL').disabled);
+    await page.locator('#workspaceGalleryURL').fill('http://public.invalid');
+    await page.locator('#workspaceGalleryDialog button[type=submit]').click();
+    await page.locator('#workspaceGalleryMessage').filter({hasText:'HTTPS'}).waitFor();
+    await page.locator('#workspaceGalleryURL').fill('https://gallery.example/');
+    await page.locator('#workspaceGalleryDialog button[type=submit]').click();
+    await page.locator('#workspaceGalleryOpen').waitFor();
+    assert.equal(await page.locator('#workspaceGalleryOpen').getAttribute('href'),'https://gallery.example');
+    assert.equal(await page.locator('#workspaceGalleryOpen').getAttribute('rel'),'noopener noreferrer');
+    assert.equal((await api('/api/studio/gallery')).url,'https://gallery.example');
+    await page.keyboard.press('Escape');await page.locator('#workspaceGalleryDialog').waitFor({state:'hidden'});
+    assert.equal(page.url(),before);await page.setViewportSize({width:1440,height:900});
+  });
   for(const [name,url]of Object.entries(urls))await check(`${name}: account and API settings keep the current page mounted`,async()=>{
     await go(url);const before=page.url();await page.locator('#studioAccountButton').click();
     await page.locator('.dw-library input[name=username]').waitFor();
