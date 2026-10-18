@@ -1,0 +1,14 @@
+{
+  "source_head": "d59a0225f5a0329e5dee7e888b96cbab71b0621e",
+  "canvas_remote": "https://github.com/344996/deepwhite-studio-collab.git",
+  "gallery_remote": "https://github.com/344996/deepwhite-gallery.git",
+  "canvas_previous_head": "1887f21bbaf83a2bd4847f166a5660bd07ec372d",
+  "gallery_head": "1c630eb6bf1d585326acbcfcf38335456660da1a",
+  "source_tracked_files": 1774,
+  "canvas_tracked_files_before_this_batch": 1807,
+  "source_files_missing_in_canvas": [],
+  "license_files_checked": 4,
+  "license_files_changed": [],
+  "source_worktree_clean": true,
+  "gallery_worktree_clean": true
+}

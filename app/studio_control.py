@@ -19,6 +19,7 @@ import studio_agent_plans as plans
 import studio_assets as assets
 import studio_catalog as catalog
 import studio_generation as generation
+import studio_graph as graph
 from studio_capabilities import parameters
 
 LOCK = threading.RLock()
@@ -28,6 +29,7 @@ TOOLS = {
     'list_canvases', 'get_canvas', 'list_models', 'list_assets', 'apply_nodes',
     'undo_edit', 'generate_node', 'get_generation', 'resume_generation',
 }
+TOOLS.update(graph.TOOLS)
 
 
 def path():
@@ -85,7 +87,7 @@ def _settings(value, base_url='http://127.0.0.1:3848'):
 
 
 def _public_canvas(canvas):
-    out = copy.deepcopy(canvas)
+    out = copy.deepcopy({k: v for k, v in canvas.items() if k != graph.JOURNAL})
     def clean(value):
         if isinstance(value, dict):
             return {k:clean(v) for k,v in value.items() if k.lower() not in ('key','api_key','token','authorization','secret','password')}
@@ -149,6 +151,9 @@ def _apply(canvas_id, payload):
         if old.get('fingerprint') != fingerprint: raise HTTPException(409, 'operation_id 已用于另一项编辑。')
         return {k:v for k,v in old.items() if k != 'fingerprint'}
     canvas = _canvas(canvas_id)
+    journal = canvas.get(graph.JOURNAL) or {}
+    if journal.get('canvas_id') == canvas_id and operation_id in journal.get('records', {}):
+        raise HTTPException(409, 'operation_id 已用于结构编辑，请使用新的编号。')
     if plans.revision(canvas) != payload.get('expected_revision'):
         raise HTTPException(409, '画布已发生变化，请重新读取后再编辑。')
     raw_nodes = payload.get('nodes')
@@ -277,6 +282,9 @@ def _apply(canvas_id, payload):
 
 
 def _undo(canvas_id, payload):
+    result = graph.undo(canvas_id, payload)
+    if result is not None:
+        return result
     op = payload.get('operation_id'); state = _load(); key = canvas_id + ':' + str(op)
     if not op or key not in state['undo']: raise HTTPException(404, '没有此编辑操作的撤销快照。')
     with plans.APPLY_LOCK:
@@ -466,6 +474,10 @@ def install(app):
         _tool_auth(request)
         name = payload.get('name'); args = payload.get('arguments', {})
         if name not in TOOLS or not isinstance(args, dict): raise HTTPException(400, '未知工具或 arguments 格式错误。')
+        if name in graph.TOOLS:
+            if name == 'edit_canvas' and ('edit:' + str(args.get('canvas_id')) + ':' + str(args.get('operation_id'))) in _load()['runs']:
+                raise HTTPException(409, 'operation_id 已用于模型节点编辑，请使用新的编号。')
+            return {'result': graph.call(name, args)}
         if name == 'list_canvases':
             return {'result': {'items': [x for x in core.list_canvases() if not x.get('deleted_at') and core.normalize_canvas_kind(x.get('kind')) != 'smart']}}
         if name == 'get_canvas':

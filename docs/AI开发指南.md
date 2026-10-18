@@ -1,6 +1,6 @@
 # 深白片场 AI 开发指南
 
-适用仓库：`344996/deepwhite-studio-collab`。文档日期：2026-10-18。当前开发版本：`0.10.2-studio.12`。
+适用仓库：`344996/deepwhite-studio-collab`。文档日期：2026-10-18。当前开发版本：`0.10.2-studio.14`。
 
 本项目是浏览器界面加本机 Python 服务，使用原生 JavaScript、HTML 和 CSS，保留经典画布与智能画布两套引擎。继续开发时，应在现有业务模块中扩展，避免以新演示页替换正式画布，或重写已有保存、撤销和生成生命周期。
 
@@ -50,6 +50,7 @@ python -m venv .venv
 | `app/studio_account.py`、`studio_account_extension.py` | API 网站登录、注册能力和账号会话 | 网站账户与模型 API 密钥是不同概念 |
 | `app/studio_assets.py`、`studio_storage.py` | 版本化资产、文件与目录管理 | 保留原件、校验结果和失败原因 |
 | `app/studio_control.py`、`studio_mcp.py` | 本地控制、审批和 stdio 桥接 | 保留权限边界、revision、operation_id 和付费审批 |
+| `app/studio_graph.py`、`studio_graph_tools.json` | 项目/schema、新建画布、文字和连线编辑 | HTTP/stdin 共用校验；编辑日志随画布原子写，复制时隔离；不可重放未知创建 |
 | `app/tests/` | 后端与浏览器回归 | 使用临时数据和模拟上游，禁止默认消耗生成额度 |
 | `app/docs/releases/` | 版本说明与累计功能缺口 | 每次版本更新同步维护，历史未完成项不能消失 |
 
@@ -70,7 +71,7 @@ python -m venv .venv
 | `GET /api/studio/assets?project_id=…` | 项目资产 | 复用资产版本，不接受任意文件路径写入 |
 | `POST /api/studio/control/call` | 获授权的控制操作 | 调用受支持工具并保留令牌、版本冲突和审批检查 |
 
-接口的精确请求字段以 Pydantic 模型、`app/studio_mcp_tools.json` 与对应测试为准。经典和智能画布节点结构不相同，不能只改 `kind` 字段就转换整个画布。
+接口的精确请求字段以 Pydantic 模型、`app/studio_mcp_tools.json`、`app/studio_graph_tools.json` 与对应测试为准。经典和智能画布节点结构不相同，不能只改 `kind` 字段就转换整个画布。MCP 新编辑参数、重试语义、备份限制见[本轮开发报告](项目完整迁移与MCP开发.md)。
 
 运行数据默认分为 `data/canvases/`、`data/projects.json`、资产与生成目录，以及 `API/.env`。项目索引备份不是媒体备份。SQLite 连接必须关闭；JSON 修改使用已有原子写入函数；浏览器草稿不能替代服务端备份。
 
@@ -104,6 +105,7 @@ python -m venv .venv
 node app/tests/check-workspace-requirements.cjs
 node app/tests/check-phase1-interactions.cjs
 node app/tests/check-phase1-save.cjs --browser
+node app/tests/check-mcp-graph.cjs
 node app/tests/check-studio-account-registration.cjs
 ```
 

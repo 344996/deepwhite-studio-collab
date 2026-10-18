@@ -2,16 +2,17 @@
 
 本仓库是 `344996/deepwhite-studio-collab` 的开发副本，来源于 [aslancootl/deepwhite-studio-collab](https://github.com/aslancootl/deepwhite-studio-collab)，原始导入提交为 `d59a0225f5a0329e5dee7e888b96cbab71b0621e`。原仓库保持不变。
 
-当前版本为 **0.10.2-studio.13**。在第一批修复及工作台体验更新基础上，增加可配置的公共画廊网站入口。独立网站前后端在 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery)，已完成本地模拟账号验收，尚未部署公网。
+当前版本为 **0.10.2-studio.14**。原交接源码的 1,774 个跟踪文件、许可证及此前修复已完整保留在本账号仓库。本版新增 MCP 新建普通画布、文字编辑、移动和连线，保留第一批修复、工作台和画廊入口。独立网站前后端在 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery)，已完成本地模拟账号验收，尚未部署公网。
 
 - [需求与进度](docs/requirements-2026-10.md)
+- [完整迁移核对与本轮 MCP 开发测试](docs/项目完整迁移与MCP开发.md)
 - [公共画廊接入与本轮测试](docs/公共画廊接入与测试.md)
 - [上一轮工作台修改与测试](docs/本轮修改与测试.md)
 - [源码启动与 AI 开发指南](docs/AI开发指南.md)
 - [微信登录、画廊、更新和 MCP 评估](docs/扩展功能评估.md)
 - [第一批可复查测试摘要](docs/phase1-verification.json)
 - [第一批修改说明](第一批修复说明.md)
-- [当前累计功能与缺口](app/docs/releases/0.10.2-studio.13-status.md)
+- [当前累计功能与缺口](app/docs/releases/0.10.2-studio.14-status.md)
 - [开发步骤](tasks/plan.md)
 
 源码启动：准备 Python 3.12，安装根目录 `requirements.txt`，运行 `python -B app/studio_server.py`，浏览器打开 `http://127.0.0.1:3848/`。建议使用独立虚拟环境，完整 PowerShell 步骤见开发指南。

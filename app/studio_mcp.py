@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -147,6 +148,19 @@ def _sanitize(value):
 
 
 def _validate(value, schema, path="$args"):
+    if "oneOf" in schema:
+        matches = 0
+        for option in schema["oneOf"]:
+            try:
+                _validate(value, option, path)
+                matches += 1
+            except BridgeError:
+                pass
+        if matches != 1:
+            raise BridgeError(f"{path} 操作格式无效，请按 get_node_schema 提供的结构调用。")
+        return
+    if "const" in schema and value != schema["const"]:
+        raise BridgeError(f"{path} 操作类型无效。")
     expected = schema.get("type")
     types = expected if isinstance(expected, list) else [expected]
     checks = {"object": lambda x: isinstance(x, dict), "array": lambda x: isinstance(x, list),
@@ -159,6 +173,16 @@ def _validate(value, schema, path="$args"):
         raise BridgeError(f"{path} 的值无效。")
     if isinstance(value, str) and len(value) < schema.get("minLength", 0):
         raise BridgeError(f"{path} 不能为空。")
+    if isinstance(value, str):
+        if len(value) > schema.get("maxLength", len(value)):
+            raise BridgeError(f"{path} 超出长度限制。")
+        if "pattern" in schema and re.fullmatch(schema["pattern"], value) is None:
+            raise BridgeError(f"{path} 格式无效。")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if (isinstance(value, float) and not math.isfinite(value)) or value < schema.get("minimum", value) or value > schema.get("maximum", value):
+            raise BridgeError(f"{path} 数值超出范围。")
+    if isinstance(value, list) and not schema.get("minItems", 0) <= len(value) <= schema.get("maxItems", len(value)):
+        raise BridgeError(f"{path} 数量超出范围。")
     if isinstance(value, dict):
         properties = schema.get("properties", {})
         for key in schema.get("required", []):
@@ -179,6 +203,7 @@ def _validate(value, schema, path="$args"):
 def load_tools():
     try:
         tools = json.loads((ROOT / "studio_mcp_tools.json").read_text(encoding="utf-8"))
+        tools += json.loads((ROOT / "studio_graph_tools.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise BridgeError("MCP 工具定义文件不可用。") from exc
     if not isinstance(tools, list):

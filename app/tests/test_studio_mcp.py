@@ -133,7 +133,8 @@ class StudioMCPTests(unittest.TestCase):
         listed = replies[2]["result"]["tools"]
         self.assertEqual({tool["name"] for tool in listed}, {
             "list_canvases", "get_canvas", "list_models", "list_assets", "apply_nodes",
-            "undo_edit", "generate_node", "get_generation", "resume_generation"})
+            "undo_edit", "generate_node", "get_generation", "resume_generation",
+            "list_projects", "get_node_schema", "create_canvas", "edit_canvas"})
         self.assertTrue(next(t for t in listed if t["name"] == "apply_nodes")["annotations"]["idempotentHint"])
 
     def test_tools_call_posts_local_control_and_redacts_secrets(self):

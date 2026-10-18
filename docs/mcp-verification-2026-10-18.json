@@ -1,0 +1,147 @@
+{
+  "version": "0.10.2-studio.14",
+  "date": "2026-10-18",
+  "source": "local isolated runs; mock account/provider boundaries",
+  "backend": {
+    "passed": true,
+    "tests": 301,
+    "failures": [],
+    "errors": [],
+    "skipped": 0
+  },
+  "mcp_browser": {
+    "passed": true,
+    "version": "0.10.2-studio.14",
+    "checks": [
+      "stdio discovery and idempotent canvas creation",
+      "text, generator and connection appear in the live browser",
+      "stale revision is rejected and undo synchronizes",
+      "invalid input rejected and saved graph survives page reload",
+      "server and bridge restart preserve replay receipts and undo result",
+      "settings describes edit scope and disabling revokes access"
+    ],
+    "errors": [],
+    "external": [],
+    "generation": [],
+    "note": "real local stdio/browser, mocked provider catalogue; no paid calls"
+  },
+  "browser_regressions": {
+    "workspace_gallery": 37,
+    "core_interactions": 17,
+    "save_timing": 5,
+    "save_browser": 3,
+    "passed": true
+  },
+  "dependency_audit": {
+    "packages": 24,
+    "known_vulnerabilities": 0,
+    "installed_versions_match_audit": true,
+    "packages_and_versions": [
+      {
+        "name": "annotated-doc",
+        "version": "0.0.5"
+      },
+      {
+        "name": "annotated-types",
+        "version": "0.8.0"
+      },
+      {
+        "name": "anyio",
+        "version": "4.15.1"
+      },
+      {
+        "name": "certifi",
+        "version": "2026.7.22"
+      },
+      {
+        "name": "charset-normalizer",
+        "version": "3.5.2"
+      },
+      {
+        "name": "click",
+        "version": "8.5.0"
+      },
+      {
+        "name": "fastapi",
+        "version": "0.143.3"
+      },
+      {
+        "name": "h11",
+        "version": "0.16.0"
+      },
+      {
+        "name": "httpcore",
+        "version": "1.0.9"
+      },
+      {
+        "name": "httpx",
+        "version": "0.28.1"
+      },
+      {
+        "name": "idna",
+        "version": "3.20"
+      },
+      {
+        "name": "opentelemetry-api",
+        "version": "1.45.1"
+      },
+      {
+        "name": "pillow",
+        "version": "12.3.0"
+      },
+      {
+        "name": "psutil",
+        "version": "7.1.0"
+      },
+      {
+        "name": "pydantic",
+        "version": "2.11.7"
+      },
+      {
+        "name": "pydantic-core",
+        "version": "2.33.2"
+      },
+      {
+        "name": "python-multipart",
+        "version": "0.0.31"
+      },
+      {
+        "name": "requests",
+        "version": "2.33.0"
+      },
+      {
+        "name": "starlette",
+        "version": "1.8.0"
+      },
+      {
+        "name": "typing-inspection",
+        "version": "0.4.4"
+      },
+      {
+        "name": "typing-extensions",
+        "version": "4.16.0"
+      },
+      {
+        "name": "urllib3",
+        "version": "2.8.0"
+      },
+      {
+        "name": "uvicorn",
+        "version": "0.35.0"
+      },
+      {
+        "name": "websockets",
+        "version": "15.0.1"
+      }
+    ]
+  },
+  "review": {
+    "findings_fixed": 3,
+    "independent_graph_tests_passed": 16
+  },
+  "paid_calls": false,
+  "live_account_tested": false,
+  "public_gallery_deployed": false,
+  "codex_configuration_modified": false,
+  "wechat_implemented": false
+}

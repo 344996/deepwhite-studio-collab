@@ -47,7 +47,7 @@
       <div class="intro"><h1>本地智能体（MCP）</h1><p>让你选择的桌面智能体连接深白片场。你可以逐次确认每次生成，或临时授权最多 30 分钟、20 次生成。</p></div>
       <div id="controlLoadError" class="notice" role="alert" hidden></div>
       <section class="control-card" aria-labelledby="controlAccessTitle">
-        <div class="control-card-head"><div><h2 id="controlAccessTitle">访问控制</h2><p>关闭后，本地智能体不能通过 MCP 发起生成。</p></div><label class="check control-toggle"><input id="controlEnabled" type="checkbox">启用 MCP 访问</label></div>
+        <div class="control-card-head"><div><h2 id="controlAccessTitle">访问控制</h2><p>启用后，智能体可读取项目、新建普通画布、编辑文字和连线、移动节点；这些操作不会生成内容。关闭后禁止全部 MCP 访问。</p></div><label class="check control-toggle"><input id="controlEnabled" type="checkbox">启用 MCP 访问</label></div>
         <div class="control-modes" role="group" aria-label="生成确认方式">
           <button type="button" id="controlConfirm" aria-pressed="true"><strong>逐次确认</strong><small>每次生成前都需要你批准。</small></button>
           <button type="button" id="controlSession" aria-pressed="false"><strong>本次授权</strong><small>最多 30 分钟或 20 次生成，到期自动结束。</small></button>
