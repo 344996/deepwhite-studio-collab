@@ -1,0 +1,105 @@
+{
+  "version": "0.10.2-studio.16",
+  "commit": "9c14d2e60941cc2c275374b420fcd4e7c4f5f42f",
+  "files": {
+    "deepwhite-0.10.2-studio.16-windows-x64-portable.zip": {
+      "sha256": "fd34e6d7133e461bcb0ef7965a6ce815ac671db4986cddea29074ebc4f6ce8b5",
+      "size": 116813066
+    },
+    "deepwhite-0.10.2-studio.16-windows-x64-version.zip": {
+      "sha256": "1ac6220125fd702555d20eb4edca2e382282f69edc58a1ac2c54e755dea771fa",
+      "size": 116652567
+    },
+    "update-stable.json": {
+      "sha256": "86756f22484999ea9074cae064733766457dece8fb609fd777b63ec129b1a31d",
+      "size": 1973
+    }
+  },
+  "unpacked_size": 170167323,
+  "python": {
+    "sha256": "97dae5274cc54867065e8d5a3226e48c35017ed332a0fdb0e27d5b5821961297",
+    "source_page": "https://www.python.org/downloads/release/python-31316/",
+    "url": "https://www.python.org/ftp/python/3.13.16/python-3.13.16-embed-amd64.zip",
+    "version": "3.13.16"
+  },
+  "wheel_count": 27,
+  "published_at_utc": "2026-10-19T04:00:00Z",
+  "release_url": "https://github.com/344996/deepwhite-studio-collab/releases/tag/v0.10.2-studio.16",
+  "source_tag": "v0.10.2-studio.16",
+  "sequence": 16,
+  "key_id": "deepwhite-stable-2026",
+  "production_package_validation": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "Checksums, signature metadata, Git source and both ZIP contents match",
+        "passed": true
+      },
+      {
+        "name": "Embedded Python 3.13.16 verifies production signature and imports only installation paths",
+        "passed": true
+      },
+      {
+        "name": "Final Start.cmd launches exact release with Python absent from PATH",
+        "passed": true
+      },
+      {
+        "name": "Final package repeated launch reuses its supervisor and server",
+        "passed": true
+      },
+      {
+        "name": "Final package creates, saves and reloads a text canvas",
+        "passed": true
+      }
+    ],
+    "temporary_processes_stopped": true,
+    "paid_provider_generation": false
+  },
+  "public_https_validation": {
+    "api_or_github_credentials_used": false,
+    "checks": [
+      {
+        "feed": "https://github.com/344996/deepwhite-studio-collab/releases/latest/download/update-stable.json",
+        "name": "Stable latest URL returns the exact signed production manifest",
+        "passed": true,
+        "sequence": 16,
+        "signature": "Ed25519 verified"
+      },
+      {
+        "name": "Published checksum file equals the verified local release",
+        "passed": true
+      },
+      {
+        "bytes": 116813066,
+        "name": "Public download matches production package: deepwhite-0.10.2-studio.16-windows-x64-portable.zip",
+        "passed": true,
+        "sha256": "fd34e6d7133e461bcb0ef7965a6ce815ac671db4986cddea29074ebc4f6ce8b5"
+      },
+      {
+        "bytes": 116652567,
+        "name": "Public download matches production package: deepwhite-0.10.2-studio.16-windows-x64-version.zip",
+        "passed": true,
+        "sha256": "1ac6220125fd702555d20eb4edca2e382282f69edc58a1ac2c54e755dea771fa"
+      },
+      {
+        "name": "Downloaded signed version passes safe extraction and source metadata checks",
+        "passed": true
+      },
+      {
+        "name": "Installed production package checks the real feed and reports latest",
+        "passed": true,
+        "phase": "latest",
+        "bundled_runtime_reverified": "3.13.16"
+      }
+    ],
+    "commit": "9c14d2e60941cc2c275374b420fcd4e7c4f5f42f",
+    "mock_transport": false,
+    "passed": true,
+    "transport": "real HTTPS using production updater client",
+    "version": "0.10.2-studio.16"
+  },
+  "notes": [
+    "Only the two ZIP files, update-stable.json and SHA256SUMS.txt were published; local paths, private signing key and user data were not included.",
+    "The immutable release tag identifies code and bundled documentation at build time. Later documentation-only commits record published artifact hashes and online validation."
+  ]
+}

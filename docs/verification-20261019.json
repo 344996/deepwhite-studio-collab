@@ -161,5 +161,13 @@
     "Portable rehearsal uses temporary signed fixture versions and mocked feed transport, but real ZIPs, processes, install HTTP endpoints, files and backups.",
     "Production package and live GitHub download verification are recorded separately in the artifact report.",
     "No production gallery hosting, live API account login, Authenticode reputation, physical power-loss or sustained low-end-machine guarantee."
-  ]
+  ],
+  "production_release": {
+    "source_commit": "9c14d2e60941cc2c275374b420fcd4e7c4f5f42f",
+    "actual_package_checks": 5,
+    "live_https_checks": 6,
+    "all_passed": true,
+    "report": "release-verification-20261019.json",
+    "release_url": "https://github.com/344996/deepwhite-studio-collab/releases/tag/v0.10.2-studio.16"
+  }
 }
