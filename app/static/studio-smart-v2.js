@@ -14,13 +14,17 @@
   const redoStack=[];let historyCanvas=canvas,historyChanging=false,historySignature='';
   const historyTransient=new Set(['_dom','_ltxEditor','_activeLoopCtx','_cascadeIdx','_cascadeFailed','_runMetaTargetId','_selectAfterRunId','studioSavingSubmission']);
   const signature=()=>JSON.stringify({nodes:nodes.map(node=>Object.fromEntries(Object.entries(node).filter(([key])=>!historyTransient.has(key)))),connections:canvas?.connections||[]});
-  const modalActive=()=>!!document.querySelector('dialog[open],#imageEditModal.open,#smartLogModal.open,#smartShortcutModal.open,#smartWorkflowTransferModal.open');
-  let workspaceMode='select',workspaceSpace=false,additiveSelection=null;
+  const modalActive=()=>!!document.querySelector('dialog[open],#imageEditModal.open,#smartLogModal.open,#smartShortcutModal.open,#smartWorkflowTransferModal.open,.workspace-inspector[data-modal=true]');
+  let workspaceMode='select',workspaceSpace=false,workspaceCut=false,additiveSelection=null;
   function setMode(value){workspaceMode=value==='hand'?'hand':'select';shell.classList.toggle('workspace-hand',workspaceMode==='hand'||workspaceSpace);window.StudioCanvasWorkspace?.sync();}
   shell.addEventListener('mousedown',event=>{
     if(event.button!==0||modalActive()||isEditableTarget(event.target)||event.target.closest('button,.node-port,.composer,.resize-handle,.smart-minimap,.asset-panel,.workflow-transfer-panel'))return;
     const blank=event.target===shell||event.target===world||event.target.matches?.('svg.connection-layer');
-    if(workspaceMode==='hand'||workspaceSpace){
+    if(workspaceCut){
+      event.preventDefault();event.stopImmediatePropagation();closeCreateMenu();didPan=false;
+      connectionEraseState={started:false,count:0,indices:new Set(),lastX:event.clientX,lastY:event.clientY,trail:[]};
+      shell.classList.add('connection-erasing');updateConnectionEraseTrail(event);eraseConnectionsAtPoint(event);
+    }else if(workspaceMode==='hand'||workspaceSpace){
       event.preventDefault();event.stopImmediatePropagation();closeCreateMenu();didPan=false;
       panState={button:0,startX:event.clientX,startY:event.clientY,ox:viewport.x,oy:viewport.y};shell.classList.add('panning');
     }else if(blank){
@@ -43,15 +47,17 @@
     if((event.ctrlKey||event.metaKey)&&key==='k')action=openSearch;
     else if(!event.ctrlKey&&!event.metaKey&&!event.altKey){
       if(key==='v')action=()=>setMode('select');else if(key==='h')action=()=>setMode('hand');
+      else if(key==='x')action=()=>{workspaceCut=true;shell.classList.add('workspace-cut');};
       else if(event.code==='Space')action=()=>{workspaceSpace=true;setMode(workspaceMode);};
       else if(event.shiftKey&&event.code==='Digit1')action=()=>fit();
       else if(key==='f')action=()=>{const node=selectedNode();if(node)fit(node);};
-      else if(key==='Escape'&&portDragState)action=()=>{portDragState=null;discardPendingUndo();shell.classList.remove('port-dragging');clearPortDragVisual();};
+      else if(key==='escape'&&portDragState)action=()=>{portDragState=null;discardPendingUndo();shell.classList.remove('port-dragging');clearPortDragVisual();};
     }
     if(action){event.preventDefault();event.stopImmediatePropagation();if(!event.repeat)action();}
   },true);
-  document.addEventListener('keyup',event=>{if(event.code==='Space'){workspaceSpace=false;setMode(workspaceMode);}},true);
-  window.addEventListener('blur',()=>{workspaceSpace=false;additiveSelection=null;setMode(workspaceMode);if(portDragState){portDragState=null;discardPendingUndo();shell.classList.remove('port-dragging');clearPortDragVisual();}});
+  const releaseCutter=event=>{workspaceCut=false;shell.classList.remove('workspace-cut');if(connectionEraseState)window.onmouseup(event);};
+  document.addEventListener('keyup',event=>{if(event.code==='Space'){workspaceSpace=false;setMode(workspaceMode);}if(event.key.toLowerCase()==='x')releaseCutter(event);},true);
+  window.addEventListener('blur',event=>{workspaceSpace=false;additiveSelection=null;releaseCutter(event);setMode(workspaceMode);if(portDragState){portDragState=null;discardPendingUndo();shell.classList.remove('port-dragging');clearPortDragVisual();}});
   function checkHistory(){if(historyChanging)return;if(historyCanvas!==canvas){historyCanvas=canvas;undoStack.length=0;redoStack.length=0;historySignature='';return;}if(!redoStack.length)return;const next=signature();if(next!==historySignature){redoStack.length=0;historySignature='';}}
   historySignature=signature();
   const nativePushUndo=pushUndo;pushUndo=function(...args){checkHistory();if(!undoSuppressed&&canvas)redoStack.length=0;return nativePushUndo.apply(this,args);};
@@ -123,6 +129,7 @@
     const bounds=shell.getBoundingClientRect(),head=header.getBoundingClientRect(),railRect=rail.getBoundingClientRect();
     let right=bounds.right-20;const assets=document.getElementById('assetPanel');
     if(assets?.classList.contains('open'))right=Math.min(right,assets.offsetLeft-14,assets.getBoundingClientRect().left-14);
+    const inspector=document.getElementById('workspaceInspector');if(inspector&&!inspector.hidden&&innerWidth>900)right=Math.min(right,inspector.getBoundingClientRect().left-14);
     return {left:Math.max(bounds.left+20,railRect.right+14),top:Math.max(bounds.top+14,head.bottom+14),right,bottom:Math.min(bounds.bottom-20,bottom.getBoundingClientRect().top-14,view.getBoundingClientRect().top-14)};
   }
   function projectRect(node){

@@ -15749,6 +15749,10 @@ function startLink(e, originId, originKind){
     };
     window.onmouseup = e2 => {
         const targetKind = originKind === 'out' ? 'in' : 'out';
+        window.removeEventListener('keydown',cancelLink);window.removeEventListener('blur',cancelLink);
+        if(document.elementFromPoint(e2.clientX,e2.clientY)?.closest('dialog,.workspace-inspector,.workspace-canvas-tools,.workspace-viewport,#workspaceCanvasRail,.workspace-more-panel')){
+            clearLinkSnap();tempLink=null;window.onmousemove=null;window.onmouseup=null;renderLinks();return;
+        }
         const hit=linkDropTarget(e2.clientX,e2.clientY,targetKind,originId,originKind);
         const target=hit?.card;
         clearLinkSnap();

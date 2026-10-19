@@ -84,6 +84,14 @@
     view.classList.add('workspace-viewport'); view.setAttribute('aria-label', '缩放与导航');
     if (smart) {
       const fit = document.getElementById('smartV2Fit'); fit.setAttribute('aria-label', '适应全部节点 · Shift+1');
+      const shortcuts = document.querySelector('#smartShortcutModal .shortcut-list');
+      shortcuts.querySelector('[data-i18n="smart.shortcutPan"]')?.closest('.shortcut-item').remove();
+      shortcuts.querySelector('[data-i18n="smart.shortcutBoxSelect"]')?.closest('.shortcut-item').remove();
+      for (const [key, label] of [['V / H','选择 / 移动工具'],['空白处拖动 / Shift + 拖动','框选 / 追加选择'],['空格 / 中键 + 拖动','临时平移画布'],['Ctrl / ⌘ + K','查找节点'],['F / Shift + 1','定位选中 / 适应全部'],['按住 X 拖动','断开经过的连线']]) {
+        const row = document.createElement('div'); row.className = 'shortcut-item';
+        const keys = document.createElement('span'); keys.className = 'shortcut-keys'; const kbd = document.createElement('kbd'); kbd.textContent = key; keys.append(kbd);
+        const text = document.createElement('span'); text.textContent = label; row.append(keys, text); shortcuts.append(row);
+      }
       const map = button('workspaceMinimap', '导航地图', 'map', () => {
         const minimap = document.querySelector('.smart-minimap'); minimap.hidden = !minimap.hidden; map.setAttribute('aria-pressed', String(!minimap.hidden));
       }); map.setAttribute('aria-pressed', 'true');

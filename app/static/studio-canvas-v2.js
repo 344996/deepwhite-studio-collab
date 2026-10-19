@@ -187,8 +187,9 @@
     const box=nodeBounds(list.map(n=>n.id)),r=board.getBoundingClientRect();
     const map=document.getElementById('minimap'),mapTop=map&&!map.hidden?map.getBoundingClientRect().top-r.top:r.height-70;
     const top=105,bottom=Math.max(top+100,Math.min(r.height-85,mapTop-18)),height=bottom-top;
-    const scale=fit?Math.max(.06,Math.min(1,(r.width-220)/(box.w+100),height/(box.h+60))):viewport.scale;
-    moveView({scale,x:r.width/2-(box.x+box.w/2)*scale,y:top+height/2-(box.y+box.h/2)*scale});
+    const inspector=document.getElementById('workspaceInspector'),right=inspector&&!inspector.hidden&&innerWidth>900?Math.min(r.width,inspector.getBoundingClientRect().left-r.left-16):r.width;
+    const scale=fit?Math.max(.06,Math.min(1,(right-160)/(box.w+100),height/(box.h+60))):viewport.scale;
+    moveView({scale,x:right/2+40-(box.x+box.w/2)*scale,y:top+height/2-(box.y+box.h/2)*scale});
   }
   const nativeNode=renderNode;
   renderNode=function(node){
@@ -309,7 +310,7 @@
     window.addEventListener('studio-save-state',e=>{if(e.detail.canvasId!==canvas?.id)return;status.textContent=e.detail.ok?'已保存':'保存未完成';status.classList.toggle('failed',!e.detail.ok);status.title=e.detail.ok?'已保存到当前项目':e.detail.error||'请重试保存';});
     // Let delayed engine/account controls retain their existing mount targets.
     refreshIcons();if(canvas)render();update();
-    window.StudioCanvasV2=Object.freeze({search,help,focus,group,ungroup,ready:true,get minimapMetrics(){return Object.freeze({frames:mapFrames,measurements:mapMeasurements,cachedNodes:mapEntries.size});}});
+    window.StudioCanvasV2=Object.freeze({search,help,focus,group,ungroup,duplicate,ready:true,get minimapMetrics(){return Object.freeze({frames:mapFrames,measurements:mapMeasurements,cachedNodes:mapEntries.size});}});
   }
   // Adapt the old Shift-based cutter to X; Shift is now reserved for selection.
   const nativeKnifeMode=setKnifeMode;
