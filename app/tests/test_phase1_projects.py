@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import re
+import sys
 from pathlib import Path
 import tempfile
 import threading
@@ -18,6 +19,7 @@ from pydantic import BaseModel
 
 
 APP = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(APP))
 RUNTIME = APP.parent / '.test-runtime' / 'projects'
 RUNTIME.mkdir(parents=True, exist_ok=True)
 os.environ['DEEPWHITE_STUDIO_RUNTIME_DIR'] = str(RUNTIME)
