@@ -1,10 +1,12 @@
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -185,6 +187,17 @@ class ReleaseTests(unittest.TestCase):
         self.assertNotIn('app/.env', files)
         self.assertNotIn('app/workspace/canvas.json', files)
         self.assertNotIn('app/private-key.pem', files)
+
+    def test_source_archive_rejects_windows_path_separators_and_drives(self):
+        for name in ['app/..\\..\\outside.txt', 'app/C:stream', '/absolute.txt']:
+            buffer = io.BytesIO()
+            with tarfile.open(fileobj=buffer, mode='w') as archive:
+                item = tarfile.TarInfo(name)
+                item.size = 1
+                archive.addfile(item, io.BytesIO(b'x'))
+            with patch.object(build.subprocess, 'check_output', return_value=buffer.getvalue()):
+                with self.assertRaises(build.BuildError):
+                    build.committed_sources(self.root, 'HEAD')
 
     def test_runtime_extraction_rejects_bad_hash_and_traversal(self):
         archive = self.root / 'runtime.zip'

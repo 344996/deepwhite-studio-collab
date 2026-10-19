@@ -87,7 +87,8 @@ def committed_sources(repo, ref):
                 raise BuildError('Source commit contains a possible private key: ' + entry.name)
             if forbidden(entry.name) or entry.isdir():
                 continue
-            if not entry.isfile() or PurePosixPath(entry.name).is_absolute() or '..' in PurePosixPath(entry.name).parts:
+            if (not entry.isfile() or PurePosixPath(entry.name).is_absolute() or '..' in PurePosixPath(entry.name).parts
+                    or '\\' in entry.name or ':' in entry.name):
                 raise BuildError('Source archive contains a non-regular or unsafe path.')
             content = stream.extractfile(entry).read()
             if re.search(rb'(?m)^-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----\r?$', content):

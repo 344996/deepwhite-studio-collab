@@ -64,3 +64,20 @@ portable ZIP into a fresh writable directory, verify the served version and own
 installation identity, repeat the launch to confirm a single server, and perform
 the update/rollback rehearsal using temporary data. A local build does not prove
 GitHub publication or real provider generation.
+
+`check_portable_release.py` automates the .15-to-.16 regression rehearsal using
+a separate temporary Git repository and signing key. Select a committed source
+whose `app/VERSION` is `.15` (for example, the recorded pre-release verification
+commit), and use a new evidence directory:
+
+```powershell
+& ./.venv/Scripts/python.exe -u scripts/check_portable_release.py --ref BASELINE_COMMIT --cache D:/DeepWhiteBuildCache --workspace D:/DeepWhiteEvidence/NEW-PORTABLE-CHECK
+```
+
+This creates signed fixture versions, starts the extracted application, saves
+text canvases, installs .16, creates new work and retains it through manual
+rollback. A deliberately broken .17 verifies automatic rollback and hard exit
+during validation. The feed transport is mocked; ZIP validation, actual embedded
+processes, HTTP install requests, data backup and recovery are real. The script
+retains artifacts/logs and stops only its own recorded processes. Fixture keys
+and manifests are separate from production trust and must never be published.
