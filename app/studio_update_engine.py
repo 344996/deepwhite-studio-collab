@@ -3,11 +3,12 @@
 Program versions are immutable. User data is backed up only after the owned server
 has stopped; the maintenance gate remains closed until the new server is healthy.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 import json
 import os
 from pathlib import Path
 import shutil
+import sqlite3
 import time
 import uuid
 
@@ -111,9 +112,33 @@ def busy_jobs(runtime):
                 row = read_json(path, 32 * 1024**2)
             except UpdateError:
                 raise UpdateError('有任务记录无法读取，请先检查任务记录再更新。')
+            if not isinstance(row,dict) or not isinstance(row.get('status'),str):
+                raise UpdateError('任务记录格式不正确，请先检查任务记录再更新。')
             if row.get('status') not in TERMINAL:
                 count += 1
     return count
+
+
+def validate_data(runtime):
+    """Read existing project records and SQLite before accepting a new server."""
+    runtime=Path(runtime)
+    marker=runtime/'data-schema.json'
+    if marker.exists() and read_json(marker) != {'schema':DATA_SCHEMA}:
+        raise UpdateError('用户数据版本不受当前程序支持，未启动或迁移。')
+    paths=[runtime/'data'/'projects.json']
+    paths.extend((runtime/'data'/'canvases').glob('*.json'))
+    try:
+        for path in paths:
+            if path.exists():
+                with path.open(encoding='utf-8') as stream: json.load(stream)
+        database=runtime/'data'/'studio-assets'/'index.sqlite3'
+        if database.exists():
+            with closing(sqlite3.connect(database.as_uri()+'?mode=ro',uri=True)) as connection:
+                if connection.execute('PRAGMA quick_check').fetchall()!=[('ok',)]:
+                    raise UpdateError('素材索引检查失败，已停止启动；请保留原数据。')
+    except (OSError,ValueError,sqlite3.Error) as exc:
+        raise UpdateError('项目或素材索引无法完整读取，已保留数据并停止启动。') from exc
+    if not marker.exists(): atomic_json(marker,{'schema':DATA_SCHEMA})
 
 
 def check(root, *, transport=None, now=None):
@@ -174,6 +199,11 @@ def journal(root, value):
 
 
 def backup_data(root, operation):
+    with exclusive(Path(root)/'updates'/'runtime.lock'):
+        return _backup_data_locked(root,operation)
+
+
+def _backup_data_locked(root, operation):
     _, _, runtime, updates, _ = layout(root)
     destination = inside(root, updates/'backups'/operation)
     before = tree_manifest(runtime)
@@ -185,6 +215,11 @@ def backup_data(root, operation):
 
 
 def restore_backup(root, tx):
+    with exclusive(Path(root)/'updates'/'runtime.lock'):
+        return _restore_backup_locked(root,tx)
+
+
+def _restore_backup_locked(root, tx):
     root = Path(root).resolve()
     backup = inside(root, root/'updates'/'backups'/tx['id'])
     recorded = read_json(backup/'manifest.json', 64*1024**2)
@@ -219,7 +254,9 @@ def install(root, stop, start, healthy, *, action='install', now=None):
         signed = verified_available(root, now=now)
         if version(signed['version']) <= version(old_version): raise UpdateError('不能重复安装或自动降级。')
         prepared = read_json(updates/'prepared.json')
-        if prepared.get('version') != signed['version'] or prepared.get('sha256') != signed['artifact']['sha256']:
+        if (not isinstance(prepared,dict) or set(prepared)!={'version','sha256','path'}
+                or not isinstance(prepared.get('path'),str) or prepared.get('version') != signed['version']
+                or prepared.get('sha256') != signed['artifact']['sha256']):
             raise UpdateError('准备好的更新与当前清单不一致，请重新下载。')
         stage = inside(root, root/prepared['path'])
         if not stage.is_relative_to((updates/'staged').resolve()): raise UpdateError('更新暂存目录无效。')
@@ -277,18 +314,39 @@ def install(root, stop, start, healthy, *, action='install', now=None):
 
 def recover(root):
     """Called under the supervisor lock AFTER ensuring its former child has exited."""
+    with exclusive(Path(root)/'updates'/'runtime.lock'):
+        return _recover_locked(root)
+
+
+def validate_transaction(tx,current):
+    required={'id','old','new','action','phase','backup_complete'}
+    phases={'stopping','backing_up','switching','validating','committed','reverted','recovery_required'}
+    if (not isinstance(tx,dict) or not required.issubset(tx) or set(tx)-required-{'error'}
+            or tx.get('phase') not in phases or tx.get('action') not in ('install','rollback')
+            or type(tx.get('backup_complete')) is not bool):
+        raise UpdateError('更新事务格式或阶段不受支持，已保留维护状态和全部数据。')
+    version(tx['old']); version(tx['new'])
+    if (tx['old']==tx['new'] or current not in (tx['old'],tx['new'])
+            or not isinstance(tx['id'],str) or len(tx['id'])!=32 or any(c not in '0123456789abcdef' for c in tx['id'])):
+        raise UpdateError('更新事务版本或编号不匹配，拒绝自动恢复。')
+    if (tx['phase'] in ('stopping','backing_up','reverted') and current!=tx['old']
+            or tx['phase'] in ('validating','committed') and current!=tx['new']
+            or tx['phase'] in ('switching','validating','committed') and not tx['backup_complete']):
+        raise UpdateError('更新事务与当前安装状态矛盾，拒绝自动恢复。')
+    return tx
+
+
+def _recover_locked(root):
     root, _, _, updates, current = layout(root)
     path = updates/'transaction.json'
     if not path.exists():
         # Gate before request/transaction was durable: no program/data change occurred.
         gate(root,False); return
-    tx = read_json(path)
+    gate(root,True)
+    tx = validate_transaction(read_json(path),current)
     if tx['phase'] in ('committed','reverted'):
         gate(root,False); return
-    version(tx['old']); version(tx['new'])
-    if not isinstance(tx['id'],str) or len(tx['id'])!=32 or any(c not in '0123456789abcdef' for c in tx['id']):
-        raise UpdateError('恢复事务编号无效。')
-    if tx.get('backup_complete'): restore_backup(root,tx)
+    if tx['backup_complete']: _restore_backup_locked(root,tx)
     atomic_json(root/'current.json',{'version':tx['old']})
     tx.update(phase='reverted',error='上次更新被中断，启动器已恢复原版本。'); journal(root,tx)
     gate(root,False)

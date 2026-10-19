@@ -130,6 +130,7 @@ def install(app, core):
         _origin(request); root=_root(core); _supervisor(root)
         if not payload.saved_and_closed: raise HTTPException(409,'请先保存并关闭其他画布标签页。')
         if not _lock.acquire(blocking=False): raise HTTPException(409,'已有更新操作正在执行。')
+        queued=False
         try:
             # Gate first, then drain/check: no new browser/API work can race the snapshot.
             engine.gate(root,True)
@@ -139,14 +140,16 @@ def install(app, core):
             if payload.action=='install':
                 signed=engine.verified_available(root)
                 prepared=read_json(root/'updates'/'prepared.json')
-                if prepared.get('version')!=signed['version']: raise UpdateError('请先下载并校验更新包。')
+                if not isinstance(prepared,dict) or prepared.get('version')!=signed['version']: raise UpdateError('请先下载并校验更新包。')
             elif not (root/'updates'/'previous.json').exists(): raise UpdateError('没有可回退的上一个版本。')
             engine.require_space(root)
             current=engine.layout(root)[4]
             engine.state(root,phase='queued',error=None)
             atomic_json(root/'updates'/'request.json',{'action':payload.action,'version':current,'at':int(time.time())})
+            queued=True
             return {'accepted':True,'phase':'queued'}
         except (UpdateError,OSError) as exc:
-            engine.gate(root,False)
             raise HTTPException(409,str(exc) if isinstance(exc,UpdateError) else '无法准备更新，请检查磁盘和文件占用。') from exc
-        finally: _lock.release()
+        finally:
+            if not queued: engine.gate(root,False)
+            _lock.release()

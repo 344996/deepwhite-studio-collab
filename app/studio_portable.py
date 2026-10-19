@@ -30,11 +30,39 @@ def healthy(port, expected, installation=None, pid=None):
 
 
 def server(args):
+    root=Path(args.root).resolve()
+    def parent_alive():
+        try:
+            process=psutil.Process(args.supervisor_pid)
+            return abs(process.create_time()-args.supervisor_created)<.001 and process.is_running()
+        except psutil.Error: return False
+    # No data access until the parent has durably recorded this exact child.
+    deadline=time.monotonic()+10
+    while True:
+        if not parent_alive(): raise UpdateError('启动器已退出，服务未访问用户数据。')
+        try:
+            record=read_json(root/'updates'/'server-process.json')
+            if record.get('pid')==os.getpid() and abs(record.get('created',0)-psutil.Process().create_time())<.001: break
+        except UpdateError: pass
+        if time.monotonic()>=deadline: raise UpdateError('服务启动登记未完成，已停止。')
+        time.sleep(.05)
+    def orphan_monitor():
+        while True:
+            if not parent_alive(): os._exit(0)
+            time.sleep(.25)
+    threading.Thread(target=orphan_monitor,daemon=True).start()
+    with updates.exclusive(root/'updates'/'runtime.lock'):
+        if not parent_alive(): raise UpdateError('启动器已退出，服务未访问用户数据。')
+        _serve(args)
+
+
+def _serve(args):
     root, release, runtime, update_dir, current=updates.layout(args.root)
     if Path(__file__).resolve().parent != release/'app':
         raise UpdateError('服务启动版本与当前版本指针不一致。')
     os.environ.update(DEEPWHITE_STUDIO_RUNTIME_DIR=str(runtime), DEEPWHITE_INSTALL_ROOT=str(root),
                       DEEPWHITE_STUDIO_PORT=str(args.port), PYTHONDONTWRITEBYTECODE='1')
+    updates.validate_data(runtime)
     import studio_server
     import uvicorn
     instance=uvicorn.Server(uvicorn.Config(studio_server.app,host='127.0.0.1',port=args.port,
@@ -83,7 +111,8 @@ class Supervisor:
                  DEEPWHITE_STUDIO_PORT=str(self.port),PYTHONDONTWRITEBYTECODE='1')
         self.log=(self.updates/'server.log').open('ab')
         self.child=subprocess.Popen([str(release/'python'/'python.exe'),'-I','-B',str(release/'app'/'studio_portable.py'),
-                                     '--root',str(self.root),'--port',str(self.port),'--serve'],
+                                     '--root',str(self.root),'--port',str(self.port),'--serve',
+                                     '--supervisor-pid',str(os.getpid()),'--supervisor-created',str(psutil.Process().create_time())],
                                     cwd=release,env=env,stdin=subprocess.DEVNULL,stdout=self.log,stderr=subprocess.STDOUT,
                                     creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         atomic_json(self.updates/'server-process.json',{'pid':self.child.pid,'created':psutil.Process(self.child.pid).create_time(),
@@ -154,9 +183,13 @@ def main():
     parser.add_argument('--port',type=int,default=int(os.getenv('DEEPWHITE_STUDIO_PORT','3848')))
     parser.add_argument('--no-browser',action='store_true')
     parser.add_argument('--serve',action='store_true')
+    parser.add_argument('--supervisor-pid',type=int)
+    parser.add_argument('--supervisor-created',type=float)
     args=parser.parse_args()
     if not 1024 <= args.port <= 65535: parser.error('port must be between 1024 and 65535')
-    if args.serve: server(args)
+    if args.serve:
+        if not args.supervisor_pid or not args.supervisor_created: parser.error('server requires supervisor identity')
+        server(args)
     else:
         runner=Supervisor(args.root,args.port,args.no_browser or os.getenv('DEEPWHITE_NO_BROWSER')=='1')
         def stop_signal(*_): raise KeyboardInterrupt()

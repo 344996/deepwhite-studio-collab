@@ -114,7 +114,7 @@ class UpdateTransactionTests(unittest.TestCase):
 
     def test_unresolved_jobs_and_corrupt_receipts_block_install(self):
         self.prepare(); directory=self.runtime/'data'/'studio_jobs'; directory.mkdir()
-        for content in ['{"status":"running"}','{"status":"uncertain"}','{"status":"paused"}','{broken']:
+        for content in ['{"status":"running"}','{"status":"uncertain"}','{"status":"paused"}','{broken','[]','null','{}']:
             (directory/'fixture.json').write_text(content)
             with self.subTest(content=content),self.assertRaises(UpdateError): self.install()
         self.assertEqual(self.events,[])
@@ -140,7 +140,7 @@ class UpdateTransactionTests(unittest.TestCase):
         self.prepare(); operation='b'*32
         engine.backup_data(self.root,operation)
         (self.runtime/'key.env').write_text('PARTIAL_STARTUP')
-        atomic_json(self.root/'updates'/'transaction.json',{'id':operation,'old':self.old,'new':self.new,'phase':'validating','backup_complete':True})
+        atomic_json(self.root/'updates'/'transaction.json',{'id':operation,'old':self.old,'new':self.new,'action':'install','phase':'switching','backup_complete':True})
         engine.gate(self.root,True)
         engine.recover(self.root)
         self.assertEqual(engine.tree_manifest(self.runtime),self.before)
@@ -167,6 +167,41 @@ class UpdateTransactionTests(unittest.TestCase):
                 with engine.exclusive(self.root/'lock'): pass
         atomic_json(self.root/'current.json',{'version':'../../outside'})
         with self.assertRaises(UpdateError): engine.layout(self.root)
+
+    def test_startup_readiness_checks_projects_database_and_data_schema(self):
+        engine.validate_data(self.runtime)
+        self.assertEqual(read_json(self.runtime/'data-schema.json'),{'schema':1})
+        canvas=self.runtime/'data'/'canvases'/'fixture.json'
+        canvas.write_text('{broken')
+        with self.assertRaises(UpdateError): engine.validate_data(self.runtime)
+        self.assertEqual(canvas.read_text(),'{broken')
+        canvas.write_text('{}')
+        atomic_json(self.runtime/'data-schema.json',{'schema':2})
+        with self.assertRaises(UpdateError): engine.validate_data(self.runtime)
+        atomic_json(self.runtime/'data-schema.json',{'schema':1})
+        database=self.runtime/'data'/'studio-assets'/'index.sqlite3'; database.parent.mkdir()
+        database.write_bytes(b'corrupted fixture database')
+        with self.assertRaises(UpdateError): engine.validate_data(self.runtime)
+
+    def test_unknown_recovery_phase_retains_current_works_and_gate(self):
+        self.prepare(); operation='d'*32
+        engine.backup_data(self.root,operation)
+        (self.runtime/'later-work.json').write_text('{}')
+        newest=engine.tree_manifest(self.runtime)
+        base={'id':operation,'old':self.old,'new':self.new,'action':'install','phase':'switching','backup_complete':True}
+        for mutation in ({'phase':'unknown'},{'backup_complete':'true'},{'old':'0.10.2-studio.1'},{'phase':'committed'}):
+            atomic_json(self.root/'updates'/'transaction.json',{**base,**mutation})
+            with self.subTest(mutation=mutation),self.assertRaises(UpdateError): engine.recover(self.root)
+            self.assertEqual(engine.tree_manifest(self.runtime),newest)
+            self.assertTrue((self.root/'updates'/'maintenance.json').exists())
+
+    def test_live_server_lock_prevents_any_backup_or_recovery(self):
+        self.prepare(); engine.gate(self.root,True)
+        with engine.exclusive(self.root/'updates'/'runtime.lock'):
+            with self.assertRaises(UpdateError): engine.recover(self.root)
+            with self.assertRaises(UpdateError): engine.backup_data(self.root,'e'*32)
+        self.assertEqual(engine.tree_manifest(self.runtime),self.before)
+        self.assertTrue((self.root/'updates'/'maintenance.json').exists())
 
 
 if __name__=='__main__': unittest.main()

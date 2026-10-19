@@ -72,7 +72,10 @@ class UpdateAPITests(unittest.TestCase):
             directory=self.root/'userdata'/'data'/'studio_jobs'; directory.mkdir(parents=True)
             atomic_json(directory/'fixture.json',{'status':'uncertain'})
             self.assertEqual(self.post('install',{'saved_and_closed':True}).status_code,409)
+            atomic_json(directory/'fixture.json',[])
+            self.assertEqual(self.post('install',{'saved_and_closed':True}).status_code,409)
         self.assertFalse((self.root/'updates'/'request.json').exists())
+        self.assertFalse((self.root/'updates'/'maintenance.json').exists())
 
     def test_install_only_queues_bounded_request_and_keeps_gate_closed(self):
         api.engine.layout(self.root)
