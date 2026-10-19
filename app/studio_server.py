@@ -54,6 +54,8 @@ import studio_gallery
 studio_gallery.install(app)
 import studio_gallery_import
 studio_gallery_import.install(app)
+import studio_updates
+studio_updates.install(app, core)
 
 # Migrate the product view only; saved enable/remove preferences remain intact.
 import studio_catalog
@@ -77,8 +79,10 @@ async def studio_boundary(request: Request, call_next):
     if request.url.path in ('/api/update-from-github', '/api/update-rollback'):
         return JSONResponse({'detail': 'DeepWhite Studio 使用独立版本更新。'}, status_code=409)
     if request.url.path == '/api/check-update':
-        return JSONResponse({'current_version': VERSION, 'latest_version': VERSION,
-                             'has_update': False, 'update_available': False})
+        try:
+            return JSONResponse(studio_updates.status(core))
+        except studio_updates.UpdateError as exc:
+            return JSONResponse({'detail': str(exc)}, status_code=409)
     return await call_next(request)
 
 
@@ -109,7 +113,7 @@ def original_tools():
 @app.get('/api/studio/health')
 def health():
     return {'app': 'DeepWhite Studio', 'display_name':'深白片场', 'version': VERSION,
-            'installation': str(ROOT), 'pid': os.getpid(), 'stage': 'asset-foundation'}
+            'installation': str(ROOT), 'pid': os.getpid(), 'stage': 'asset-foundation', 'ready': True}
 
 
 if __name__ == '__main__':
