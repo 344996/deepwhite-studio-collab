@@ -70,7 +70,7 @@ async function main() {
     throw Error('Fixture startup failed: ' + serverLog);
   }
   const health = await startServer();
-  assert.equal(health.version, '0.10.2-studio.14');
+  assert.equal(health.version, fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim());
   const enabled = await api('/api/studio/control/settings', 'PUT', {enabled: true});
   const config = enabled.client_config.mcpServers['deepwhite-studio'];
   startBridge(config); await handshake();

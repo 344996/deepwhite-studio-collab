@@ -1,0 +1,536 @@
+{
+  "date": "2026-10-19",
+  "gallery_version": "0.2.0",
+  "canvas_version": "0.10.2-studio.15",
+  "backend": {
+    "gallery": {
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "command": "python -B -m unittest discover -s gallery -p 'test_*.py'"
+    },
+    "canvas": {
+      "passed": true,
+      "tests": 309,
+      "failures": [],
+      "errors": [],
+      "skipped": 0
+    }
+  },
+  "gallery_browser": [
+    {
+      "name": "Public list, search and exact tag filtering",
+      "passed": true
+    },
+    {
+      "name": "Responsive layouts 1440, 768, 390 and 320 plus keyboard entry",
+      "passed": true
+    },
+    {
+      "name": "Login uses configured account site and exposes own workspace",
+      "passed": true
+    },
+    {
+      "name": "Explicit upload, prompt opt-in and pending privacy",
+      "passed": true
+    },
+    {
+      "name": "Private draft save and busy form prevent accidental changes",
+      "passed": true
+    },
+    {
+      "name": "Reviewer approves and visitor opens a direct sharing link",
+      "passed": true
+    },
+    {
+      "name": "Author withdraw revokes fresh public detail and media access",
+      "passed": true
+    },
+    {
+      "name": "Failed metadata save preserves draft and retry does not duplicate file",
+      "passed": true
+    },
+    {
+      "name": "Real MP4 upload, authorized playback and byte ranges",
+      "passed": true
+    },
+    {
+      "name": "Reviewer rejection, author correction and delete lifecycle",
+      "passed": true
+    },
+    {
+      "name": "Logout and two-factor login on narrow viewport",
+      "passed": true
+    },
+    {
+      "name": "No uncaught browser errors or external requests",
+      "passed": true
+    }
+  ],
+  "prompt_reuse_browser": [
+    {
+      "name": "Prompt-only form: blank input and server rejection can be corrected in-place",
+      "passed": true
+    },
+    {
+      "name": "Lost creation response retries original request and then applies edited prompt once",
+      "passed": true
+    },
+    {
+      "name": "Moderated prompt becomes searchable and has a public reuse contract",
+      "passed": true
+    },
+    {
+      "name": "Copy, JSON export, website link and safe local destination",
+      "passed": true
+    },
+    {
+      "name": "Link opens local preview without an automatic write or generation",
+      "passed": true
+    },
+    {
+      "name": "Lost local save response survives reload and retries without a duplicate canvas",
+      "passed": true
+    },
+    {
+      "name": "File fallback rejects invalid packages and imports explicit JSON through workspace entry",
+      "passed": true
+    },
+    {
+      "name": "No script injection, provider execution or external requests",
+      "passed": true
+    }
+  ],
+  "canvas_entry": {
+    "passed": true,
+    "canvas_version": "0.10.2-studio.15",
+    "gallery_version": "0.2.0",
+    "checks": [
+      "configured URL persisted",
+      "new gallery tab opened",
+      "local canvas remained mounted",
+      "opener isolated",
+      "default account website correct",
+      "no automatic upload",
+      "no external requests"
+    ],
+    "errors": [],
+    "external": []
+  },
+  "canvas_workspace": [
+    {
+      "name": "Local workspace exposes navigation, creation and optional account without login",
+      "passed": true
+    },
+    {
+      "name": "Create classic canvas while logged out",
+      "passed": true
+    },
+    {
+      "name": "Create smart canvas while logged out",
+      "passed": true
+    },
+    {
+      "name": "home: public gallery configuration persists without uploading canvas data",
+      "passed": true
+    },
+    {
+      "name": "classic: public gallery configuration persists without uploading canvas data",
+      "passed": true
+    },
+    {
+      "name": "smart: public gallery configuration persists without uploading canvas data",
+      "passed": true
+    },
+    {
+      "name": "home: account and API settings keep the current page mounted",
+      "passed": true
+    },
+    {
+      "name": "classic: account and API settings keep the current page mounted",
+      "passed": true
+    },
+    {
+      "name": "smart: account and API settings keep the current page mounted",
+      "passed": true
+    },
+    {
+      "name": "home: main controls fit 1440px",
+      "passed": true
+    },
+    {
+      "name": "classic: main controls fit 1440px",
+      "passed": true
+    },
+    {
+      "name": "smart: main controls fit 1440px",
+      "passed": true
+    },
+    {
+      "name": "home: main controls fit 1024px",
+      "passed": true
+    },
+    {
+      "name": "classic: main controls fit 1024px",
+      "passed": true
+    },
+    {
+      "name": "smart: main controls fit 1024px",
+      "passed": true
+    },
+    {
+      "name": "home: main controls fit 768px",
+      "passed": true
+    },
+    {
+      "name": "classic: main controls fit 768px",
+      "passed": true
+    },
+    {
+      "name": "smart: main controls fit 768px",
+      "passed": true
+    },
+    {
+      "name": "home: main controls fit 390px",
+      "passed": true
+    },
+    {
+      "name": "classic: main controls fit 390px",
+      "passed": true
+    },
+    {
+      "name": "smart: main controls fit 390px",
+      "passed": true
+    },
+    {
+      "name": "home: main controls fit 320px",
+      "passed": true
+    },
+    {
+      "name": "classic: main controls fit 320px",
+      "passed": true
+    },
+    {
+      "name": "smart: main controls fit 320px",
+      "passed": true
+    },
+    {
+      "name": "Reduced motion and isolated generation",
+      "passed": true
+    },
+    {
+      "name": "home: graphite appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "classic: graphite appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "smart: graphite appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "home: milk appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "classic: milk appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "smart: milk appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "home: light appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "classic: light appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "smart: light appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "home: dark appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "classic: dark appearance remains usable",
+      "passed": true
+    },
+    {
+      "name": "smart: dark appearance remains usable",
+      "passed": true
+    }
+  ],
+  "canvas_mcp": {
+    "passed": true,
+    "version": "0.10.2-studio.15",
+    "checks": [
+      "stdio discovery and idempotent canvas creation",
+      "text, generator and connection appear in the live browser",
+      "stale revision is rejected and undo synchronizes",
+      "invalid input rejected and saved graph survives page reload",
+      "server and bridge restart preserve replay receipts and undo result",
+      "settings describes edit scope and disabling revokes access"
+    ],
+    "errors": [],
+    "external": [],
+    "generation": [],
+    "note": "real local stdio/browser, mocked provider catalogue; no paid calls"
+  },
+  "canvas_core_interactions": {
+    "tests": 17,
+    "passed": true,
+    "command": "node app/tests/check-phase1-interactions.cjs"
+  },
+  "canvas_save": {
+    "timing": 5,
+    "browser": 3,
+    "passed": true,
+    "command": "node app/tests/check-phase1-save.cjs --browser"
+  },
+  "browser_errors": [],
+  "external_requests": [],
+  "pip_check": {
+    "gallery": true,
+    "canvas": true
+  },
+  "pip_audit": {
+    "gallery": {
+      "dependencies": [
+        {
+          "name": "annotated-doc",
+          "version": "0.0.5",
+          "vulns": []
+        },
+        {
+          "name": "annotated-types",
+          "version": "0.8.0",
+          "vulns": []
+        },
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "vulns": []
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22",
+          "vulns": []
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "vulns": []
+        },
+        {
+          "name": "fastapi",
+          "version": "0.143.3",
+          "vulns": []
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0",
+          "vulns": []
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9",
+          "vulns": []
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1",
+          "vulns": []
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "vulns": []
+        },
+        {
+          "name": "opentelemetry-api",
+          "version": "1.45.1",
+          "vulns": []
+        },
+        {
+          "name": "pillow",
+          "version": "13.0.0",
+          "vulns": []
+        },
+        {
+          "name": "pydantic",
+          "version": "2.14.1",
+          "vulns": []
+        },
+        {
+          "name": "pydantic-core",
+          "version": "2.50.1",
+          "vulns": []
+        },
+        {
+          "name": "starlette",
+          "version": "1.8.0",
+          "vulns": []
+        },
+        {
+          "name": "typing-inspection",
+          "version": "0.4.4",
+          "vulns": []
+        },
+        {
+          "name": "typing-extensions",
+          "version": "4.16.0",
+          "vulns": []
+        },
+        {
+          "name": "uvicorn",
+          "version": "0.54.0",
+          "vulns": []
+        }
+      ],
+      "fixes": []
+    },
+    "canvas": {
+      "dependencies": [
+        {
+          "name": "annotated-doc",
+          "version": "0.0.5",
+          "vulns": []
+        },
+        {
+          "name": "annotated-types",
+          "version": "0.8.0",
+          "vulns": []
+        },
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "vulns": []
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22",
+          "vulns": []
+        },
+        {
+          "name": "charset-normalizer",
+          "version": "3.5.2",
+          "vulns": []
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "vulns": []
+        },
+        {
+          "name": "fastapi",
+          "version": "0.143.3",
+          "vulns": []
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0",
+          "vulns": []
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9",
+          "vulns": []
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1",
+          "vulns": []
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "vulns": []
+        },
+        {
+          "name": "opentelemetry-api",
+          "version": "1.45.1",
+          "vulns": []
+        },
+        {
+          "name": "pillow",
+          "version": "12.3.0",
+          "vulns": []
+        },
+        {
+          "name": "psutil",
+          "version": "7.1.0",
+          "vulns": []
+        },
+        {
+          "name": "pydantic",
+          "version": "2.11.7",
+          "vulns": []
+        },
+        {
+          "name": "pydantic-core",
+          "version": "2.33.2",
+          "vulns": []
+        },
+        {
+          "name": "python-multipart",
+          "version": "0.0.31",
+          "vulns": []
+        },
+        {
+          "name": "requests",
+          "version": "2.33.0",
+          "vulns": []
+        },
+        {
+          "name": "starlette",
+          "version": "1.8.0",
+          "vulns": []
+        },
+        {
+          "name": "typing-inspection",
+          "version": "0.4.4",
+          "vulns": []
+        },
+        {
+          "name": "typing-extensions",
+          "version": "4.16.0",
+          "vulns": []
+        },
+        {
+          "name": "urllib3",
+          "version": "2.8.0",
+          "vulns": []
+        },
+        {
+          "name": "uvicorn",
+          "version": "0.35.0",
+          "vulns": []
+        },
+        {
+          "name": "websockets",
+          "version": "15.0.1",
+          "vulns": []
+        }
+      ],
+      "fixes": []
+    }
+  },
+  "review": {
+    "required_findings_fixed": 1,
+    "status": "closed after independent re-review"
+  },
+  "limits": [
+    "isolated data and simulated account/provider transports",
+    "no real login, paid generation or GPU test",
+    "no public deployment, domain, Docker/TLS run or production restore",
+    "direct gallery generation and multi-media albums unimplemented",
+    "WeChat deferred"
+  ]
+}
