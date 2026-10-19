@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import httpx
 import psutil
 import studio_update_engine as updates
-from studio_update_core import UpdateError, atomic_json, read_json, version
+from studio_update_core import UpdateError, atomic_json, read_object as read_json, version
 
 
 def healthy(port, expected, installation=None, pid=None):

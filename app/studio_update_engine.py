@@ -12,7 +12,7 @@ import sqlite3
 import time
 import uuid
 
-from studio_update_core import (APP_ID, DATA_SCHEMA, UpdateError, atomic_json, read_json,
+from studio_update_core import (APP_ID, DATA_SCHEMA, UpdateError, atomic_json, read_object as read_json,
                                 version, verify_manifest, fetch_manifest, download,
                                 extract_package, digest)
 
@@ -246,6 +246,7 @@ def install(root, stop, start, healthy, *, action='install', now=None):
     if action == 'rollback':
         if not previous: raise UpdateError('没有可回退的上一个版本。')
         new_version = previous['version']; version(new_version)
+        if new_version == old_version: raise UpdateError('记录中的回退版本就是当前版本，未执行重复切换。')
         new_release = inside(root, root/'versions'/new_version)
         metadata = read_json(new_release/'release.json')
         if metadata.get('data_schema') != {'read_min':1,'read_max':1,'write':1} or metadata.get('app') != APP_ID:
@@ -303,6 +304,8 @@ def install(root, stop, start, healthy, *, action='install', now=None):
             stop()
             if tx['backup_complete']: restore_backup(root,tx)
             atomic_json(root/'current.json',{'version':old_version})
+            if previous is not None: atomic_json(updates/'previous.json',previous)
+            else: (updates/'previous.json').unlink(missing_ok=True)
             start(old_version)
             if not healthy(old_version):
                 tx.update(phase='recovery_required',error='旧版本启动失败，数据与版本备份均已保留。'); journal(root,tx)

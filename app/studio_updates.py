@@ -12,7 +12,7 @@ import psutil
 from pydantic import BaseModel, ConfigDict
 
 import studio_update_engine as engine
-from studio_update_core import UpdateError, atomic_json, read_json
+from studio_update_core import UpdateError, atomic_json, read_object as read_json
 
 _lock=threading.Lock()
 _worker=None
@@ -38,6 +38,7 @@ def status(core):
                 'message':'当前为源码运行版。请通过 Git 更新；自动下载安装需要 Windows 独立发行包。'}
     path=root/'updates'/'state.json'
     result=read_json(path) if path.exists() else {'phase':'unchecked'}
+    if not isinstance(result.get('phase'),str): raise UpdateError('更新状态记录损坏，请保留诊断文件。')
     latest=result.get('latest_version')
     result.update(managed=True,current_version=current,has_update=bool(latest and latest!=current),
                   update_available=bool(latest and latest!=current),can_install=result['phase']=='ready',

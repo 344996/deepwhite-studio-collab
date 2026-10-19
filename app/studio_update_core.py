@@ -61,6 +61,12 @@ def read_json(path, limit=MAX_MANIFEST):
         raise UpdateError('更新记录无法读取；请保留文件并查看恢复说明。') from exc
 
 
+def read_object(path, limit=MAX_MANIFEST):
+    value=read_json(path,limit)
+    if not isinstance(value,dict): raise UpdateError('更新记录必须是 JSON 对象。')
+    return value
+
+
 def version(value):
     if not isinstance(value, str):
         raise UpdateError('不支持此版本编号。')
@@ -94,6 +100,8 @@ def _integer(value, low, high):
 
 def verify_manifest(envelope, trust, *, current, channel='stable', minimum_sequence=0, now=None):
     now = int(time.time() if now is None else now)
+    if not isinstance(trust,dict) or not trust or not _integer(minimum_sequence,0,2**53):
+        raise UpdateError('本机更新信任配置或清单序号不正确。')
     if not isinstance(envelope, dict) or set(envelope) != {'signed', 'signatures'}:
         raise UpdateError('更新清单格式不正确。')
     signed, signatures = envelope['signed'], envelope['signatures']
@@ -105,7 +113,7 @@ def verify_manifest(envelope, trust, *, current, channel='stable', minimum_seque
         raise UpdateError('更新清单格式不正确。') from exc
     verified = False
     for item in signatures:
-        if not isinstance(item, dict) or item.get('key_id') not in trust:
+        if not isinstance(item, dict) or not isinstance(item.get('key_id'),str) or item['key_id'] not in trust:
             continue
         try:
             key = Ed25519PublicKey.from_public_bytes(base64.b64decode(trust[item['key_id']], validate=True))

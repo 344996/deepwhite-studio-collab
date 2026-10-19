@@ -65,6 +65,9 @@ class UpdateCoreTests(unittest.TestCase):
         envelope['signatures'][0]['key_id'] = 'stranger'
         with self.assertRaises(updates.UpdateError):
             self.verify(envelope)
+        envelope['signatures'][0]['key_id']=[]
+        with self.assertRaises(updates.UpdateError): self.verify(envelope)
+        with self.assertRaises(updates.UpdateError): self.verify(minimum_sequence='corrupt')
 
     def test_replayed_sequence_and_downgrade_rejected(self):
         with self.assertRaises(updates.UpdateError):
