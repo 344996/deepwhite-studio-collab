@@ -639,28 +639,25 @@ FIELD_LABELS = {
 }
 
 def friendly_validation_error(errors):
+    # Only accepts the allowlisted diagnostics from public_validation_errors.
     parts = []
     for err in errors or []:
         loc = [str(item) for item in err.get("loc", []) if item != "body"]
         field = loc[-1] if loc else ""
-        label = FIELD_LABELS.get(field, field or "请求参数")
-        ctx = err.get("ctx") or {}
-        limit = ctx.get("limit_value") or ctx.get("max_length") or ctx.get("min_length")
-        err_type = str(err.get("type") or "")
-        msg = str(err.get("msg") or "")
-        if "max_length" in err_type or "at most" in msg:
-            parts.append(f"{label}过长：当前内容超过后端上限 {limit} 个字符。请拆分为多个提示词节点，或先用 LLM 节点压缩后再生成。")
-        elif "min_length" in err_type:
-            parts.append(f"{label}不能为空。")
-        else:
-            parts.append(f"{label}格式不正确：{msg}")
+        label = FIELD_LABELS.get(field, field if field and field != '[key]' else "请求参数")
+        message = f"{label}：{err['msg']}"
+        if err['type'] == 'string_too_long' and field in FIELD_LABELS:
+            message += "请拆分为多个提示词节点，或先用 LLM 节点压缩后再生成。"
+        parts.append(message)
     return "\n".join(parts) or "请求参数不正确。"
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
+    from request_validation import public_validation_errors
+    errors = public_validation_errors(request, exc.errors())
     return JSONResponse(
         status_code=422,
-        content={"detail": friendly_validation_error(exc.errors()), "errors": exc.errors()},
+        content={"detail": friendly_validation_error(errors), "errors": errors},
     )
 
 def model_list(env_name, primary, defaults):
