@@ -254,6 +254,15 @@ def release_metadata(version, commit):
         'data_schema': {'read_min': 1, 'read_max': 1, 'write': 1}, 'min_bootstrap': 1, 'commit': commit}
 
 
+def write_reference_docs(sources, references):
+    """Include offline recovery/project documents from the same Git export."""
+    for path, content in sources.items():
+        if path.startswith('docs/'):
+            target = Path(references) / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+
+
 def manifest_metadata(release, artifact, unpacked_size, *, sequence, artifact_url, notes,
                       issued_at=None, expires_days=90):
     issued_at = int(time.time()) if issued_at is None else issued_at
@@ -321,6 +330,7 @@ def build_release(repo, ref, cache, output, private_key, key_id, sequence, notes
     (version_tree / 'README.md').write_bytes(sources['README.md'])
     references = version_tree / 'references'
     references.mkdir()
+    write_reference_docs(sources, references)
     lock = references / 'requirements.lock.txt'
     lock.write_bytes(sources['requirements.lock.txt'])
     runtime, wheels, provenance = prepare(lock, cache)

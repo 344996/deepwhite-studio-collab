@@ -173,6 +173,8 @@ class ReleaseTests(unittest.TestCase):
     def test_source_export_uses_committed_bytes_and_excludes_private_runtime_files(self):
         repo = self.root / 'repo'
         (repo / 'app' / 'workspace').mkdir(parents=True)
+        (repo / 'docs').mkdir()
+        (repo / 'docs' / 'recovery.md').write_bytes('离线恢复说明\n'.encode('utf-8'))
         (repo / 'app' / 'server.py').write_text('committed source')
         (repo / 'app' / '.env').write_text('fixture-private-config')
         (repo / 'app' / 'workspace' / 'canvas.json').write_text('fixture-user-data')
@@ -181,12 +183,16 @@ class ReleaseTests(unittest.TestCase):
                 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture']]:
             subprocess.run(command, cwd=repo, check=True, capture_output=True)
         (repo / 'app' / 'server.py').write_text('uncommitted modification')
+        (repo / 'docs' / 'recovery.md').write_text('uncommitted documentation')
         (repo / 'app' / 'private-key.pem').write_text('untracked secret')
         files = build.committed_sources(repo, 'HEAD')
         self.assertEqual(files['app/server.py'], b'committed source')
         self.assertNotIn('app/.env', files)
         self.assertNotIn('app/workspace/canvas.json', files)
         self.assertNotIn('app/private-key.pem', files)
+        build.write_reference_docs(files, self.root / 'references')
+        self.assertEqual(files['docs/recovery.md'].decode('utf-8').splitlines(), ['离线恢复说明'])
+        self.assertEqual((self.root / 'references' / 'docs' / 'recovery.md').read_bytes(), files['docs/recovery.md'])
 
     def test_source_archive_rejects_windows_path_separators_and_drives(self):
         for name in ['app/..\\..\\outside.txt', 'app/C:stream', '/absolute.txt']:
