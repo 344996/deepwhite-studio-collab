@@ -3626,17 +3626,8 @@ PROJECTS_PATH = os.path.join(DATA_DIR, "projects.json")
 DEFAULT_PROJECT_ID = "default"
 
 def _project_index_validate(data):
-    projects = data.get("projects") if isinstance(data, dict) else data
-    if not isinstance(projects, list):
-        raise ValueError("项目列表格式无效")
-    ids = set()
-    for project in projects:
-        if not isinstance(project, dict) or not isinstance(project.get("id"), str) or not project["id"]:
-            raise ValueError("项目编号缺失或格式无效")
-        if project["id"] in ids:
-            raise ValueError("项目编号重复")
-        ids.add(project["id"])
-    return projects
+    from studio_record_validation import project_index
+    return project_index(data)
 
 
 def _project_index_read(path):

@@ -123,14 +123,18 @@ def validate_data(runtime):
     """Read existing project records and SQLite before accepting a new server."""
     runtime=Path(runtime)
     marker=runtime/'data-schema.json'
-    if marker.exists() and read_json(marker) != {'schema':DATA_SCHEMA}:
-        raise UpdateError('用户数据版本不受当前程序支持，未启动或迁移。')
+    if marker.exists():
+        schema=read_json(marker)
+        if set(schema)!={'schema'} or type(schema['schema']) is not int or schema['schema']!=DATA_SCHEMA:
+            raise UpdateError('用户数据版本不受当前程序支持，未启动或迁移。')
     paths=[runtime/'data'/'projects.json']
     paths.extend((runtime/'data'/'canvases').glob('*.json'))
     try:
         for path in paths:
             if path.exists():
-                with path.open(encoding='utf-8') as stream: json.load(stream)
+                from studio_record_validation import project_index, canvas_record
+                with path.open(encoding='utf-8-sig') as stream: value=json.load(stream)
+                (project_index if path==paths[0] else canvas_record)(value)
         database=runtime/'data'/'studio-assets'/'index.sqlite3'
         if database.exists():
             with closing(sqlite3.connect(database.as_uri()+'?mode=ro',uri=True)) as connection:

@@ -195,6 +195,21 @@ class UpdateTransactionTests(unittest.TestCase):
             self.assertEqual(engine.tree_manifest(self.runtime),newest)
             self.assertTrue((self.root/'updates'/'maintenance.json').exists())
 
+    def test_readiness_rejects_semantically_invalid_but_parseable_records(self):
+        project=self.runtime/'data'/'projects.json'
+        canvas=self.runtime/'data'/'canvases'/'fixture.json'
+        for value in (True,{'projects':'wrong'},[{'id':'x'},{'id':'x'}]):
+            atomic_json(project,value)
+            with self.subTest(project=value),self.assertRaises(UpdateError): engine.validate_data(self.runtime)
+        atomic_json(project,{'projects':[{'id':'default'}]})
+        for value in ([],True,{'nodes':{}},{'connections':[1]}):
+            atomic_json(canvas,value)
+            with self.subTest(canvas=value),self.assertRaises(UpdateError): engine.validate_data(self.runtime)
+        atomic_json(canvas,{'nodes':[],'connections':[]})
+        engine.validate_data(self.runtime)
+        atomic_json(self.runtime/'data-schema.json',{'schema':True})
+        with self.assertRaises(UpdateError): engine.validate_data(self.runtime)
+
     def test_live_server_lock_prevents_any_backup_or_recovery(self):
         self.prepare(); engine.gate(self.root,True)
         with engine.exclusive(self.root/'updates'/'runtime.lock'):
