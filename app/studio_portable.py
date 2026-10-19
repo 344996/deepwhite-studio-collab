@@ -180,12 +180,22 @@ class Supervisor:
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--root',required=True)
-    parser.add_argument('--port',type=int,default=int(os.getenv('DEEPWHITE_STUDIO_PORT','3848')))
+    parser.add_argument('--port',type=int)
     parser.add_argument('--no-browser',action='store_true')
     parser.add_argument('--serve',action='store_true')
     parser.add_argument('--supervisor-pid',type=int)
     parser.add_argument('--supervisor-created',type=float)
     args=parser.parse_args()
+    if args.port is None:
+        configured=3848
+        config=Path(args.root)/'installation.json'
+        if config.exists():
+            value=read_json(config)
+            if not isinstance(value,dict) or set(value)!={'port'} or type(value['port']) is not int:
+                parser.error('installation.json must contain only an integer port')
+            configured=value['port']
+        try: args.port=int(os.getenv('DEEPWHITE_STUDIO_PORT',str(configured)))
+        except ValueError: parser.error('DEEPWHITE_STUDIO_PORT must be an integer')
     if not 1024 <= args.port <= 65535: parser.error('port must be between 1024 and 65535')
     if args.serve:
         if not args.supervisor_pid or not args.supervisor_created: parser.error('server requires supervisor identity')
