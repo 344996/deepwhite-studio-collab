@@ -73,6 +73,57 @@ def _commit(canvas):
         canvas["id"], canvas["updated_at"], "studio-mcp"))
 
 
+def edit_journal(canvas):
+    """Unify edit receipts without rewriting the legacy control/settings file.
+
+    Call under APPLY_LOCK. A copied canvas starts its own namespace. Legacy
+    receipts are imported once and retained; undo consumption is committed only
+    with the canvas, so stale legacy snapshots can never resurrect an undo.
+    """
+    journal = canvas.get(JOURNAL) or {}
+    if journal.get("canvas_id") != canvas["id"]:
+        journal = {"canvas_id": canvas["id"], "records": {}}
+        canvas[JOURNAL] = journal
+    records = journal.setdefault("records", {})
+    from studio_control import _load
+    legacy = _load()
+    prefix = "edit:" + canvas["id"] + ":"
+    for key, receipt in legacy.get("runs", {}).items():
+        if not key.startswith(prefix) or not isinstance(receipt, dict):
+            continue
+        operation = key[len(prefix):]
+        if operation in records or receipt.get("canvas_id") != canvas["id"]:
+            continue
+        records[operation] = {"tool": "apply_nodes", "fingerprint": receipt.get("fingerprint"),
+            "result": {k: copy.deepcopy(v) for k, v in receipt.items() if k != "fingerprint"}}
+        snapshot = legacy.get("undo", {}).get(key[len("edit:"):])
+        if (not journal.get("undo") and isinstance(snapshot, dict) and
+                snapshot.get("applied_revision") == plans.revision(canvas)):
+            journal["undo"] = {"nodes": copy.deepcopy(snapshot.get("nodes", [])),
+                "connections": copy.deepcopy(snapshot.get("connections", [])),
+                "operation_id": operation, "revision": snapshot["applied_revision"]}
+    return journal
+
+
+def replay_edit(journal, operation, fingerprint, tool):
+    record = journal["records"].get(operation)
+    if record is not None:
+        if record.get("tool", "edit_canvas") != tool or record.get("fingerprint") != fingerprint:
+            raise HTTPException(409, "operation_id 已用于另一项编辑，请使用新的编号。")
+        return copy.deepcopy(record["result"])
+    if len(journal["records"]) >= MAX_RECORDS:
+        raise HTTPException(409, "此画布已达到 MCP 编辑记录上限，请复制画布后继续。")
+    return None
+
+
+def commit_edit(canvas, journal, operation, fingerprint, tool, before, result):
+    journal["records"][operation] = {"tool": tool, "fingerprint": fingerprint, "result": result}
+    journal["undo"] = {**before, "operation_id": operation, "revision": result["revision"]}
+    # Content, undo and replay receipt reach disk in the SAME atomic replacement.
+    _commit(canvas)
+    return result
+
+
 def _create(args):
     # Deterministic id plus an independent receipt prevents duplicate creation even
     # after a canvas is permanently deleted. Persist the reservation before writing.
@@ -137,21 +188,12 @@ def _create(args):
 def _edit(args):
     with plans.APPLY_LOCK:
         canvas = _canvas(args["canvas_id"])
-        journal = canvas.get(JOURNAL) or {}
-        if journal.get("canvas_id") != canvas["id"]:
-            # A UI duplicate/import must never inherit another canvas's receipts.
-            journal = {"canvas_id": canvas["id"], "records": {}}
-            canvas[JOURNAL] = journal
-        records = journal.setdefault("records", {})
+        journal = edit_journal(canvas)
         operation = args["operation_id"]
         fingerprint = _fingerprint(args)
-        if operation in records:
-            record = records[operation]
-            if record["fingerprint"] != fingerprint:
-                raise HTTPException(409, "operation_id 已用于另一项编辑。")
-            return record["result"]
-        if len(records) >= MAX_RECORDS:
-            raise HTTPException(409, "此画布已达到 MCP 编辑记录上限，请复制画布后继续。")
+        previous = replay_edit(journal, operation, fingerprint, "edit_canvas")
+        if previous is not None:
+            return previous
         if plans.revision(canvas) != args["expected_revision"]:
             raise HTTPException(409, "画布已变化，请重新读取 get_canvas 后再编辑。")
         _idle(canvas)
@@ -219,33 +261,33 @@ def _edit(args):
             raise HTTPException(400, "画布超过 MCP 编辑节点或连线数量上限。")
         result = {"canvas_id": canvas["id"], "revision": plans.revision(canvas),
                   "node_ids": created, "connection_ids": connection_ids}
-        records[operation] = {"fingerprint": fingerprint, "result": result}
-        journal["undo"] = {**before, "operation_id": operation, "revision": result["revision"]}
-        # Content, undo and replay receipt reach disk in the SAME atomic replacement.
-        _commit(canvas)
-        return result
+        return commit_edit(canvas, journal, operation, fingerprint, "edit_canvas", before, result)
 
 
 def undo(canvas_id, args):
-    """Return None for legacy apply_nodes operations; only restore our latest edit."""
+    """Undo either edit tool atomically; exact retries return the durable receipt."""
     with plans.APPLY_LOCK:
         canvas = _canvas(canvas_id)
-        journal = canvas.get(JOURNAL) or {}
-        if journal.get("canvas_id") != canvas_id:
-            return None
-        if args.get("operation_id") not in journal.get("records", {}):
-            return None
+        journal = edit_journal(canvas)
+        record = journal["records"].get(args.get("operation_id"))
+        if record is None:
+            raise HTTPException(404, "没有此编辑操作的撤销快照。")
+        undone = record.get("undo")
+        if undone and undone.get("expected_revision") == args.get("expected_revision"):
+            return copy.deepcopy(undone["result"])
         snapshot = journal.get("undo") or {}
         if (snapshot.get("operation_id") != args["operation_id"] or
                 snapshot.get("revision") != args.get("expected_revision") or
                 plans.revision(canvas) != args.get("expected_revision")):
-            raise HTTPException(409, "只能撤销最近一次且没有后续修改的 MCP 结构编辑。")
+            raise HTTPException(409, "只能撤销最近一次且没有后续修改的 MCP 编辑。")
         _idle(canvas)
         canvas["nodes"] = snapshot["nodes"]
         canvas["connections"] = snapshot["connections"]
         journal.pop("undo", None)
+        result = {"canvas_id": canvas_id, "revision": plans.revision(canvas)}
+        record["undo"] = {"expected_revision": args["expected_revision"], "result": result}
         _commit(canvas)
-        return {"canvas_id": canvas_id, "revision": plans.revision(canvas)}
+        return result
 
 
 def call(name, args):

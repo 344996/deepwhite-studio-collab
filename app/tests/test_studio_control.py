@@ -1,6 +1,7 @@
 """Controller contract checks. Every generation boundary is mocked; no paid/local executor runs."""
 import asyncio
 import copy
+import importlib
 import os
 import sys
 import tempfile
@@ -20,6 +21,7 @@ import studio_agent_plans as plans
 import studio_assets as assets
 import studio_generation as generation
 import studio_catalog as catalog
+import studio_graph as graph
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
@@ -97,6 +99,111 @@ class StudioControl(unittest.TestCase):
         changed=copy.deepcopy(applied); changed['nodes'][0]['studioTitle']='manual change'; core.save_canvas(changed)
         self.assertEqual(self.call('undo_edit',{'canvas_id':self.cid,'operation_id':'operation-undo','expected_revision':plans.revision(changed)}).status_code,409)
         self.assertEqual(core.load_canvas(self.cid)['nodes'][0]['studioTitle'],'manual change')
+
+    def edit_args(self, operation='atomic-model-edit'):
+        return {'canvas_id': self.cid, 'operation_id': operation,
+                'expected_revision': plans.revision(core.load_canvas(self.cid)),
+                'nodes': [self.image_spec()]}
+
+    def test_edit_does_not_depend_on_a_second_control_file_write(self):
+        args = self.edit_args()
+        with patch.object(control, '_save', side_effect=OSError('control disk unavailable')):
+            first = self.call('apply_nodes', args)
+        self.assertEqual(first.status_code, 200, first.text)
+        saved = core.load_canvas(self.cid)
+        self.assertIn(args['operation_id'], saved[graph.JOURNAL]['records'])
+        importlib.reload(control)
+        self.assertEqual(first.json(), self.call('apply_nodes', dict(args,
+            expected_revision=plans.revision(saved))).json())
+        self.assertEqual(len(core.load_canvas(self.cid)['nodes']), 1)
+        undo = {'canvas_id': self.cid, 'operation_id': args['operation_id'],
+                'expected_revision': first.json()['result']['revision']}
+        with patch.object(control, '_save', side_effect=OSError('still unavailable')):
+            undone = self.call('undo_edit', undo)
+        self.assertEqual(undone.status_code, 200, undone.text)
+        self.assertEqual(core.load_canvas(self.cid)['nodes'], [])
+
+    def test_failed_canvas_replace_keeps_content_receipt_and_undo_unchanged(self):
+        import studio_asset_integration
+        args = self.edit_args()
+        before = Path(core.canvas_path(self.cid)).read_bytes()
+        with patch.object(studio_asset_integration.os, 'replace', side_effect=OSError('disk unavailable')):
+            failed = self.call('apply_nodes', args)
+        self.assertEqual(failed.status_code, 507, failed.text)
+        self.assertEqual(Path(core.canvas_path(self.cid)).read_bytes(), before)
+        applied = self.call('apply_nodes', args).json()['result']
+        undo = {'canvas_id': self.cid, 'operation_id': args['operation_id'], 'expected_revision': applied['revision']}
+        before = Path(core.canvas_path(self.cid)).read_bytes()
+        with patch.object(studio_asset_integration.os, 'replace', side_effect=OSError('disk unavailable')):
+            failed = self.call('undo_edit', undo)
+        self.assertEqual(failed.status_code, 507, failed.text)
+        self.assertEqual(Path(core.canvas_path(self.cid)).read_bytes(), before)
+        self.assertEqual(self.call('undo_edit', undo).status_code, 200)
+
+    def test_lost_edit_and_undo_responses_are_replayable_after_reload(self):
+        args = self.edit_args()
+        save = core.save_canvas
+        def save_then_disconnect(canvas):
+            save(canvas)
+            raise RuntimeError('response lost after durable commit')
+        with patch.object(core, 'save_canvas', side_effect=save_then_disconnect):
+            with self.assertRaises(RuntimeError):
+                self.call('apply_nodes', args)
+        importlib.reload(control)
+        applied = self.call('apply_nodes', args).json()['result']
+        self.assertEqual(len(core.load_canvas(self.cid)['nodes']), 1)
+        undo = {'canvas_id': self.cid, 'operation_id': args['operation_id'], 'expected_revision': applied['revision']}
+        with patch.object(core, 'save_canvas', side_effect=save_then_disconnect):
+            with self.assertRaises(RuntimeError):
+                self.call('undo_edit', undo)
+        importlib.reload(graph)
+        self.assertEqual(self.call('undo_edit', undo).status_code, 200)
+        self.assertEqual(self.call('apply_nodes', args).json()['result'], applied)
+        self.assertEqual(core.load_canvas(self.cid)['nodes'], [])
+
+    def test_legacy_edit_receipts_migrate_without_writing_or_reviving_undo(self):
+        args = self.edit_args('legacy-model-edit')
+        self._save_generator()
+        applied = {'canvas_id': self.cid, 'node_ids': {'hero': 'node1'},
+                   'revision': plans.revision(core.load_canvas(self.cid))}
+        fingerprint = control.hashlib.sha256(control.json.dumps(
+            {k: v for k, v in args.items() if k != 'expected_revision'},
+            sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        state = control._load()
+        key = self.cid + ':' + args['operation_id']
+        state['runs']['edit:' + key] = {**applied, 'fingerprint': fingerprint}
+        state['undo'][key] = {'nodes': [], 'connections': [], 'applied_revision': applied['revision']}
+        control._save(state)
+        before = self.cfg.read_bytes()
+        self.assertEqual(self.call('apply_nodes', args).json()['result'], applied)
+        undo = {'canvas_id': self.cid, 'operation_id': args['operation_id'], 'expected_revision': applied['revision']}
+        self.assertEqual(self.call('undo_edit', undo).status_code, 200)
+        self.assertEqual(self.call('undo_edit', undo).status_code, 200)
+        self.assertEqual(self.cfg.read_bytes(), before)
+        self.assertEqual(core.load_canvas(self.cid)['nodes'], [])
+        self.assertEqual(self.call('apply_nodes', args).json()['result'], applied)
+
+    def test_model_and_graph_operations_share_namespace_and_latest_undo(self):
+        args = self.edit_args()
+        applied = self.call('apply_nodes', args).json()['result']
+        graph_args = {'canvas_id': self.cid, 'operation_id': args['operation_id'],
+                      'expected_revision': applied['revision'],
+                      'operations': [{'op': 'add_prompt', 'key': 'text', 'text': 'hello', 'x': 0, 'y': 0}]}
+        self.assertEqual(self.call('edit_canvas', graph_args).status_code, 409)
+        graph_args['operation_id'] = 'later-graph-edit'
+        later = self.call('edit_canvas', graph_args).json()['result']
+        self.assertEqual(self.call('undo_edit', {'canvas_id': self.cid,
+            'operation_id': args['operation_id'], 'expected_revision': later['revision']}).status_code, 409)
+        self.assertEqual(self.call('apply_nodes', dict(args,
+            operation_id=graph_args['operation_id'])).status_code, 409)
+        copied = copy.deepcopy(core.load_canvas(self.cid))
+        copied['id'] = uuid.uuid4().hex
+        core.save_canvas(copied)
+        copied_args = dict(args, canvas_id=copied['id'], expected_revision=plans.revision(copied))
+        self.assertEqual(self.call('undo_edit', dict(copied_args)).status_code, 404)
+        duplicate = self.call('apply_nodes', copied_args)
+        self.assertEqual(duplicate.status_code, 200, duplicate.text)
+        self.assertNotEqual(duplicate.json()['result']['node_ids'], applied['node_ids'])
 
     def test_asset_mapping_compiles_bound_token_and_creates_reference_edge(self):
         filename=uuid.uuid4().hex+'.png'; Path(core.output_path_for(filename)).write_bytes(b'fixture')

@@ -140,20 +140,21 @@ def _models():
 
 
 def _apply(canvas_id, payload):
+    with plans.APPLY_LOCK:
+        return _apply_locked(canvas_id, payload)
+
+
+def _apply_locked(canvas_id, payload):
     if not isinstance(payload, dict): raise HTTPException(400, '请求格式错误。')
     operation_id = payload.get('operation_id')
     if not isinstance(operation_id, str) or not 8 <= len(operation_id) <= 80:
         raise HTTPException(400, 'operation_id 无效。')
-    state = _load(); op_key = canvas_id + ':' + operation_id
-    old = state['runs'].get('edit:' + op_key)
     fingerprint = hashlib.sha256(json.dumps({k:v for k,v in payload.items() if k != 'expected_revision'}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
-    if old:
-        if old.get('fingerprint') != fingerprint: raise HTTPException(409, 'operation_id 已用于另一项编辑。')
-        return {k:v for k,v in old.items() if k != 'fingerprint'}
     canvas = _canvas(canvas_id)
-    journal = canvas.get(graph.JOURNAL) or {}
-    if journal.get('canvas_id') == canvas_id and operation_id in journal.get('records', {}):
-        raise HTTPException(409, 'operation_id 已用于结构编辑，请使用新的编号。')
+    journal = graph.edit_journal(canvas)
+    old = graph.replay_edit(journal, operation_id, fingerprint, 'apply_nodes')
+    if old is not None:
+        return old
     if plans.revision(canvas) != payload.get('expected_revision'):
         raise HTTPException(409, '画布已发生变化，请重新读取后再编辑。')
     raw_nodes = payload.get('nodes')
@@ -217,6 +218,7 @@ def _apply(canvas_id, payload):
     # One validation pass above ensures all nodes and references are valid before mutation.
     with plans.APPLY_LOCK:
         canvas = _canvas(canvas_id)
+        journal = graph.edit_journal(canvas)
         if plans.revision(canvas) != payload.get('expected_revision'):
             raise HTTPException(409, '画布已发生变化，请重新读取后再编辑。')
         fresh_targets = _models()
@@ -231,8 +233,8 @@ def _apply(canvas_id, payload):
             fresh_ctx['target_models'] = {entry['kind']:{'provider_id':entry['provider_id'],'model':entry['model']}}
             plans.validate_plan({'nodes':[{k:entry[k] for k in ('key','kind','title','prompt','references','target_node_id') if k in entry}]},
                                 fresh_ctx, fresh_targets)
-        snapshot = {'nodes': copy.deepcopy(canvas.get('nodes', [])), 'connections': copy.deepcopy(canvas.get('connections', [])),
-                    'updated_at': canvas.get('updated_at')}
+        graph._idle(canvas)
+        snapshot = {'nodes': copy.deepcopy(canvas.get('nodes', [])), 'connections': copy.deepcopy(canvas.get('connections', []))}
         nodes = canvas.setdefault('nodes', []); conns = canvas.setdefault('connections', [])
         right = max([float(n.get('x', 0)) + float(n.get('w') or 500) for n in nodes] + [0]) + 360
         created = {}
@@ -275,26 +277,12 @@ def _apply(canvas_id, payload):
                 if len(roles)!=len(spec['references']) or roles.count('first_frame')!=1 or roles.count('last_frame')>1 or any(r['kind']!='image' for r in spec['references']):
                     raise HTTPException(400,'请指定一个首帧和至多一个尾帧。')
             created[spec['key']] = nid
-        _touch(canvas)
         result = {'canvas_id': canvas_id, 'node_ids': created, 'revision': plans.revision(canvas)}
-        state = _load(); state['undo'][op_key] = {**snapshot,'applied_revision':result['revision']}; state['runs']['edit:' + op_key] = {**result,'fingerprint':fingerprint}; _save(state)
-        return result
+        return graph.commit_edit(canvas, journal, operation_id, fingerprint, 'apply_nodes', snapshot, result)
 
 
 def _undo(canvas_id, payload):
-    result = graph.undo(canvas_id, payload)
-    if result is not None:
-        return result
-    op = payload.get('operation_id'); state = _load(); key = canvas_id + ':' + str(op)
-    if not op or key not in state['undo']: raise HTTPException(404, '没有此编辑操作的撤销快照。')
-    with plans.APPLY_LOCK:
-        canvas = _canvas(canvas_id)
-        if plans.revision(canvas) != payload.get('expected_revision') or payload.get('expected_revision') != state['undo'][key].get('applied_revision'):
-            raise HTTPException(409, '画布已发生变化，请重新读取，避免覆盖后续修改。')
-        snap = state['undo'][key]
-        canvas['nodes'] = copy.deepcopy(snap['nodes']); canvas['connections'] = copy.deepcopy(snap['connections'])
-        _touch(canvas); state['undo'].pop(key, None); _save(state)
-    return {'canvas_id': canvas_id, 'revision': plans.revision(canvas)}
+    return graph.undo(canvas_id, payload)
 
 
 def _control_request(canvas_id, node, request_id, check=True):
@@ -475,8 +463,6 @@ def install(app):
         name = payload.get('name'); args = payload.get('arguments', {})
         if name not in TOOLS or not isinstance(args, dict): raise HTTPException(400, '未知工具或 arguments 格式错误。')
         if name in graph.TOOLS:
-            if name == 'edit_canvas' and ('edit:' + str(args.get('canvas_id')) + ':' + str(args.get('operation_id'))) in _load()['runs']:
-                raise HTTPException(409, 'operation_id 已用于模型节点编辑，请使用新的编号。')
             return {'result': graph.call(name, args)}
         if name == 'list_canvases':
             return {'result': {'items': [x for x in core.list_canvases() if not x.get('deleted_at') and core.normalize_canvas_kind(x.get('kind')) != 'smart']}}
