@@ -61,6 +61,15 @@ class ReleaseTests(unittest.TestCase):
                 launcher.launch(root)
         call.assert_not_called()
 
+    def test_hidden_supervisor_failure_is_logged_and_reported(self):
+        root, _ = self.fixture()
+        with patch.object(launcher.subprocess, 'call', return_value=7) as call:
+            with self.assertRaisesRegex(launcher.LaunchError, 'exit code 7'):
+                launcher.launch(root, no_browser=True)
+        self.assertEqual(call.call_args.kwargs['stderr'], subprocess.STDOUT)
+        self.assertEqual(Path(call.call_args.kwargs['stdout'].name), root / 'userdata' / 'logs' / 'launcher.log')
+        self.assertTrue((root / 'userdata' / 'logs' / 'launcher.log').is_file())
+
     def test_strip_host_python_entrypoints_preserves_importable_dependencies(self):
         site = self.root / 'site-packages'
         (site / 'bin').mkdir(parents=True)

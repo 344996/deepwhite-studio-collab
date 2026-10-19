@@ -86,8 +86,14 @@ def launch(root, *, port=None, no_browser=False, check=False):
     if no_browser:
         command.append('--no-browser')
     # The supervisor owns the installation lock, readiness and repeated launches.
-    return subprocess.call(command, cwd=root, env=environment,
-        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+    log = root / 'userdata' / 'logs' / 'launcher.log'
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with log.open('ab') as stream:
+        code = subprocess.call(command, cwd=root, env=environment, stdout=stream, stderr=subprocess.STDOUT,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+    if code:
+        raise LaunchError('Studio could not start (exit code ' + str(code) + '). See userdata/logs/launcher.log and updates/server.log.')
+    return 0
 
 
 def main():
