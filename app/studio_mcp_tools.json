@@ -1,14 +1,14 @@
 [
   {
     "name": "list_canvases",
-    "description": "读取当前工作区的画布列表。Read first to find a canvas_id; then inspect its revision before writing.",
-    "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false},
+    "description": "读取普通画布列表，可用 project_id 仅查看指定项目。先查 list_projects，再读取画布 revision 后编辑。",
+    "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}}, "required": [], "additionalProperties": false},
     "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
   },
   {
     "name": "get_canvas",
     "description": "读取画布内容、节点和当前 revision。先调用它，再用其 revision 作为 expected_revision。Read before editing.",
-    "inputSchema": {"type": "object", "properties": {"canvas_id": {"type": "string", "minLength": 1}}, "required": ["canvas_id"], "additionalProperties": false},
+    "inputSchema": {"type": "object", "properties": {"canvas_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}}, "required": ["canvas_id"], "additionalProperties": false},
     "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
   },
   {
@@ -20,37 +20,37 @@
   {
     "name": "list_assets",
     "description": "读取指定项目已导入的素材与 version_id。若素材尚未出现，请先通过 DeepWhite Studio 现有资产界面导入；本工具不接受任意本地文件路径。先查素材，再把需要的版本作为节点 references。Read assets imported through the Studio UI, then reference version_id.",
-    "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}}, "required": ["project_id"], "additionalProperties": false},
+    "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}}, "required": ["project_id"], "additionalProperties": false},
     "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
   },
   {
     "name": "apply_nodes",
     "description": "将节点计划写入画布；只保存节点，不启动生成。调用前先读取画布 revision、模型和所需素材；expected_revision 必须取自最新 get_canvas。Apply nodes only; generation requires a separate explicit generate_node call.",
-    "inputSchema": {"type": "object", "properties": {"canvas_id": {"type": "string", "minLength": 1}, "expected_revision": {"type": ["string", "integer"]}, "operation_id": {"type": "string", "minLength": 1}, "nodes": {"type": "array", "items": {"type": "object", "properties": {"key": {"type": "string", "minLength": 1}, "kind": {"type": "string", "enum": ["image", "video"]}, "title": {"type": "string"}, "prompt": {"type": "string"}, "provider_id": {"type": "string", "minLength": 1}, "model": {"type": "string", "minLength": 1}, "params": {"type": "object"}, "references": {"type": "array", "items": {"type": "object", "properties": {"version_id": {"type": "string", "minLength": 1}, "role": {"type": "string"}}, "required": ["version_id"], "additionalProperties": false}}, "target_node_id": {"type": "string"}}, "required": ["key", "kind", "title", "prompt", "provider_id", "model"], "additionalProperties": false}}}, "required": ["canvas_id", "expected_revision", "operation_id", "nodes"], "additionalProperties": false},
+    "inputSchema": {"type": "object", "properties": {"canvas_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}, "expected_revision": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "operation_id": {"type": "string", "minLength": 8, "maxLength": 80}, "nodes": {"type": "array", "items": {"type": "object", "properties": {"key": {"type": "string", "minLength": 1, "maxLength": 80}, "kind": {"type": "string", "enum": ["image", "video"]}, "title": {"type": "string", "maxLength": 120}, "prompt": {"type": "string", "minLength": 1, "maxLength": 20000}, "provider_id": {"type": "string", "minLength": 1}, "model": {"type": "string", "minLength": 1}, "params": {"type": "object"}, "references": {"type": "array", "items": {"type": "object", "properties": {"version_id": {"type": "string", "pattern": "^[a-f0-9]{32}$"}, "role": {"type": "string", "enum": ["first_frame", "last_frame"]}}, "required": ["version_id"], "additionalProperties": false}, "maxItems": 40}, "target_node_id": {"type": "string", "minLength": 0, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]*$"}}, "required": ["key", "kind", "title", "prompt", "provider_id", "model"], "additionalProperties": false}, "minItems": 1, "maxItems": 40}}, "required": ["canvas_id", "expected_revision", "operation_id", "nodes"], "additionalProperties": false},
     "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
   },
   {
     "name": "undo_edit",
-    "description": "撤销此 MCP 操作写入的节点；先确认 operation_id 和最新 expected_revision。Undo the identified edit only.",
-    "inputSchema": {"type": "object", "properties": {"canvas_id": {"type": "string", "minLength": 1}, "operation_id": {"type": "string", "minLength": 1}, "expected_revision": {"type": ["string", "integer"]}}, "required": ["canvas_id", "operation_id", "expected_revision"], "additionalProperties": false},
-    "annotations": {"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false}
+    "description": "撤销最近一次且无后续改动的 MCP 编辑。expected_revision 取自该编辑回执；相同参数重试返回原撤销回执，不会再次修改画布。",
+    "inputSchema": {"type": "object", "properties": {"canvas_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}, "operation_id": {"type": "string", "minLength": 8, "maxLength": 80}, "expected_revision": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}, "required": ["canvas_id", "operation_id", "expected_revision"], "additionalProperties": false},
+    "annotations": {"readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": false}
   },
   {
     "name": "generate_node",
     "description": "对指定节点提交生成请求；可能返回待审批状态，必须等待用户在 DeepWhite Studio 审批后才会执行。先确认已保存节点和用户意图。This may incur cost after approval; never retry without checking status.",
-    "inputSchema": {"type": "object", "properties": {"canvas_id": {"type": "string", "minLength": 1}, "node_id": {"type": "string", "minLength": 1}, "request_id": {"type": "string", "minLength": 1}}, "required": ["canvas_id", "node_id", "request_id"], "additionalProperties": false},
+    "inputSchema": {"type": "object", "properties": {"canvas_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}, "node_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}, "request_id": {"type": "string", "minLength": 8, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}}, "required": ["canvas_id", "node_id", "request_id"], "additionalProperties": false},
     "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
   },
   {
     "name": "get_generation",
     "description": "查询生成任务或审批状态。Check status before any further action.",
-    "inputSchema": {"type": "object", "properties": {"job_id": {"type": "string", "minLength": 1}}, "required": ["job_id"], "additionalProperties": false},
+    "inputSchema": {"type": "object", "properties": {"job_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}}, "required": ["job_id"], "additionalProperties": false},
     "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
   },
   {
     "name": "resume_generation",
     "description": "在获批任务被暂时中断后继续查询/恢复该任务。先 get_generation 确认状态；此工具不能代替审批。Resume an already approved generation only.",
-    "inputSchema": {"type": "object", "properties": {"job_id": {"type": "string", "minLength": 1}}, "required": ["job_id"], "additionalProperties": false},
+    "inputSchema": {"type": "object", "properties": {"job_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}}, "required": ["job_id"], "additionalProperties": false},
     "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
   }
 ]

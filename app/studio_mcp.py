@@ -141,7 +141,8 @@ def _read_control_config() -> tuple[str, str]:
 def _sanitize(value):
     if isinstance(value, dict):
         return {key: _sanitize(item) for key, item in value.items()
-                if not any(part in str(key).casefold() for part in SENSITIVE_KEY_PARTS)}
+                if str(key).casefold() not in ('key', 'secret') and
+                not any(part in str(key).casefold() for part in SENSITIVE_KEY_PARTS)}
     if isinstance(value, list):
         return [_sanitize(item) for item in value]
     return value
@@ -191,7 +192,7 @@ def _validate(value, schema, path="$args"):
         if schema.get("additionalProperties") is False:
             extra = set(value) - set(properties)
             if extra:
-                raise BridgeError(f"{path} 含有未支持字段：{', '.join(sorted(extra))}。")
+                raise BridgeError(f"{path} 含有未支持字段。")
         for key, item in value.items():
             if key in properties:
                 _validate(item, properties[key], f"{path}.{key}")
@@ -231,9 +232,16 @@ class Bridge:
             response = _request_json(self.base_url + "/api/studio/control/call", method="POST", timeout=30,
                                      payload={"name": name, "arguments": arguments},
                                      headers={"Authorization": "Bearer " + token}, sensitive_values=(token,))
-            if not isinstance(response, dict) or "result" not in response:
+            if not isinstance(response, dict) or not isinstance(response.get("result"), dict):
                 raise BridgeError("DeepWhite Studio 返回了无效的控制结果。")
             result = _sanitize(response["result"])
+            if name == "get_node_schema":
+                # These are static schema property names (including `key`), not
+                # credential-bearing canvas fields. Publish the exact contract.
+                result["input_schemas"] = {tool["name"]: tool["inputSchema"] for tool in self.tools}
+            if name in ("apply_nodes", "edit_canvas") and isinstance(response["result"].get("node_ids"), dict):
+                # User aliases such as `token` must still map to the saved node.
+                result["node_ids"] = response["result"]["node_ids"]
             return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, separators=(",", ":"))}],
                     "structuredContent": result, "isError": False}
         except BridgeError as exc:
@@ -241,7 +249,9 @@ class Bridge:
 
     def handle(self, message):
         if not isinstance(message, dict) or message.get("jsonrpc") != "2.0" or not isinstance(message.get("method"), str):
-            return self._error(message.get("id") if isinstance(message, dict) else None, -32600, "Invalid Request")
+            return self._error(None, -32600, "Invalid Request")
+        if "id" in message and type(message["id"]) not in (str, int):
+            return self._error(None, -32600, "Invalid Request")
         method = message["method"]
         request_id = message.get("id")
         notification = "id" not in message
@@ -250,6 +260,14 @@ class Bridge:
                 self.initialized = True
                 return None
             return None
+        if method == "server/discover":
+            # 2026-07-28 dual-era stdio clients probe first. An ordinary method
+            # error explicitly selects their documented legacy initialize path.
+            # Do not advertise a modern revision without its metadata semantics.
+            return self._error(request_id, -32601,
+                "Legacy MCP server; use initialize (supports " + ", ".join(PROTOCOL_VERSIONS) + ")")
+        if method == "ping":
+            return {"jsonrpc": "2.0", "id": request_id, "result": {}}
         if method == "initialize":
             params = message.get("params")
             if self.initializing or self.initialized or not isinstance(params, dict):
@@ -267,12 +285,11 @@ class Bridge:
                                "serverInfo": SERVER_INFO}}
         if not self.initialized:
             return self._error(request_id, -32002, "Server not initialized")
-        if method == "ping":
-            return {"jsonrpc": "2.0", "id": request_id, "result": {}}
         if method == "tools/list":
             params = message.get("params", {})
             if (not isinstance(params, dict) or set(params) - {"cursor", "_meta"} or
                     ("cursor" in params and not isinstance(params["cursor"], str)) or
+                    params.get("cursor") or
                     ("_meta" in params and not isinstance(params["_meta"], dict))):
                 return self._error(request_id, -32602, "Invalid params")
             return {"jsonrpc": "2.0", "id": request_id, "result": {"tools": self.tools}}
@@ -319,8 +336,10 @@ def serve(base_url: str) -> int:
             continue
         try:
             text = raw.decode("utf-8").strip()
-            message = json.loads(text)
-        except (UnicodeDecodeError, json.JSONDecodeError):
+            def reject_constant(_value):
+                raise ValueError("Non-finite JSON number")
+            message = json.loads(text, parse_constant=reject_constant)
+        except (UnicodeDecodeError, ValueError):
             reply = bridge._error(None, -32700, "Parse error")
         else:
             reply = bridge.handle(message)
