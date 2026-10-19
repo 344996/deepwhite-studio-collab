@@ -1,0 +1,30 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),net=require('node:net');
+const {spawn}=require('node:child_process');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const root=path.resolve(__dirname,'..'),runtime=fs.mkdtempSync(path.join(os.tmpdir(),'dw-provider-ui-'));
+const output=path.join(root,'test-output/provider-capabilities');fs.mkdirSync(output,{recursive:true});
+const checks=[],errors=[],external=[];let server,browser,log='';
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{
+  const socket=net.createServer();await new Promise(r=>socket.listen(0,'127.0.0.1',r));const port=socket.address().port;await new Promise(r=>socket.close(r));
+  const base='http://127.0.0.1:'+port;
+  server=spawn(process.env.PYTHON_EXECUTABLE||'python',['-B','tests/catalog-browser-server.py'],{cwd:root,windowsHide:true,env:{...process.env,PYTHONUTF8:'1',DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,DEEPWHITE_STUDIO_PORT:String(port)}});
+  server.stdout.on('data',d=>log+=d);server.stderr.on('data',d=>log+=d);
+  for(let i=0;i<150;i++){try{if((await fetch(base+'/api/studio/health')).ok)break;}catch{}await wait(100);if(i===149)throw Error(log);}
+  browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})});
+  const page=await browser.newPage({viewport:{width:1280,height:900}});page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/*',route=>{if(new URL(route.request().url()).origin!==base){external.push(route.request().url());return route.abort();}return route.continue();});
+  await page.goto(base+'/settings');await page.waitForFunction(()=>!document.getElementById('apiForm').inert);
+  await page.locator('#providerCapabilities').getByText('此平台的调用范围',{exact:true}).waitFor();
+  await page.locator('#apiKey').fill('fixture-only-key');await page.locator('#saveProvider').click();
+  await page.locator('#saveState').getByText('连接设置已保存。',{exact:true}).waitFor();
+  await page.locator('#providerCapabilities').getByText(/网站登录管理账户/).waitFor();checks.push('Saved provider shows account and credential separation');
+  await page.locator('#testConnection').click();await page.locator('#providerCapabilities').getByText(/最近列表检查/).waitFor();checks.push('GET-only successful probe produces address-bound receipt');
+  const response=await fetch(base+'/api/studio/settings/provider-capabilities');assert.equal(response.status,200);assert(!(await response.text()).includes('fixture-only-key'));checks.push('Capability response contains no submitted API key');
+  await page.locator('#baseUrl').fill('https://custom.invalid/v1');await page.locator('#apiKey').fill('new-fixture-key');await page.locator('#saveProvider').click();
+  await page.locator('#providerCapabilities').getByText(/此地址尚无成功/).waitFor();assert(await page.locator('#providerCapabilities').getByText('兼容协议，待验证',{exact:true}).count()>=1);checks.push('Address change clears receipt and does not claim full compatibility');
+  await page.setViewportSize({width:390,height:900});await page.locator('#providerCapabilities').scrollIntoViewIfNeeded();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.screenshot({path:path.join(output,'capabilities-mobile.png'),fullPage:true});checks.push('Capability table fits mobile settings');
+  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
+})().catch(e=>{console.error(e);process.exitCode=1;errors.push(String(e));}).finally(async()=>{await browser?.close();server?.kill();fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({checks,errors,external},null,2));fs.writeFileSync(path.join(output,'server.log'),log);console.log(JSON.stringify({checks,errors,external}));});

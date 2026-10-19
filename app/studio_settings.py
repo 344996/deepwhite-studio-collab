@@ -111,6 +111,8 @@ class CatalogPreferences(BaseModel):
 
 def install(app):
     catalog.install_generation_routes(app)
+    import studio_provider_capabilities
+    studio_provider_capabilities.install(app)
 
     @app.get('/api/studio/model-catalog')
     async def get_catalog():
@@ -156,7 +158,13 @@ def install(app):
 
     @app.post('/api/studio/settings/test')
     async def test_connection(payload: core.TestConnectionPayload):
-        return await read_models(payload)
+        result = await read_models(payload)
+        # Diagnostic persistence must not turn a successful read-only check into a failure.
+        try:
+            studio_provider_capabilities.record_probe(payload.provider_id, payload.base_url, result)
+        except OSError:
+            result['diagnostic_saved'] = False
+        return result
 
     @app.put('/api/studio/settings/provider')
     async def save_provider(payload: core.ApiProviderPayload):

@@ -24,6 +24,7 @@
         <div class="row switches"><label class="check"><input type="checkbox" id="enabled" checked>启用此平台</label><label class="check"><input type="checkbox" id="primary" checked>作为默认平台</label></div>
         <div class="row"><button type="button" id="testConnection">测试连接</button><button type="button" id="fetchModels">同步模型</button><small>只读取模型列表，不生成内容。</small></div>
         <div id="apiResult" class="notice" role="status" aria-live="polite" hidden></div>
+        <section id="providerCapabilities" aria-live="polite" aria-label="平台能力说明"></section>
         <section id="modelManager" class="picker">
           <div class="row"><h2>我的模型</h2><span id="modelCount"></span></div>
           <p>同步后自动分类并启用。同一模型的生成方式已合并，画布会根据参考素材自动选择。</p>
@@ -61,6 +62,7 @@
     </section>
   </main>
   <script src="/static/studio-settings.js?v=0.10.2-studio.10.1789616036"></script>
+  <script src="/static/studio-provider-capabilities.js"></script>
 <script src="/static/studio-local-engine.js?v=0.10.2-studio.10.1790498448"></script>
 <script src="/static/studio-storage.js?v=0.10.2-studio.10.1790409534"></script>
 <script src="/static/studio-dreamina.js?v=0.10.2-studio.10.1790409430"></script>

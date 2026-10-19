@@ -16,6 +16,7 @@
     $('apiKey').value='';$('apiKey').type='password';$('showKey').textContent='显示';$('showKey').setAttribute('aria-pressed','false');
     $('apiKey').placeholder=current.has_key?'已保存；留空保留原密钥':'粘贴 API Key';$('keyState').textContent=current.has_key?'密钥已保存（不会回显完整密钥）':'尚未保存密钥';
     $('clearKey').checked=false;$('clearKey').disabled=!current.has_key;$('enabled').checked=current.enabled!==false;$('primary').checked=!!current.primary;$('imageMode').value=current.image_request_mode||'openai';dirty=false;renderModels();
+    window.dispatchEvent(new CustomEvent('studio-provider-selected'));
   }
   function formPayload(){
     if(!$('apiForm').reportValidity())throw Error('请填写平台名称和有效的 API 地址。');
@@ -40,7 +41,7 @@
   $('modelSearch').oninput=renderModels;$('modelFilter').onchange=renderModels;$('showRemoved').onchange=renderModels;
   $('enableVisible').onclick=()=>preferences(visible().filter(m=>m.available&&!m.removed).map(m=>({id:m.id,enabled:true,removed:false})));
   $('disableVisible').onclick=()=>preferences(visible().filter(m=>!m.removed).map(m=>({id:m.id,enabled:false,removed:false})));
-  $('testConnection').onclick=async()=>{if(loading)return;try{const p=formPayload();if(p.clear_key)throw Error('已选择清除密钥，请先取消再测试。');lock(true);notice('apiResult','正在检查连接…');const data=await api('/api/studio/settings/test','POST',{base_url:p.base_url,api_key:p.api_key||'',provider_id:p.id});notice('apiResult',data.message);}catch(e){notice('apiResult',e.message,true);}finally{lock(false);}};
+  $('testConnection').onclick=async()=>{if(loading)return;try{const p=formPayload();if(p.clear_key)throw Error('已选择清除密钥，请先取消再测试。');lock(true);notice('apiResult','正在检查连接…');const data=await api('/api/studio/settings/test','POST',{base_url:p.base_url,api_key:p.api_key||'',provider_id:p.id});notice('apiResult',data.message);window.dispatchEvent(new CustomEvent('studio-provider-probed'));}catch(e){notice('apiResult',e.message,true);}finally{lock(false);}};
   $('fetchModels').onclick=async()=>{if(loading)return;try{const p=formPayload();if(p.clear_key)throw Error('请取消清除密钥后再同步模型。');lock(true);notice('apiResult','正在同步并自动整理模型…');const data=await api('/api/studio/settings/sync-models','POST',p);catalogs[p.id]={base_url:p.base_url,models:data.models};accept(data.provider);render();notice('apiResult',data.message);$('saveState').textContent='模型和连接设置已自动保存。';broadcast();}catch(e){notice('apiResult',e.message,true);}finally{lock(false);}};
   $('apiForm').onsubmit=async event=>{event.preventDefault();if(loading)return;try{const p=formPayload();lock(true);$('saveState').textContent='正在保存…';const data=await api('/api/studio/settings/provider','PUT',p);accept(data.provider);render();$('saveState').textContent='连接设置已保存。';broadcast();}catch(e){$('saveState').textContent=e.message;}finally{lock(false);}};
   $('showKey').onclick=()=>{const show=$('apiKey').type==='password';$('apiKey').type=show?'text':'password';$('showKey').textContent=show?'隐藏':'显示';$('showKey').setAttribute('aria-pressed',String(show));};
