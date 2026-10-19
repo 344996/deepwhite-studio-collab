@@ -1,0 +1,82 @@
+/* Fixed chrome only; world/node positions must always follow pointer input directly. */
+.studio-canvas-workspace .workspace-save-state{font-size:11px;color:var(--dw-muted);white-space:nowrap;line-height:16px}
+.workspace-save-state::before{content:'';display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:var(--dw-success)}
+.workspace-save-state[data-state=dirty]::before,.workspace-save-state[data-state=saving]::before{background:var(--dw-gold)}
+.workspace-save-state[data-state=error],.workspace-save-state[data-state=conflict]{color:var(--dw-danger)}
+.workspace-save-state[data-state=error]::before,.workspace-save-state[data-state=conflict]::before{background:currentColor}
+html.studio-canvas-workspace .sv2-header{height:70px}
+.studio-canvas-workspace .sv2-heading{gap:2px}.studio-canvas-workspace .sv2-eyebrow{font-size:9px}
+.studio-canvas-workspace .workspace-canvas-tools{gap:8px}
+.studio-v2-canvas.studio-canvas-workspace .workspace-canvas-tools{z-index:90}
+html.studio-v2-canvas.studio-canvas-workspace .topbar{z-index:90;zoom:1!important}
+.studio-canvas-workspace .workspace-canvas-tools [data-workspace-tasks]{position:static!important;transform:none!important;zoom:1!important;width:auto!important;height:36px!important;padding:8px 12px!important;font-size:12px}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail{left:16px;top:104px;width:68px;padding:6px;gap:4px;max-height:calc(100dvh - 200px);overflow:visible;border-radius:12px;box-shadow:0 6px 20px var(--dw-shadow);background:var(--dw-surface);z-index:60}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button{display:flex!important;flex-direction:column;width:54px!important;min-width:54px;min-height:56px;height:56px;padding:8px 2px!important;gap:6px;font-size:10px;color:var(--dw-muted);border:0;border-radius:8px;background:transparent}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button>span{display:block!important;font-size:10px;line-height:14px;white-space:nowrap}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button svg{width:18px;height:18px;flex:none}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button[aria-pressed=true]{color:var(--dw-ink)!important;background:var(--dw-raised)!important;box-shadow:inset 0 0 0 1px var(--dw-line-strong)!important}
+.workspace-extra-tools{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid var(--dw-line);padding-top:12px;width:100%}
+.workspace-extra-tools button{display:inline-flex;gap:6px;align-items:center}.workspace-extra-tools svg{width:16px;height:16px}
+html.studio-canvas-workspace .workspace-viewport{right:20px;bottom:20px;min-height:48px;padding:6px;gap:4px;border:1px solid var(--dw-line-strong);border-radius:12px;background:var(--dw-surface);box-shadow:0 6px 20px var(--dw-shadow);z-index:65}
+.workspace-viewport button{min-width:32px;min-height:32px;border:0;border-radius:7px;background:transparent;color:var(--dw-ink)}.workspace-viewport svg{width:16px;height:16px}.workspace-viewport #smartV2Fit span,.workspace-viewport #workspaceMinimap span{display:none}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>:is(#studioV2Add,#smartV2Add){background:var(--dw-gold)!important;color:var(--dw-on-gold)!important}
+html.studio-canvas-workspace :is(#minimap,.smart-minimap){right:20px;bottom:84px}
+.studio-canvas-workspace :is(button,summary,input,textarea,select):focus-visible{outline:2px solid var(--dw-gold);outline-offset:3px}
+.studio-canvas-workspace .workspace-extra-tools .sv2-advanced-panel{position:static;box-shadow:none;margin-top:8px;width:100%}
+@media(max-width:1100px){
+  .studio-canvas-workspace .workspace-canvas-tools [data-workspace-tasks]{font-size:11px;padding:8px!important}
+  html.studio-canvas-workspace .canvas-nav{max-width:210px;padding-left:8px}
+  .studio-canvas-workspace .v2-brand small{display:none}
+}
+@media(max-width:768px){
+  html.studio-canvas-workspace .sv2-header{height:124px}
+  html.studio-v2.studio-canvas-workspace #workspaceCanvasRail{left:12px;top:140px;width:60px;padding:4px}
+  html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button{width:50px!important;min-width:50px;min-height:50px;height:50px}
+  .studio-canvas-workspace .workspace-canvas-tools{gap:5px}
+  .studio-canvas-workspace .workspace-canvas-tools #workspaceSave span,.studio-canvas-workspace .workspace-canvas-tools #smartV2Save span{display:none}
+  .studio-canvas-workspace .workspace-canvas-tools [data-workspace-tasks]{padding:8px 5px!important;font-size:11px;width:auto;height:36px;position:static;transform:none}
+  .studio-canvas-workspace .workspace-more-panel{position:fixed;left:auto;right:12px;top:118px;width:min(320px,calc(100vw - 24px))}
+  html.studio-canvas-workspace .workspace-viewport{bottom:12px;right:12px}
+  .studio-canvas-workspace .sv2-save-status{position:static}.studio-canvas-workspace .sv2-eyebrow{display:none}
+  .studio-canvas-workspace .v2-brand{display:none!important}
+  html.studio-canvas-workspace .canvas-nav{max-width:calc(100vw - 24px);padding:0;border:0}
+}
+@media(prefers-reduced-motion:no-preference){
+  .studio-canvas-workspace #workspaceCanvasRail>button:active{transform:translateY(1px)}
+  .studio-canvas-workspace #workspaceCanvasRail>button{transition:transform 120ms ease,opacity 120ms ease}
+}
+.workspace-inspector{box-sizing:border-box;position:fixed;top:90px;right:20px;bottom:152px;width:300px;z-index:62;display:flex;flex-direction:column;overflow:hidden;background:var(--dw-surface);border:1px solid var(--dw-line-strong);border-radius:12px;color:var(--dw-ink);box-shadow:0 10px 28px var(--dw-shadow);font-family:inherit;font-size:12px;line-height:1.5}
+.workspace-inspector[hidden],#workspaceInspectorToggle[hidden],#workspaceInspectorScrim[hidden]{display:none!important}
+.workspace-inspector>header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--dw-line)}
+.workspace-inspector h2{font-size:13px;font-weight:600;margin:0}.workspace-inspector header button{padding:4px!important}.workspace-inspector header button>span{display:none}
+.workspace-inspector-content{padding:16px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;display:flex;flex-direction:column;gap:16px}
+.workspace-inspector button,#workspaceInspectorToggle{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--dw-line-strong);border-radius:8px;padding:8px 10px;min-height:32px;background:var(--dw-panel);color:var(--dw-ink);font:inherit;cursor:pointer}
+.workspace-inspector svg,#workspaceInspectorToggle svg{width:16px;height:16px;flex:none}
+.workspace-property{display:flex;flex-direction:column;gap:6px;color:var(--dw-muted);font-size:11px;min-width:0}
+.workspace-property>input,.workspace-property>textarea,.workspace-property>select{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--dw-line-strong);border-radius:7px;background:var(--dw-canvas);color:var(--dw-ink);padding:9px 10px;font-family:inherit;font-size:12px;line-height:1.6}
+.workspace-property>textarea{resize:vertical;min-height:116px;max-height:340px;overscroll-behavior:contain}.workspace-property>input:invalid{border-color:var(--dw-danger)}
+.workspace-property-position{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.workspace-property-kind{font-size:12px;color:var(--dw-gold);margin:0;overflow-wrap:anywhere}
+.workspace-property-note{font-size:11px;color:var(--dw-muted);line-height:1.8;margin:0}
+.workspace-selection-actions{display:flex;flex-wrap:wrap;gap:6px}.workspace-selection-actions button{font-size:11px;padding:7px 9px}
+#workspaceInspectorToggle{position:fixed;top:82px;right:20px;z-index:61;font-size:12px;min-height:32px}
+.workspace-inspector-open #workspaceInspectorToggle{visibility:hidden}
+#workspaceInspectorScrim{position:fixed;inset:0;z-index:96;background:var(--dw-scrim);border:0}#workspaceInspectorScrim>*{display:none}
+.studio-canvas-workspace #shell.workspace-hand,.studio-canvas-workspace #shell.workspace-hand .image-node{cursor:grab!important}
+.studio-canvas-workspace #shell.panning{cursor:grabbing!important}
+.studio-canvas-workspace .workspace-connection-hint{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:80;padding:10px 16px;border:1px solid var(--dw-gold-line);border-radius:9px;background:var(--dw-surface);color:var(--dw-ink);font-size:12px;pointer-events:none;max-width:calc(100vw - 48px);text-align:center}
+.workspace-connection-hint[hidden]{display:none}.workspace-connection-hint[data-state=invalid]{border-color:var(--dw-danger);color:var(--dw-danger)}
+@media(max-width:900px){
+  .workspace-inspector{top:138px;right:12px;bottom:76px;width:min(320px,calc(100vw - 24px));z-index:97}
+  #workspaceInspectorToggle{top:136px;right:12px}.workspace-inspector-content{gap:14px}
+}
+@media(prefers-reduced-motion:no-preference){
+  .workspace-inspector:not([hidden]){animation:workspace-inspector-in 180ms ease-out}
+  .workspace-connection-hint:not([hidden]){animation:workspace-appear 140ms ease-out}
+  @keyframes workspace-inspector-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+}
+@media(prefers-reduced-motion:reduce){.studio-canvas-workspace :is(.workspace-inspector,.workspace-connection-hint,#workspaceCanvasRail>button){animation:none!important;transition:none!important}}
+
+.studio-v2-smart #shell.workspace-cut,.studio-v2-smart #shell.workspace-cut .connection-layer{cursor:crosshair}
+
+@media(min-width:901px){html.studio-canvas-workspace.workspace-inspector-open :is(#minimap,.smart-minimap){right:336px}}
