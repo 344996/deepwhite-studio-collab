@@ -46,6 +46,8 @@ async function undo(redo = false) { await page.evaluate(() => document.activeEle
       assert.deepEqual(await page.locator('#workspaceCanvasRail>button>span').allTextContents(), ['添加','选择','移动','素材','工作流']);
       for(const item of await page.locator('#workspaceCanvasRail>button').all()){const box=await item.boundingBox();assert(box.width>=44&&box.height>=44,'labeled tools retain a usable pointer target');}
       assert.equal(await page.locator('[data-workflow-workbench]').count(), 1); assert(await page.locator('#workspaceInspector').isHidden());
+      await selectText();await page.evaluate(kind=>{if(kind==='smart'){selectedId='removed-node';selectedIds=[];}else{selected.clear();selected.add('removed-node');}render();},kind);
+      await page.waitForFunction(()=>document.getElementById('workspaceInspector').hidden&&document.getElementById('workspaceInspectorToggle').hidden);
     });
     await check(kind + ': inspector prompt edit is one undo session and persists exactly', async () => {
       await selectText(); const input = page.locator('#workspaceInspector [data-property=text]');

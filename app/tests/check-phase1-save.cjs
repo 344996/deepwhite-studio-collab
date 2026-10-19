@@ -63,6 +63,7 @@ async function conflictDraft(){
 async function browserRegression(){
   const {spawn}=require('node:child_process'),net=require('node:net');
   const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+  const evidence=path.resolve(process.env.PHASE1_SAVE_EVIDENCE_DIR||path.join(root,'test-output/phase1-save'));fs.mkdirSync(evidence,{recursive:true});
   const runtimeRoot=path.resolve(root,'../.test-runtime');fs.mkdirSync(runtimeRoot,{recursive:true});
   const runtime=fs.mkdtempSync(path.join(runtimeRoot,'phase1-save-'));
   const server=net.createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port;await new Promise(r=>server.close(r));
@@ -100,7 +101,10 @@ async function browserRegression(){
     await page.waitForFunction(()=>document.getElementById('smartV2SaveStatus').textContent==='已保存');
     assert.equal((await api('/api/canvases/'+saved.id)).canvas.nodes.find(n=>n.id==='phase1-save-node').text,'last edit');
     mode='fail';const failure=await page.evaluate(async()=>{nodes.find(n=>n.id==='phase1-save-node').text='retry text';scheduleSave();return saveCanvas();});assert.equal(failure.ok,false);
-    assert.equal(await page.locator('#smartV2SaveStatus').innerText(),'保存失败，请重试');
+    assert.equal(await page.locator('#smartV2SaveStatus').innerText(),'保存失败');
+    assert((await page.locator('#smartV2SaveStatus').getAttribute('title')).trim());
+    assert(await page.locator('#studioSaveNotice').getByRole('button',{name:'重试保存',exact:true}).isVisible());
+    await page.screenshot({path:path.join(evidence,'smart-save-failure.png')});
     mode='normal';await page.evaluate(()=>saveCanvas());assert.equal((await api('/api/canvases/'+saved.id)).canvas.nodes.find(n=>n.id==='phase1-save-node').text,'retry text');
     console.log('PASS browser: assembled smart page delayed saves, truthful status and failure retry');
     const heldBeforeBack=held.length;
@@ -120,14 +124,16 @@ async function browserRegression(){
     await page.locator('.smart-back').click();await page.waitForURL('**/canvas-list.html?project='+owner.id);
     await page.goto(base+'/static/smart-canvas.html?id='+saved.id);await page.waitForFunction(()=>canvas?.id&&window.StudioSave);
     mode='fail';await page.evaluate(()=>{nodes.find(n=>n.id==='phase1-save-node').text='failed return draft';scheduleSave();});await page.locator('.smart-back').click();
-    await page.waitForFunction(()=>document.getElementById('smartV2SaveStatus').textContent==='保存失败，请重试'&&!document.querySelector('.smart-back').disabled);
+    await page.waitForFunction(()=>document.getElementById('smartV2SaveStatus').textContent==='保存失败'&&!document.querySelector('.smart-back').disabled);
     assert(new URL(page.url()).pathname.endsWith('smart-canvas.html'));assert.equal(await page.evaluate(()=>nodes.find(n=>n.id==='phase1-save-node').text),'failed return draft');
+    await page.screenshot({path:path.join(evidence,'smart-return-failure.png')});
     mode='normal';await page.locator('.smart-back').click();await page.waitForURL('**/canvas-list.html?project='+owner.id);
     assert.equal((await api('/api/canvases/'+saved.id)).canvas.nodes.find(n=>n.id==='phase1-save-node').text,'failed return draft');
     console.log('PASS browser: real back click waits for saves, keeps new edits and failed saves on-page, and preserves project on retry');
     await api('/api/projects','POST',{name:'Retained project'});await api('/api/projects','POST',{name:'Newest project'});
     const index=path.join(runtime,'data/projects.json'),damage=Buffer.from('{broken phase1 fixture');fs.writeFileSync(index,damage);
     await page.goto(base+'/');await page.locator('#projectIndexError').waitFor();assert(await page.locator('#projectIndexError').innerText().then(t=>t.includes('恢复上一版')));
+    await page.screenshot({path:path.join(evidence,'project-index-recovery.png')});
     assert.deepEqual(fs.readFileSync(index),damage,'viewing damage must not overwrite the index');
     page.once('dialog',dialog=>dialog.accept());await page.locator('#projectIndexError button').click();await page.waitForFunction(()=>!document.getElementById('projectIndexError'));
     assert((await api('/api/projects')).projects.some(p=>p.name==='Retained project'));

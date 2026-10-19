@@ -7,7 +7,7 @@
     const smart = document.documentElement.classList.contains('studio-v2-smart');
     const narrow = matchMedia('(max-width:900px)');
     const element = (tag, cls, text) => { const item = document.createElement(tag); if (cls) item.className = cls; if (text) item.textContent = text; return item; };
-    const selectedIdsNow = () => smart ? selectedNodeIds() : [...selected];
+    const selectedIdsNow = () => (smart ? selectedNodeIds() : [...selected]).filter(id => nodes.some(node => node.id === id));
     const titleOf = node => node.studioTitle || node.title || node.name || ({prompt:'文本',generator:'图片生成',video:'视频生成',audio:'音频生成','smart-prompt':'文本','smart-image':'图片节点'}[node.type] || '节点');
     const panel = element('aside', 'workspace-inspector'); panel.id = 'workspaceInspector'; panel.hidden = true; panel.setAttribute('aria-label', '节点属性');
     const head = element('header'), heading = element('h2', '', '节点属性');

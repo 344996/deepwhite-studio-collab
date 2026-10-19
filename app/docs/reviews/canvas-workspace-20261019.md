@@ -40,3 +40,11 @@ The drag phase calls the smart map 30 times; the zoom phase calls it 10 times. T
 There is remaining large-scene work outside the map function. For example, the whole smart 500-node zoom took 1246 ms before, 1034 ms in the first optimized pass and 1441 ms in the final repeat; the final repeat still observed two long tasks totaling 785 ms. Shared load and native renderer/save work are included, and these runs do not isolate their individual causes. No overall frame-rate or latency improvement is claimed.
 
 Raw local evidence is under `app/test-output/workspace-performance-before`, `workspace-performance-after`, `workspace-performance-final`, `canvas-workspace`, `workspace-requirements` and `workspace-interactions`. These ignored folders contain result JSON, browser screenshots and server logs; they are test artifacts rather than user data or release files.
+
+## Integrated acceptance
+
+After merging the workspace commits into the integration checkout with VERSION `0.10.2-studio.16`, the following scripts ran sequentially using the integration `.venv`: 17 interaction checks, 37 workspace checks, 23 inspector/connection checks, 8 save/recovery scenarios (`check-phase1-save.cjs --browser`, excluding its duplicate outer summary), 5 provider-capability checks, 9 update-page checks and 6 MCP graph checks. All 105 passed. The final 23 + 8 rerun includes a guard that hides inspector controls for stale selected IDs and screenshots for save failure, blocked return and index recovery.
+
+The save test now checks the shared short label `保存失败`, a nonempty error explanation and a visible retry button. It retains the original durable-content, queued-save, failed-navigation and explicit index-recovery assertions. Provider/update success responses are offline fixtures; live credentials, paid generation and a real program installation or rollback were not exercised.
+
+Integrated result logs, actual counts, timestamps and screenshot folders are indexed in `app/test-output/integration-ui-20261019/SUMMARY.md` and `summary.json`, with focused final reruns in `integration-ui-20261019-final`. The performance figures above remain the scoped isolated-branch measurements under shared host load.
