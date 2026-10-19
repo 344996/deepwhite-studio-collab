@@ -1,0 +1,165 @@
+{
+  "date": "2026-10-19",
+  "canvas_version": "0.10.2-studio.16",
+  "gallery_version": "0.3.0",
+  "account": "344996",
+  "original_upstream_unchanged": true,
+  "canvas_backend": {
+    "passed": true,
+    "tests": 370,
+    "failures": [],
+    "errors": [],
+    "skipped": 0
+  },
+  "canvas_interactions": {
+    "passed": true,
+    "total": 105,
+    "groups": [
+      {
+        "name": "interactions17",
+        "count": 17,
+        "exit_code": 0
+      },
+      {
+        "name": "workspace37",
+        "count": 37,
+        "exit_code": 0
+      },
+      {
+        "name": "canvas23",
+        "count": 23,
+        "exit_code": 0
+      },
+      {
+        "name": "save8",
+        "count": 8,
+        "exit_code": 0
+      },
+      {
+        "name": "providers5",
+        "count": 5,
+        "exit_code": 0
+      },
+      {
+        "name": "updates9",
+        "count": 9,
+        "exit_code": 0
+      },
+      {
+        "name": "mcp6",
+        "count": 6,
+        "exit_code": 0
+      }
+    ]
+  },
+  "real_codex": {
+    "status": "passed",
+    "client_version": "codex-cli 0.162.0-alpha.17.2",
+    "discovered_tools": [
+      "apply_nodes",
+      "create_canvas",
+      "edit_canvas",
+      "generate_node",
+      "get_canvas",
+      "get_generation",
+      "get_node_schema",
+      "list_assets",
+      "list_canvases",
+      "list_models",
+      "list_projects",
+      "resume_generation",
+      "undo_edit"
+    ],
+    "final_nodes_after_idempotent_undo": 0,
+    "user_config_unchanged": true,
+    "model_inference_used": false,
+    "provider_generation_used": false
+  },
+  "updater_subset_of_backend": {
+    "passed": true,
+    "count": 42
+  },
+  "release_build_regressions": {
+    "passed": true,
+    "count": 13
+  },
+  "gallery": {
+    "commit": "4b017be480d2155109434d24890adf94ac4face6",
+    "backend": 56,
+    "demo_backend": 3,
+    "browser": 17,
+    "prompt_handoff": 8,
+    "canvas_entry": 1,
+    "backup_restore_cli": 7,
+    "passed": true,
+    "detail": "https://github.com/344996/deepwhite-gallery/blob/main/docs/verification-0.3.0.json"
+  },
+  "portable_process_rehearsal": {
+    "checks": [
+      {
+        "initial_commit": "121a6574be1e657805008a1bbb4ee733a487ec7c",
+        "name": "Package source, exclusions, runtime origin and unpacked size verified",
+        "passed": true
+      },
+      {
+        "name": "Actual Start.cmd serves bundled .15 using installation.json port",
+        "passed": true,
+        "server_pid": 30196
+      },
+      {
+        "name": "Repeated launch keeps one supervisor and server",
+        "passed": true
+      },
+      {
+        "canvas_ids": [
+          "90db5d614c1f4e88a302ef350cafcfa8",
+          "fd97fdefb7f249048869afd6daca9e7e"
+        ],
+        "name": "Signed .15 to .16 upgrade preserves work and accepts new work",
+        "passed": true
+      },
+      {
+        "name": "Manual rollback preserves work created on .16",
+        "passed": true
+      },
+      {
+        "error": "新版本启动检查失败。",
+        "name": "New-version startup failure automatically restores .15 and all work",
+        "passed": true
+      },
+      {
+        "name": "Supervisor hard exit stops its child; relaunch preserves work",
+        "new_pid": 22220,
+        "old_pid": 36436,
+        "passed": true
+      },
+      {
+        "name": "Hard exit during validating with broken new supervisor recovers through old bootstrap runtime",
+        "passed": true
+      }
+    ],
+    "feed_transport": "mocked",
+    "fixture_signing_key": true,
+    "paid_provider_generation": false,
+    "source_commit": "947f6ecefd46d58fdb822ddaa85edc2125130d56",
+    "temporary_processes_stopped": true
+  },
+  "independent_release_probes": {
+    "passed": true,
+    "count": 6,
+    "reported_blockers_remaining": 0
+  },
+  "dependency_audit": {
+    "tool": "pip-audit 2.10.1",
+    "canvas_packages": 27,
+    "gallery_packages": 18,
+    "known_vulnerabilities_reported": 0
+  },
+  "test_boundaries": [
+    "Local temporary runtime and synthetic media/accounts. No real provider charges or GPU inference.",
+    "The 42 updater checks are included in the 370 backend total; UI mock update is not a real installer test.",
+    "Portable rehearsal uses temporary signed fixture versions and mocked feed transport, but real ZIPs, processes, install HTTP endpoints, files and backups.",
+    "Production package and live GitHub download verification are recorded separately in the artifact report.",
+    "No production gallery hosting, live API account login, Authenticode reputation, physical power-loss or sustained low-end-machine guarantee."
+  ]
+}

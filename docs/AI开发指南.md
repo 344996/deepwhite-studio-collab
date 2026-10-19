@@ -1,6 +1,8 @@
 # 深白片场 AI 开发指南
 
-适用仓库：`344996/deepwhite-studio-collab`。文档日期：2026-10-18。当前开发版本：`0.10.2-studio.14`。
+适用仓库：`344996/deepwhite-studio-collab`。更新日期：2026-10-19。当前开发版本：`0.10.2-studio.16`。
+
+先读 [统一文档入口](README.md)、[架构与扩展契约](架构与扩展契约.md) 和 [Windows 发行与更新](Windows发行与更新.md)。本版新增统一属性面板、供应商能力说明、真实 Codex 联调、独立 Windows 更新事务；网站画廊当前为 0.3.0。
 
 本项目是浏览器界面加本机 Python 服务，使用原生 JavaScript、HTML 和 CSS，保留经典画布与智能画布两套引擎。继续开发时，应在现有业务模块中扩展，避免以新演示页替换正式画布，或重写已有保存、撤销和生成生命周期。
 
@@ -10,13 +12,13 @@
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.lock.txt
 .\.venv\Scripts\python.exe -B app\studio_server.py
 ```
 
 浏览器打开 `http://127.0.0.1:3848/`；`/api/studio/health` 应返回当前版本。默认数据在 `app/workspace/`。如端口已占用，设置 `$env:DEEPWHITE_STUDIO_PORT='3850'`，再用对应端口打开。终端按 Ctrl+C 停止。
 
-根目录旧 `.cmd` 启动器仍依赖完整发行包的 `app/python/python.exe`；源码用户使用上述入口。基础依赖不包含 ComfyUI、GPU 模型、ffmpeg 或各平台专用工具，不应在启动画布时自动安装它们。
+源码用户使用上述入口。旧历史 `.cmd` 启动器仍保留；新 Windows 发行包使用包内 Start.cmd 和独立版本目录，不依赖系统 Python。基础发行不包含 ComfyUI、GPU 模型、ffmpeg 或各平台专用工具，不应在启动画布时自动安装它们。
 
 测试应先设置独立的 `DEEPWHITE_STUDIO_RUNTIME_DIR`。`app/launch.py` 是原打包启动器，会使用自己的工作区，因此隔离测试不要通过它启动。
 

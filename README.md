@@ -2,7 +2,11 @@
 
 本仓库是 `344996/deepwhite-studio-collab` 的开发副本，来源于 [aslancootl/deepwhite-studio-collab](https://github.com/aslancootl/deepwhite-studio-collab)，原始导入提交为 `d59a0225f5a0329e5dee7e888b96cbab71b0621e`。原仓库保持不变。
 
-当前版本为 **0.10.2-studio.15**。原交接源码的 1,774 个跟踪文件、许可证及此前修复已完整保留在本账号仓库。本版新增画廊提示词预览、文件导入、确认后新建普通画布及可靠重试；保留 MCP 编辑、第一批修复与工作台。独立网站前后端在 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery)，已完成本地模拟账号验收，尚未部署公网。
+当前版本为 **0.10.2-studio.16**。本版修复 MCP 编辑保存一致性和校验错误泄漏，统一经典/智能画布工具栏与属性面板，补 API 能力说明、真实 Codex 联调与 Windows 签名更新。原源码、许可证及此前修复和历史继续保留。独立画廊 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery) 当前 **0.3.0**，新增审核记录、媒体预览与备份恢复，已完成本机模拟账号流程，尚未部署公网。
+
+- **[统一文档入口](docs/README.md)**：本次变更、AI 开发、架构接口和维护说明。
+- [Windows 下载](https://github.com/344996/deepwhite-studio-collab/releases) · [发行与更新维护](docs/Windows发行与更新.md)
+- [本次交付和测试](docs/交付与验证-20261019.md)
 
 - [画廊提示词创作与本轮测试](docs/画廊提示词创作与测试.md)
 - [画廊基础架构与修改指南](https://github.com/344996/deepwhite-gallery/blob/main/docs/画廊基础架构与修改指南.md)
@@ -14,10 +18,10 @@
 - [微信登录、画廊、更新和 MCP 评估](docs/扩展功能评估.md)
 - [第一批可复查测试摘要](docs/phase1-verification.json)
 - [第一批修改说明](第一批修复说明.md)
-- [当前累计功能与缺口](app/docs/releases/0.10.2-studio.15-status.md)
+- [当前累计功能与缺口](app/docs/releases/0.10.2-studio.16-status.md)
 - [开发步骤](tasks/plan.md)
 
-源码启动：准备 Python 3.12，安装根目录 `requirements.txt`，运行 `python -B app/studio_server.py`，浏览器打开 `http://127.0.0.1:3848/`。建议使用独立虚拟环境，完整 PowerShell 步骤见开发指南。
+源码启动：准备 Python 3.12，安装根目录 `requirements.lock.txt`，运行 `python -B app/studio_server.py`，浏览器打开 `http://127.0.0.1:3848/`。建议使用独立虚拟环境，完整 PowerShell 步骤见开发指南。Windows 便携发行包自带运行环境，完整解压后双击 Start.cmd。
 
 这是源码仓库，测试数据、账号凭据、运行日志和本机 Python 不随源码上传。原许可证及第三方署名完整保留，使用范围见 [app/LICENSE](app/LICENSE)。
 
