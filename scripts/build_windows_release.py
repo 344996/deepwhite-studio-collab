@@ -25,7 +25,7 @@ from urllib.request import Request, urlopen
 import uuid
 import zipfile
 
-from sign_release import canonical, public_key, sign_manifest
+from sign_release import canonical, external_key_path, public_key, sign_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_VERSION = '3.13.16'
@@ -35,6 +35,8 @@ PYTHON_RELEASE_PAGE = 'https://www.python.org/downloads/release/python-31316/'
 FORBIDDEN = {'.git', '.venv', 'venv', 'workspace', 'userdata', 'private', '__pycache__',
              'logs', 'test-output', '.test-runtime', 'release-secrets'}
 VERSION_PATTERN = r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-studio\.(0|[1-9]\d*)'
+PRIVATE_SUFFIXES = {'.pem', '.key', '.p12', '.pfx', '.jks'}
+PUBLIC_RUNTIME_CERTIFICATES = {'python/lib/site-packages/certifi/cacert.pem'}
 
 
 class BuildError(Exception):
@@ -71,7 +73,9 @@ def parse_lock(path):
 def forbidden(path):
     parts = PurePosixPath(path).parts
     return any(part.lower() in FORBIDDEN or part.lower() == '.env' or
-        part.lower().startswith('.env.') for part in parts) or path.lower().endswith(('.pyc', '.pyo', '.log'))
+        part.lower().startswith('.env.') for part in parts) or path.lower().endswith(('.pyc', '.pyo', '.log', '.db', '.sqlite', '.sqlite3')) or (
+        PurePosixPath(path).suffix.lower() in PRIVATE_SUFFIXES and path.lower() not in PUBLIC_RUNTIME_CERTIFICATES) or (
+        PurePosixPath(path).name.lower() in {'key.env', 'global_config.json'})
 
 
 def committed_sources(repo, ref):
@@ -79,11 +83,16 @@ def committed_sources(repo, ref):
     result = {}
     with tarfile.open(fileobj=io.BytesIO(archive)) as stream:
         for entry in stream.getmembers():
+            if entry.isfile() and PurePosixPath(entry.name).suffix.lower() in PRIVATE_SUFFIXES:
+                raise BuildError('Source commit contains a possible private key: ' + entry.name)
             if forbidden(entry.name) or entry.isdir():
                 continue
             if not entry.isfile() or PurePosixPath(entry.name).is_absolute() or '..' in PurePosixPath(entry.name).parts:
                 raise BuildError('Source archive contains a non-regular or unsafe path.')
-            result[entry.name] = stream.extractfile(entry).read()
+            content = stream.extractfile(entry).read()
+            if re.search(rb'(?m)^-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----\r?$', content):
+                raise BuildError('Source commit contains a PEM private key header: ' + entry.name)
+            result[entry.name] = content
     return result
 
 
@@ -281,6 +290,7 @@ def write_zip(tree, output, timestamp, empty_directories=()):
 
 def build_release(repo, ref, cache, output, private_key, key_id, sequence, notes, artifact_url=None):
     repo, cache, output = Path(repo).resolve(), Path(cache).resolve(), Path(output).resolve()
+    external_key_path(private_key, (repo, cache, output))
     commit = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', ref + '^{commit}'], text=True).strip()
     timestamp = int(subprocess.check_output(['git', '-C', str(repo), 'show', '-s', '--format=%ct', commit], text=True))
     sources = committed_sources(repo, commit)

@@ -42,14 +42,43 @@ def contained_file(root, path):
     return resolved
 
 
+def valid_version(value):
+    return isinstance(value, str) and len(value) <= 60 and VERSION.fullmatch(value)
+
+
+def recovery_version(root, current):
+    path = root / 'updates' / 'transaction.json'
+    if not path.exists():
+        return current
+    tx = read_json(contained_file(root, path))
+    fields = {'id', 'old', 'new', 'action', 'phase', 'backup_complete'}
+    active = {'stopping', 'backing_up', 'switching', 'validating', 'recovery_required'}
+    if (not isinstance(tx, dict) or not fields.issubset(tx) or set(tx) - fields - {'error'}
+            or type(tx['backup_complete']) is not bool or not isinstance(tx['phase'], str)
+            or tx['phase'] not in active | {'committed', 'reverted'}
+            or tx['action'] not in ('install', 'rollback') or not valid_version(tx['old']) or not valid_version(tx['new'])
+            or tx['old'] == tx['new'] or current not in (tx['old'], tx['new'])
+            or not isinstance(tx['id'], str) or not re.fullmatch('[a-f0-9]{32}', tx['id'])
+            or ('error' in tx and not isinstance(tx['error'], str))):
+        raise LaunchError('The update transaction is invalid. All program and data folders were preserved.')
+    if (tx['phase'] in ('stopping', 'backing_up', 'reverted') and current != tx['old']
+            or tx['phase'] in ('validating', 'committed') and current != tx['new']
+            or tx['phase'] in ('switching', 'validating', 'committed') and not tx['backup_complete']):
+        raise LaunchError('The update transaction conflicts with current.json. All folders were preserved.')
+    # The old supervisor owns recovery and locking. The bootstrap never changes
+    # a pointer or user data, including after a completed/reverted transaction.
+    return tx['old'] if tx['phase'] in active else current
+
+
 def selected_installation(root):
     root = Path(root).resolve()
     pointer = read_json(root / 'current.json')
     if not isinstance(pointer, dict) or set(pointer) != {'version'}:
         raise LaunchError('current.json must contain exactly one version field.')
     version = pointer['version']
-    if not isinstance(version, str) or len(version) > 60 or not VERSION.fullmatch(version):
+    if not valid_version(version):
         raise LaunchError('The selected version is invalid. Keep current.json and check the recovery instructions.')
+    version = recovery_version(root, version)
     release_root = root / 'versions' / version
     if not release_root.resolve().is_relative_to(root):
         raise LaunchError('The selected version points outside this installation.')
@@ -86,13 +115,14 @@ def launch(root, *, port=None, no_browser=False, check=False):
     if no_browser:
         command.append('--no-browser')
     # The supervisor owns the installation lock, readiness and repeated launches.
-    log = root / 'userdata' / 'logs' / 'launcher.log'
+    # Keep long-lived handles outside userdata: recovery atomically renames it.
+    log = root / 'updates' / 'launcher.log'
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open('ab') as stream:
         code = subprocess.call(command, cwd=root, env=environment, stdout=stream, stderr=subprocess.STDOUT,
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
     if code:
-        raise LaunchError('Studio could not start (exit code ' + str(code) + '). See userdata/logs/launcher.log and updates/server.log.')
+        raise LaunchError('Studio could not start (exit code ' + str(code) + '). See updates/launcher.log and updates/server.log.')
     return 0
 
 
@@ -107,7 +137,7 @@ def main():
         return launch(args.root, port=args.port, no_browser=args.no_browser, check=args.check)
     except (LaunchError, OSError) as exc:
         message = str(exc)
-        log = args.root / 'userdata' / 'logs' / 'launcher.log'
+        log = args.root / 'updates' / 'launcher.log'
         try:
             log.parent.mkdir(parents=True, exist_ok=True)
             with log.open('a', encoding='utf-8') as stream:

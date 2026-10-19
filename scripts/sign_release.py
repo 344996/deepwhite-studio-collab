@@ -17,10 +17,7 @@ def canonical(value):
 def create_key(path, key_id):
     path = Path(path).resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
-    check = subprocess.run(['git', '-C', str(path.parent), 'rev-parse', '--show-toplevel'],
-                           capture_output=True, text=True)
-    if check.returncode == 0:
-        raise ValueError('Private signing keys must be outside every Git worktree.')
+    external_key_path(path)
     key = Ed25519PrivateKey.generate()
     data = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
                              serialization.NoEncryption())
@@ -38,8 +35,19 @@ def create_key(path, key_id):
         serialization.Encoding.Raw, serialization.PublicFormat.Raw)).decode('ascii')}
 
 
+def external_key_path(path, forbidden_roots=()):
+    path = Path(path).resolve()
+    if any(path.is_relative_to(Path(root).resolve()) for root in forbidden_roots):
+        raise ValueError('Private signing keys must be outside release output and build cache/staging.')
+    check = subprocess.run(['git', '-C', str(path.parent), 'rev-parse', '--show-toplevel'],
+                           capture_output=True, text=True)
+    if check.returncode == 0:
+        raise ValueError('Private signing keys must be outside every Git worktree.')
+    return path
+
+
 def load_key(path):
-    key = serialization.load_pem_private_key(Path(path).read_bytes(), password=None)
+    key = serialization.load_pem_private_key(external_key_path(path).read_bytes(), password=None)
     if not isinstance(key, Ed25519PrivateKey):
         raise ValueError('Expected an Ed25519 private signing key.')
     return key
@@ -80,6 +88,7 @@ def main():
         args.public_output.write_bytes(canonical(trust))
         print('Created private key outside Git and wrote public trust metadata.')
     else:
+        external_key_path(args.private_key, (args.output.parent,))
         signed = json.loads(args.input.read_text(encoding='utf-8'))
         envelope = sign_manifest(signed, args.private_key, args.key_id)
         with args.output.open('xb') as stream:

@@ -65,10 +65,35 @@ folder.mkdir(exist_ok=True)
         str(root / 'Start.ps1'), '-NoBrowser', '-Port', '3963'], env=environment, capture_output=True, timeout=20)
     assert result.returncode == 1, result
     assert not (root / 'userdata' / 'probe-3963.json').exists()
-    assert (root / 'userdata' / 'logs' / 'launcher.log').is_file()
-    (root / 'current.json').write_bytes(canonical({'version': version}))
+    assert (root / 'updates' / 'launcher.log').is_file()
+    broken_version = '0.10.2-studio.17'
+    broken = root / 'versions' / broken_version
+    (broken / 'python').mkdir(parents=True)
+    (broken / 'python' / 'python.exe').write_bytes(b'fixture unexecutable Python')
+    (root / 'current.json').write_bytes(canonical({'version': broken_version}))
+    transaction = {'id': 'b' * 32, 'old': version, 'new': broken_version,
+                   'phase': 'validating', 'action': 'install', 'backup_complete': True}
+    (root / 'updates' / 'transaction.json').write_bytes(canonical(transaction))
+    command = '"' + str(cmd) + '" /d /v:off /s /c ""' + str(root / 'Start.cmd') + '" -NoBrowser -Port 3964"'
+    result = subprocess.run(command, cwd=workspace, env=environment, capture_output=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    probe = root / 'userdata' / 'probe-3964.json'
+    deadline = time.monotonic() + 15
+    while not probe.exists() and time.monotonic() < deadline:
+        time.sleep(.1)
+    recovered = json.loads(probe.read_text(encoding='utf-8'))
+    assert Path(recovered['python']) == release / 'python' / 'python.exe', recovered
+    assert json.loads((root / 'current.json').read_text())['version'] == broken_version
+    # Malformed/duplicate transactions never select any executable.
+    invalid = canonical(transaction).decode().replace('"phase":"validating"', '"phase":"validating","phase":"committed"')
+    (root / 'updates' / 'transaction.json').write_text(invalid)
+    result = subprocess.run([str(powershell), '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+        str(root / 'Start.ps1'), '-NoBrowser', '-Port', '3965'], env=environment, capture_output=True, timeout=20)
+    assert result.returncode == 1 and not (root / 'userdata' / 'probe-3965.json').exists()
+    (root / 'updates' / 'transaction.json').write_bytes(canonical(transaction))
     report = {'special_path': str(root), 'entrypoints': results, 'duplicate_pointer_rejected': True,
-              'uses_system_python': False}
+              'uses_system_python': False, 'unexecutable_new_python_recovers_with_old_python': True,
+              'duplicate_transaction_rejected': True, 'bootstrap_preserves_pointer': True}
     (workspace / 'verification.json').write_bytes(canonical(report))
     return report
 

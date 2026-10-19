@@ -2,6 +2,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -67,8 +68,9 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(launcher.LaunchError, 'exit code 7'):
                 launcher.launch(root, no_browser=True)
         self.assertEqual(call.call_args.kwargs['stderr'], subprocess.STDOUT)
-        self.assertEqual(Path(call.call_args.kwargs['stdout'].name), root / 'userdata' / 'logs' / 'launcher.log')
-        self.assertTrue((root / 'userdata' / 'logs' / 'launcher.log').is_file())
+        self.assertEqual(Path(call.call_args.kwargs['stdout'].name), root / 'updates' / 'launcher.log')
+        self.assertTrue((root / 'updates' / 'launcher.log').is_file())
+        self.assertFalse((root / 'userdata').exists())
 
     def test_strip_host_python_entrypoints_preserves_importable_dependencies(self):
         site = self.root / 'site-packages'
@@ -96,6 +98,65 @@ class ReleaseTests(unittest.TestCase):
         (release / 'app' / 'VERSION').write_text('0.10.2-studio.15')
         with self.assertRaises(launcher.LaunchError):
             launcher.launch(root)
+
+    def test_bootstrap_uses_previous_runtime_for_unfinished_transaction_only(self):
+        root, old = self.fixture()
+        new = root / 'versions' / '0.10.2-studio.17'
+        shutil.copytree(old, new)
+        (new / 'app' / 'VERSION').write_text('0.10.2-studio.17')
+        (new / 'release.json').write_text(json.dumps(build.release_metadata('0.10.2-studio.17', 'b' * 40)))
+        (root / 'current.json').write_text('{"version":"0.10.2-studio.17"}')
+        (root / 'updates').mkdir()
+        tx = {'id': 'c' * 32, 'old': '0.10.2-studio.16', 'new': '0.10.2-studio.17',
+              'phase': 'validating', 'action': 'install', 'backup_complete': True}
+        path = root / 'updates' / 'transaction.json'
+        path.write_text(json.dumps(tx))
+        self.assertEqual(launcher.selected_installation(root)[1], old / 'python' / 'python.exe')
+        # Selection never mutates the pointer/data; the old supervisor recovers.
+        self.assertEqual(json.loads((root / 'current.json').read_text())['version'], tx['new'])
+        tx['phase'] = 'committed'
+        path.write_text(json.dumps(tx))
+        self.assertEqual(launcher.selected_installation(root)[1], new / 'python' / 'python.exe')
+        for changes in [{'phase': 'unknown'}, {'phase': 'validating', 'backup_complete': False},
+                        {'id': '../escape'}, {'phase': 'stopping'}, {'backup_complete': 1}, {'extra': 1},
+                        {'phase': []}, {'error': {}}, {'new': True}]:
+            path.write_text(json.dumps({**tx, **changes}))
+            with self.assertRaises(launcher.LaunchError):
+                launcher.selected_installation(root)
+
+    def test_source_export_rejects_private_keys_and_omits_runtime_databases(self):
+        repo = self.root / 'secret-fixture'
+        (repo / 'app').mkdir(parents=True)
+        subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+        for name in ['saved.sqlite3', 'saved.sqlite', 'saved.db', 'global_config.json', 'key.env']:
+            (repo / 'app' / name).write_text('fixture user data')
+        (repo / 'app' / 'update-trust.json').write_text('{"fixture":"public"}')
+        def commit():
+            subprocess.run(['git', 'add', '-f', '.'], cwd=repo, check=True, capture_output=True)
+            subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                            'commit', '-qm', 'fixture'], cwd=repo, check=True, capture_output=True)
+        commit()
+        self.assertEqual(set(build.committed_sources(repo, 'HEAD')), {'app/update-trust.json'})
+        for name, data in [('signing-key.pem', 'fixture private'), ('private.key', 'fixture private'),
+                           ('private.p12', 'fixture private'), ('private.pfx', 'fixture private'), ('private.jks', 'fixture private'),
+                           ('private.txt', '-----BEGIN PRIVATE KEY-----\nfixture\n-----END PRIVATE KEY-----\n')]:
+            (repo / 'app' / name).write_text(data)
+            commit()
+            with self.assertRaises(build.BuildError):
+                build.committed_sources(repo, 'HEAD')
+            (repo / 'app' / name).unlink()
+
+    def test_loading_existing_signing_key_inside_git_is_rejected(self):
+        private = self.root / 'external' / 'fixture.pem'
+        signing.create_key(private, 'fixture')
+        repo = self.root / 'key-repo'
+        repo.mkdir()
+        subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+        shutil.copyfile(private, repo / 'fixture.pem')
+        with self.assertRaises(ValueError):
+            signing.load_key(repo / 'fixture.pem')
+        with self.assertRaises(ValueError):
+            signing.external_key_path(private, (private.parent,))
 
     def test_lock_requires_unique_exact_versions_and_rejects_install_options(self):
         lock = self.root / 'requirements.lock.txt'

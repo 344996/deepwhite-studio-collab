@@ -4,7 +4,7 @@
 
 `userdata/` 保存画布、账号设置、素材和运行日志。更新只替换 `versions/` 下的程序版本，不会用新版本覆盖 `userdata/`。备份与版本切换记录位于 `updates/`；故障时请保留整个目录。
 
-启动失败可查看 `userdata/logs/launcher.log` 与其他启动日志。不要只复制一个启动文件，不要在 ZIP 压缩包内直接运行，也不要手工修改 `current.json`。
+启动失败可查看 `updates/launcher.log` 与 `updates/server.log`。不要只复制一个启动文件，不要在 ZIP 压缩包内直接运行，也不要手工修改 `current.json`。
 
 模型生成仍需自行配置支持的服务或本地引擎；便携版没有打入 API 密钥、模型权重、ComfyUI、ffmpeg 或第三方登录凭据。
 
