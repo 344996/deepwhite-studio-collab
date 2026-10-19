@@ -6,6 +6,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -217,6 +218,49 @@ class StudioMCPTests(unittest.TestCase):
             self.assertIn("不是此项目", wrong.stderr)
         finally:
             MockHandler.installation = str(ROOT)
+
+    def test_modern_discovery_falls_back_to_legacy_handshake(self):
+        probe = self.rpc('server/discover', 1, {'_meta': {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28'}})
+        init = self.rpc('initialize', 2, {'protocolVersion': '2026-07-28', 'capabilities': {},
+            'clientInfo': {'name': 'dual-era-client', 'version': '1'}})
+        listed = self.rpc('tools/list', 3)
+        result = self.run_bridge('\n'.join([probe, init, self.initialized_notification(), listed, '']))
+        replies = [json.loads(line) for line in result.stdout.splitlines()]
+        self.assertEqual(replies[0]['error']['code'], -32601)
+        self.assertIn('initialize', replies[0]['error']['message'])
+        self.assertEqual(replies[1]['result']['protocolVersion'], '2025-06-18')
+        self.assertEqual(len(replies[2]['result']['tools']), 13)
+
+    def test_invalid_request_ids_and_nonfinite_json_do_not_poison_session(self):
+        bad_id = json.dumps({'jsonrpc': '2.0', 'id': {'private': 'fixture-secret'}, 'method': 'ping'})
+        init = self.rpc('initialize', 1, {'protocolVersion': '2025-06-18', 'capabilities': {},
+            'clientInfo': {'name': 'test', 'version': '1'}})
+        result = self.run_bridge('\n'.join([bad_id, '{"jsonrpc":"2.0","id":NaN,"method":"ping"}',
+            init, self.initialized_notification(), self.rpc('tools/list', 2, {'cursor': 'invalid'}),
+            self.rpc('ping', 3), '']))
+        replies = [json.loads(line) for line in result.stdout.splitlines()]
+        self.assertEqual(replies[0]['error']['code'], -32600)
+        self.assertNotIn('fixture-secret', result.stdout)
+        self.assertEqual(replies[1]['error']['code'], -32700)
+        self.assertEqual(replies[3]['error']['code'], -32602)
+        self.assertEqual(replies[4]['result'], {})
+
+    def test_schema_properties_and_user_node_aliases_survive_secret_filtering(self):
+        import studio_mcp as mcp
+        with patch.object(mcp, 'verify_service'), patch.object(mcp, '_read_control_config', return_value=('fixture', 'unused')):
+            bridge = mcp.Bridge(self.url)
+            with patch.object(mcp, '_request_json', return_value={'result': {'token': 'secret', 'input_schemas': {}}}):
+                schema = bridge.call_tool('get_node_schema', {})['structuredContent']
+            self.assertNotIn('token', schema)
+            self.assertEqual(schema['input_schemas']['apply_nodes'], bridge.by_name['apply_nodes']['inputSchema'])
+            args = {'canvas_id': 'c', 'operation_id': 'operation-fixture', 'expected_revision': '0' * 64,
+                    'operations': [{'op': 'add_prompt', 'key': 'token', 'text': '', 'x': 0, 'y': 0}]}
+            with patch.object(mcp, '_request_json', return_value={'result': {
+                    'node_ids': {'token': 'mcp_text_fixture'}, 'password': 'secret'}}):
+                result = bridge.call_tool('edit_canvas', args)['structuredContent']
+            self.assertEqual(result['node_ids'], {'token': 'mcp_text_fixture'})
+            self.assertNotIn('password', result)
 
 
 if __name__ == "__main__":

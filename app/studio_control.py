@@ -21,6 +21,7 @@ import studio_catalog as catalog
 import studio_generation as generation
 import studio_graph as graph
 from studio_capabilities import parameters
+from studio_mcp import BridgeError, _sanitize, _validate, load_tools
 
 LOCK = threading.RLock()
 MAX_SESSION_SECONDS = 30 * 60
@@ -30,6 +31,7 @@ TOOLS = {
     'undo_edit', 'generate_node', 'get_generation', 'resume_generation',
 }
 TOOLS.update(graph.TOOLS)
+TOOL_SCHEMAS = {tool['name']: tool['inputSchema'] for tool in load_tools()}
 
 
 def path():
@@ -88,12 +90,7 @@ def _settings(value, base_url='http://127.0.0.1:3848'):
 
 def _public_canvas(canvas):
     out = copy.deepcopy({k: v for k, v in canvas.items() if k != graph.JOURNAL})
-    def clean(value):
-        if isinstance(value, dict):
-            return {k:clean(v) for k,v in value.items() if k.lower() not in ('key','api_key','token','authorization','secret','password')}
-        if isinstance(value, list): return [clean(v) for v in value]
-        return value
-    return clean(out)
+    return _sanitize(out)
 
 
 def _canvas(canvas_id):
@@ -461,11 +458,19 @@ def install(app):
     async def call(request: Request, payload: dict):
         _tool_auth(request)
         name = payload.get('name'); args = payload.get('arguments', {})
-        if name not in TOOLS or not isinstance(args, dict): raise HTTPException(400, '未知工具或 arguments 格式错误。')
+        if not isinstance(name, str) or name not in TOOLS or not isinstance(args, dict): raise HTTPException(400, '未知工具或 arguments 格式错误。')
+        try:
+            _validate(args, TOOL_SCHEMAS[name])
+            if len(json.dumps(args, ensure_ascii=False, allow_nan=False).encode('utf-8')) > 256 * 1024:
+                raise BridgeError('单次控制请求不能超过 256 KB。')
+        except (BridgeError, ValueError, UnicodeError) as exc:
+            raise HTTPException(400, str(exc)) from None
         if name in graph.TOOLS:
             return {'result': graph.call(name, args)}
         if name == 'list_canvases':
-            return {'result': {'items': [x for x in core.list_canvases() if not x.get('deleted_at') and core.normalize_canvas_kind(x.get('kind')) != 'smart']}}
+            return {'result': {'items': [x for x in core.list_canvases() if not x.get('deleted_at') and
+                core.normalize_canvas_kind(x.get('kind')) != 'smart' and
+                (not args.get('project_id') or (x.get('project') or 'default') == args['project_id'])]}}
         if name == 'get_canvas':
             canvas = _canvas(args.get('canvas_id', '')); return {'result': {'canvas': _public_canvas(canvas), 'revision': plans.revision(canvas)}}
         if name == 'list_models': return {'result': {'items': _models()}}

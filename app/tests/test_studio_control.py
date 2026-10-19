@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -77,7 +78,7 @@ class StudioControl(unittest.TestCase):
 
     def test_apply_nodes_checks_cas_and_keeps_tool_params_strict(self):
         revision=plans.revision(self.canvas)
-        stale=self.call('apply_nodes',{'canvas_id':self.cid,'operation_id':'operation-stale','expected_revision':'stale','nodes':[self.image_spec()]})
+        stale=self.call('apply_nodes',{'canvas_id':self.cid,'operation_id':'operation-stale','expected_revision':'0'*64,'nodes':[self.image_spec()]})
         self.assertEqual(stale.status_code,409)
         bad=self.call('apply_nodes',{'canvas_id':self.cid,'operation_id':'operation-badpar','expected_revision':revision,
             'nodes':[self.image_spec(params={'unsupported':1})]})
@@ -162,7 +163,7 @@ class StudioControl(unittest.TestCase):
         self.assertEqual(core.load_canvas(self.cid)['nodes'], [])
 
     def test_legacy_edit_receipts_migrate_without_writing_or_reviving_undo(self):
-        args = self.edit_args('legacy-model-edit')
+        args = self.edit_args('旧版模型节点操作编号')
         self._save_generator()
         applied = {'canvas_id': self.cid, 'node_ids': {'hero': 'node1'},
                    'revision': plans.revision(core.load_canvas(self.cid))}
@@ -200,10 +201,43 @@ class StudioControl(unittest.TestCase):
         copied['id'] = uuid.uuid4().hex
         core.save_canvas(copied)
         copied_args = dict(args, canvas_id=copied['id'], expected_revision=plans.revision(copied))
-        self.assertEqual(self.call('undo_edit', dict(copied_args)).status_code, 404)
+        self.assertEqual(self.call('undo_edit', {k:v for k,v in copied_args.items() if k != 'nodes'}).status_code, 404)
         duplicate = self.call('apply_nodes', copied_args)
         self.assertEqual(duplicate.status_code, 200, duplicate.text)
         self.assertNotEqual(duplicate.json()['result']['node_ids'], applied['node_ids'])
+
+    def test_http_tools_enforce_advertised_schema_and_project_filter(self):
+        for name, args in [('list_models', {'private-extra-fixture': 'secret'}),
+                           ('get_canvas', {'canvas_id': '../' + self.cid}),
+                           ('apply_nodes', dict(self.edit_args(), operation_id='short'))]:
+            response = self.call(name, args)
+            self.assertEqual(response.status_code, 400, response.text)
+            self.assertNotIn('private-extra-fixture', response.text)
+        other = dict(self.canvas, id=uuid.uuid4().hex, project='other-project')
+        core.save_canvas(other)
+        rows = self.call('list_canvases', {'project_id': self.pid}).json()['result']['items']
+        self.assertEqual([row['id'] for row in rows], [self.cid])
+        schema = self.call('get_node_schema', {}).json()['result']['input_schemas']
+        self.assertEqual(set(schema), control.TOOLS)
+        self.assertEqual(schema['apply_nodes']['properties']['operation_id']['minLength'], 8)
+
+    def test_canvas_read_filters_nested_credentials_with_mixed_key_names(self):
+        self.canvas['nodes'] = [{'id': 'n', 'type': 'prompt', 'text': 'keep user content',
+            'nested': {'apiKey': 'fixture-key', 'accessToken': 'fixture-token',
+                       'clientSecret': 'fixture-secret', 'password': 'fixture-password'}}]
+        core.save_canvas(self.canvas)
+        response = self.call('get_canvas', {'canvas_id': self.cid})
+        self.assertEqual(response.status_code, 200)
+        for value in ['fixture-key', 'fixture-token', 'fixture-secret', 'fixture-password']:
+            self.assertNotIn(value, response.text)
+        self.assertIn('keep user content', response.text)
+
+    def test_concurrent_identical_model_edits_return_one_durable_result(self):
+        args = self.edit_args()
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            results = list(workers.map(lambda _: control._apply(self.cid, args), range(2)))
+        self.assertEqual(results[0], results[1])
+        self.assertEqual(len(core.load_canvas(self.cid)['nodes']), 1)
 
     def test_asset_mapping_compiles_bound_token_and_creates_reference_edge(self):
         filename=uuid.uuid4().hex+'.png'; Path(core.output_path_for(filename)).write_bytes(b'fixture')
