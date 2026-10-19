@@ -1,0 +1,44 @@
+/* Fixed chrome only; world/node positions must always follow pointer input directly. */
+.studio-canvas-workspace .workspace-save-state{font-size:11px;color:var(--dw-muted);white-space:nowrap;line-height:16px}
+.workspace-save-state::before{content:'';display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:var(--dw-success)}
+.workspace-save-state[data-state=dirty]::before,.workspace-save-state[data-state=saving]::before{background:var(--dw-gold)}
+.workspace-save-state[data-state=error],.workspace-save-state[data-state=conflict]{color:var(--dw-danger)}
+.workspace-save-state[data-state=error]::before,.workspace-save-state[data-state=conflict]::before{background:currentColor}
+html.studio-canvas-workspace .sv2-header{height:70px}
+.studio-canvas-workspace .sv2-heading{gap:2px}.studio-canvas-workspace .sv2-eyebrow{font-size:9px}
+.studio-canvas-workspace .workspace-canvas-tools{gap:8px}
+.studio-canvas-workspace .workspace-canvas-tools [data-workspace-tasks]{position:static!important;transform:none!important;zoom:1!important;width:auto!important;height:36px!important;padding:8px 12px!important;font-size:12px}
+html.studio-canvas-workspace #workspaceCanvasRail{left:16px;top:104px;width:68px;padding:6px;gap:4px;max-height:calc(100dvh - 200px);overflow:visible;border-radius:12px;box-shadow:0 6px 20px var(--dw-shadow);background:var(--dw-surface);z-index:60}
+html.studio-canvas-workspace #workspaceCanvasRail>button{display:flex!important;flex-direction:column;width:54px!important;min-width:54px;min-height:56px;height:56px;padding:8px 2px!important;gap:6px;font-size:10px;color:var(--dw-muted);border:0;border-radius:8px;background:transparent}
+html.studio-canvas-workspace #workspaceCanvasRail>button>span{display:block!important;font-size:10px;line-height:14px;white-space:nowrap}
+html.studio-canvas-workspace #workspaceCanvasRail>button svg{width:18px;height:18px;flex:none}
+html.studio-canvas-workspace #workspaceCanvasRail>button[aria-pressed=true]{color:var(--dw-ink)!important;background:var(--dw-raised)!important;box-shadow:inset 0 0 0 1px var(--dw-line-strong)!important}
+.workspace-extra-tools{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid var(--dw-line);padding-top:12px;width:100%}
+.workspace-extra-tools button{display:inline-flex;gap:6px;align-items:center}.workspace-extra-tools svg{width:16px;height:16px}
+html.studio-canvas-workspace .workspace-viewport{right:20px;bottom:20px;min-height:48px;padding:6px;gap:4px;border:1px solid var(--dw-line-strong);border-radius:12px;background:var(--dw-surface);box-shadow:0 6px 20px var(--dw-shadow);z-index:65}
+.workspace-viewport button{min-width:32px;min-height:32px}.workspace-viewport svg{width:16px;height:16px}.workspace-viewport #smartV2Fit span,.workspace-viewport #workspaceMinimap span{display:none}
+html.studio-canvas-workspace :is(#minimap,.smart-minimap){right:20px;bottom:84px}
+.studio-canvas-workspace :is(button,summary,input,textarea,select):focus-visible{outline:2px solid var(--dw-gold);outline-offset:3px}
+.studio-canvas-workspace .workspace-extra-tools .sv2-advanced-panel{position:static;box-shadow:none;margin-top:8px;width:100%}
+@media(max-width:1100px){
+  .studio-canvas-workspace .workspace-canvas-tools [data-workspace-tasks]{font-size:11px;padding:8px!important}
+  html.studio-canvas-workspace .canvas-nav{max-width:210px;padding-left:8px}
+  .studio-canvas-workspace .v2-brand small{display:none}
+}
+@media(max-width:768px){
+  html.studio-canvas-workspace .sv2-header{height:124px}
+  html.studio-canvas-workspace #workspaceCanvasRail{left:12px;top:140px;width:60px;padding:4px}
+  html.studio-canvas-workspace #workspaceCanvasRail>button{width:50px!important;min-width:50px;min-height:50px;height:50px}
+  .studio-canvas-workspace .workspace-canvas-tools{gap:5px}
+  .studio-canvas-workspace .workspace-canvas-tools #workspaceSave span,.studio-canvas-workspace .workspace-canvas-tools #smartV2Save span{display:none}
+  .studio-canvas-workspace .workspace-canvas-tools [data-workspace-tasks]{padding:8px 5px!important;font-size:11px;width:auto;height:36px;position:static;transform:none}
+  .studio-canvas-workspace .workspace-more-panel{position:fixed;left:auto;right:12px;top:118px;width:min(320px,calc(100vw - 24px))}
+  html.studio-canvas-workspace .workspace-viewport{bottom:12px;right:12px}
+  .studio-canvas-workspace .sv2-save-status{position:static}.studio-canvas-workspace .sv2-eyebrow{display:none}
+  .studio-canvas-workspace .v2-brand{display:none!important}
+  html.studio-canvas-workspace .canvas-nav{max-width:calc(100vw - 24px);padding:0;border:0}
+}
+@media(prefers-reduced-motion:no-preference){
+  .studio-canvas-workspace #workspaceCanvasRail>button:active{transform:translateY(1px)}
+  .studio-canvas-workspace #workspaceCanvasRail>button{transition:transform 120ms ease,opacity 120ms ease}
+}

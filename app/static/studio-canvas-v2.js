@@ -59,6 +59,7 @@
     board.classList.toggle('v2-hand',mode==='hand'||space);
     board.style.setProperty('--v2-grid-step',(24*viewport.scale)+'px');
     board.style.setProperty('--v2-grid-x',viewport.x+'px');board.style.setProperty('--v2-grid-y',viewport.y+'px');
+    window.StudioCanvasWorkspace?.sync();
   }
   const nativeViewport=applyViewport;
   applyViewport=function(...args){const result=nativeViewport.apply(this,args);update();return result;};

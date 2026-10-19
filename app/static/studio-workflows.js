@@ -909,7 +909,7 @@
   renderCanvasControls();
   function addEntry() {
     const bar = document.querySelector('.toolbar-fixed') || document.querySelector('.topbar') || document.querySelector('.sv2-header-tools');
-    if (!bar || bar.querySelector('[data-workflow-workbench]')) return;
+    if (!bar || document.querySelector('[data-workflow-workbench]')) return;
     const button = document.createElement('button'); button.type = 'button'; button.className = bar.matches('.sv2-header-tools') ? 'sv2-button' : 'tool-btn';
     button.dataset.workflowWorkbench = ''; button.textContent = '工作流工作台';
     button.onclick = () => openManager().catch(e => flash(e.message)); bar.append(button);
