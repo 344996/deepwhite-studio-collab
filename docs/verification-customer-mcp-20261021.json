@@ -78,7 +78,329 @@
       "actual-settings-connected.png"
     ]
   },
-  "actual_release": "recorded in a separate post-build evidence commit",
+  "actual_release": {
+    "directory": "release-0.11.0-studio.5-r2",
+    "source_commit": "6222ab7707f01e767bf15d0f6e489383421052c6",
+    "files": {
+      "deepwhite-0.11.0-studio.5-windows-x64-portable.zip": {
+        "sha256": "735574df06a1eddd2abc446f5fbd7cbfdc8fd4615e80e7ae24ae474cace51905",
+        "size": 117142995
+      },
+      "deepwhite-0.11.0-studio.5-windows-x64-version.zip": {
+        "sha256": "6e2132a15048c166b8bb7fbfb858f79fc692e8fea4efd9f7e1309d2c6ea775cc",
+        "size": 116982808
+      },
+      "update-stable.json": {
+        "sha256": "bc85114f838021353e6d2573f8cf1d31a23eb6c8556e7171d5e3cad3fd2a6f25",
+        "size": 4101
+      }
+    },
+    "embedded_python": "3.13.16",
+    "locked_wheels": 28,
+    "manifest": {
+      "sequence": 18,
+      "key_id": "deepwhite-stable-2026",
+      "signature_verified_with_bundled_runtime": true
+    },
+    "generic_package": {
+      "checks": [
+        {
+          "name": "Every artifact matches its recorded size and SHA-256",
+          "passed": true
+        },
+        {
+          "name": "Actual ZIP contains offline docs, Skill, runtime and no private data",
+          "passed": true
+        },
+        {
+          "name": "Start.cmd boots the bundled runtime in a special-character path",
+          "passed": true,
+          "running_version": "0.11.0-studio.5"
+        },
+        {
+          "name": "Packaged canvas creates, saves and rereads a Unicode text node",
+          "passed": true
+        },
+        {
+          "name": "Product pages load and retired assistant routes are absent",
+          "passed": true
+        },
+        {
+          "name": "Generated fixed MCP entry passes preflight on the actual extracted package",
+          "passed": true
+        },
+        {
+          "name": "Packaged stdio initializes, lists 13 tools and reads projects",
+          "passed": true
+        },
+        {
+          "name": "Restart retains the saved canvas and independent user data",
+          "passed": true
+        }
+      ],
+      "commit": "6222ab7707f01e767bf15d0f6e489383421052c6",
+      "passed": true,
+      "provider_generation_used": false,
+      "published_release_verified": false,
+      "version": "0.11.0-studio.5"
+    },
+    "customer_onboarding": {
+      "checks": [
+        {
+          "name": "Actual portable ZIP hash, version and safe extraction verified",
+          "passed": true
+        },
+        {
+          "name": "Packaged Start.cmd starts the embedded interpreter with no system Python on PATH",
+          "passed": true,
+          "profile": "isolated",
+          "version": "0.11.0-studio.5"
+        },
+        {
+          "name": "Setup status is read-only and disabled MCP blocks configuration installation",
+          "passed": true
+        },
+        {
+          "name": "Missing or foreign Origin cannot write the isolated Codex configuration",
+          "passed": true
+        },
+        {
+          "name": "A new customer profile installs automatically and undo restores empty settings",
+          "passed": true
+        },
+        {
+          "name": "A stale revision cannot overwrite newer customer preferences",
+          "passed": true
+        },
+        {
+          "name": "Automatic setup preserves preferences, comments and other MCP entries; repeat is idempotent",
+          "passed": true,
+          "recoverable_backups": 1
+        },
+        {
+          "name": "Undo restores the exact original configuration bytes",
+          "passed": true
+        },
+        {
+          "name": "Installed customer configuration initializes real stdio, discovers 13 tools and reads saved canvas",
+          "passed": true,
+          "tool_count": 13
+        },
+        {
+          "codex_version": "codex-cli 0.163.0-alpha.10.2",
+          "name": "Installed real Codex app-server discovers and calls the packaged MCP without inference",
+          "passed": true,
+          "tool_count": 13
+        },
+        {
+          "name": "Moving the complete installation retains data and requires explicit connection replacement",
+          "passed": true
+        },
+        {
+          "name": "Confirmed repair targets the new installation; undo and repeat repair preserve the prior entry",
+          "passed": true,
+          "tool_count": 13
+        },
+        {
+          "codex_version": "codex-cli 0.163.0-alpha.10.2",
+          "name": "Real Codex reconnects after installation movement and repair",
+          "passed": true,
+          "tool_count": 13
+        },
+        {
+          "name": "A subsequent restart keeps the repaired connection and saved canvas",
+          "passed": true
+        },
+        {
+          "name": "Malformed existing TOML is preserved and requires manual repair",
+          "passed": true
+        }
+      ],
+      "commit": "6222ab7707f01e767bf15d0f6e489383421052c6",
+      "inference_used": false,
+      "other_computer_verified": false,
+      "passed": true,
+      "portable_sha256": "735574df06a1eddd2abc446f5fbd7cbfdc8fd4615e80e7ae24ae474cace51905",
+      "provider_generation_used": false,
+      "real_codex_client_requested": true,
+      "real_user_config_unchanged": true,
+      "version": "0.11.0-studio.5"
+    },
+    "persistent_stdio": {
+      "initial": {
+        "stdin_kept_open_between_requests": true,
+        "preflight": {
+          "checks": [
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "本机地址"
+            },
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "画布服务与安装"
+            },
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "本机控制配置"
+            },
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "控制授权"
+            },
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "工具定义"
+            }
+          ],
+          "ok": true,
+          "scope": "本检查仅验证执行它的进程；Codex 的实际连接还需在 Codex 中发现并调用工具。",
+          "tool_count": 13,
+          "transport": "stdio",
+          "url": "http://127.0.0.1:55797",
+          "version": "0.11.0-studio.5"
+        },
+        "tools": [
+          "apply_nodes",
+          "create_canvas",
+          "edit_canvas",
+          "generate_node",
+          "get_canvas",
+          "get_generation",
+          "get_node_schema",
+          "list_assets",
+          "list_canvases",
+          "list_models",
+          "list_projects",
+          "resume_generation",
+          "undo_edit"
+        ],
+        "saved_canvas_found": true
+      },
+      "moved": {
+        "stdin_kept_open_between_requests": true,
+        "preflight": {
+          "checks": [
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "本机地址"
+            },
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "画布服务与安装"
+            },
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "本机控制配置"
+            },
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "控制授权"
+            },
+            {
+              "code": "ok",
+              "ok": true,
+              "step": "工具定义"
+            }
+          ],
+          "ok": true,
+          "scope": "本检查仅验证执行它的进程；Codex 的实际连接还需在 Codex 中发现并调用工具。",
+          "tool_count": 13,
+          "transport": "stdio",
+          "url": "http://127.0.0.1:55853",
+          "version": "0.11.0-studio.5"
+        },
+        "tools": [
+          "apply_nodes",
+          "create_canvas",
+          "edit_canvas",
+          "generate_node",
+          "get_canvas",
+          "get_generation",
+          "get_node_schema",
+          "list_assets",
+          "list_canvases",
+          "list_models",
+          "list_projects",
+          "resume_generation",
+          "undo_edit"
+        ],
+        "saved_canvas_found": true
+      }
+    },
+    "real_codex": {
+      "initial": {
+        "version": "codex-cli 0.163.0-alpha.10.2",
+        "passed": true,
+        "tools": [
+          "apply_nodes",
+          "create_canvas",
+          "edit_canvas",
+          "generate_node",
+          "get_canvas",
+          "get_generation",
+          "get_node_schema",
+          "list_assets",
+          "list_canvases",
+          "list_models",
+          "list_projects",
+          "resume_generation",
+          "undo_edit"
+        ],
+        "called_tools": [
+          "list_projects",
+          "get_node_schema"
+        ],
+        "inference_used": false,
+        "provider_generation_used": false
+      },
+      "moved": {
+        "version": "codex-cli 0.163.0-alpha.10.2",
+        "passed": true,
+        "tools": [
+          "apply_nodes",
+          "create_canvas",
+          "edit_canvas",
+          "generate_node",
+          "get_canvas",
+          "get_generation",
+          "get_node_schema",
+          "list_assets",
+          "list_canvases",
+          "list_models",
+          "list_projects",
+          "resume_generation",
+          "undo_edit"
+        ],
+        "called_tools": [
+          "list_projects",
+          "get_node_schema"
+        ],
+        "inference_used": false,
+        "provider_generation_used": false
+      }
+    },
+    "published_github_release": false,
+    "online_stable_channel_changed": false
+  },
   "user_config_modified": false,
-  "paid_generation": false
+  "paid_generation": false,
+  "failed_attempt_retained": {
+    "directory": "release-0.11.0-studio.5",
+    "source_commit": "a321edded8e45b90b44289db8d598efd55bc3fa4",
+    "customer_evidence_directory": "customer-mcp-verification-studio5",
+    "failure": "Real Codex initialize timed out; portable CopyToAsync buffered small stdin writes until EOF.",
+    "regression_failed_before_fix": true,
+    "fix": "Flush each byte-stream chunk; relay stdin/stdout/stderr concurrently. Keep stdin open in protocol tests.",
+    "excluded_from_delivery": true
+  },
+  "scope": "Windows customer onboarding on this workstation, isolated profiles and two installation paths. No physical second computer, inference, paid generation, production gallery or public release verification."
 }
