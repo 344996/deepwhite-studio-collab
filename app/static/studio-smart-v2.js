@@ -43,6 +43,7 @@
   syncSelectionUi=function(...args){const result=nativeSelectionUi.apply(this,args);window.StudioCanvasWorkspace?.sync();return result;};
   document.addEventListener('keydown',event=>{
     if(event.isComposing||isEditableTarget(event.target)||modalActive())return;
+    if(['Enter',' '].includes(event.key)&&event.target.closest?.('button,summary,a[href],[role="button"],[role="link"],audio,video'))return;
     const key=event.key.toLowerCase();let action;
     if((event.ctrlKey||event.metaKey)&&key==='k')action=openSearch;
     else if(!event.ctrlKey&&!event.metaKey&&!event.altKey){

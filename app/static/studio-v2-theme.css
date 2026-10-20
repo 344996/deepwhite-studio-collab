@@ -2,7 +2,7 @@
    tools, saved theme choices and both canvas engines share the same palette. */
 :root {
   --dw-bg:#141616; --dw-canvas:#101212; --dw-surface:#1c1f1f; --dw-panel:#242828;
-  --dw-raised:#2e3332; --dw-hover:#343b38; --dw-ink:#f2f3ef; --dw-muted:#b5bdb9; --dw-faint:#929e98;
+  --dw-raised:#2e3332; --dw-hover:#2c3230; --dw-ink:#f2f3ef; --dw-muted:#b5bdb9; --dw-faint:#929e98;
   --dw-accent:#b9e7cf; --dw-accent-hover:#cef3df; --dw-accent-soft:#b9e7cf10; --dw-accent-line:#b9e7cf50;
   --dw-gold:var(--dw-accent); --dw-gold-hover:var(--dw-accent-hover); --dw-gold-soft:var(--dw-accent-soft); --dw-gold-line:var(--dw-accent-line); --dw-on-gold:#17271e;
   --dw-primary:#f1f3ec; --dw-primary-hover:#ffffff; --dw-on-primary:#191e1b;
@@ -14,7 +14,7 @@
 html.studio-v2.studio-milk,
 html.studio-v2:not(.studio-graphite):not(.theme-dark):not(.studio-theme-dark) {
   --dw-bg:#f5f5f0; --dw-canvas:#eeefe8; --dw-surface:#fffffa; --dw-panel:#f0f2eb;
-  --dw-raised:#e5e9df; --dw-hover:#e0e7db; --dw-ink:#26352c; --dw-muted:#526559; --dw-faint:#627367;
+  --dw-raised:#e5e9df; --dw-hover:#e7ece3; --dw-ink:#26352c; --dw-muted:#526559; --dw-faint:#627367;
   --dw-accent:#34674c; --dw-accent-hover:#27563c; --dw-accent-soft:#34674c0c; --dw-accent-line:#34674c4d; --dw-on-gold:#ffffff;
   --dw-primary:#243c2f; --dw-primary-hover:#355440; --dw-on-primary:#ffffff;
   --dw-line:#29452e17; --dw-line-strong:#29452e30; --dw-success:#326546; --dw-danger:#b24738;
@@ -23,7 +23,7 @@ html.studio-v2:not(.studio-graphite):not(.theme-dark):not(.studio-theme-dark) {
 html.studio-v2:not(.studio-graphite):not(.studio-milk).theme-dark,
 html.studio-v2:not(.studio-graphite):not(.studio-milk).studio-theme-dark {
   --dw-bg:#171c1d; --dw-canvas:#131819; --dw-surface:#202829; --dw-panel:#293233;
-  --dw-raised:#323d3e; --dw-hover:#3b4748; --dw-ink:#f2f3ef; --dw-muted:#b8c2be; --dw-faint:#94a49e;
+  --dw-raised:#323d3e; --dw-hover:#333f40; --dw-ink:#f2f3ef; --dw-muted:#b8c2be; --dw-faint:#94a49e;
 }
 html.studio-v2, html.studio-v2 body, html.studio-v2 #shell {
   --page:var(--dw-bg)!important; --panel:var(--dw-surface)!important; --card:var(--dw-panel)!important;

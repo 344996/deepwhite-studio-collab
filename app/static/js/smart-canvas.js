@@ -18450,6 +18450,7 @@ window.addEventListener('paste', e => {
 });
 window.addEventListener('keydown', e => {
     const key = String(e.key || '').toLowerCase();
+    if(['Enter', ' '].includes(e.key) && e.target.closest?.('button,summary,a[href],[role="button"],[role="link"],audio,video')) return;
     if((e.code === 'Space' || e.key === ' ') && !e.ctrlKey && !e.metaKey && !e.altKey && !isEditableTarget(e.target)){
         const active = selectedNode();
         if(active?.type === 'smart-minimax'){

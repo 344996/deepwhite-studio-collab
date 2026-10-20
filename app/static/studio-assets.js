@@ -82,7 +82,7 @@
   }
   function makeCard(item) {
     const card = document.createElement('article'); card.className = 'asset-card';
-    const thumb = document.createElement('div'); thumb.className = 'thumb'; thumb.title = '预览素材'; thumb.addEventListener('click', () => preview(item));
+    const thumb = document.createElement('button'); thumb.type = 'button'; thumb.className = 'thumb'; thumb.title = '预览素材'; thumb.setAttribute('aria-label', '预览素材：' + (item.name || '未命名素材')); thumb.addEventListener('click', () => preview(item));
     const mediaUrl = safeMediaUrl(item.url);
     if (mediaUrl && !item.missing && item.kind === 'image') {const image = document.createElement('img'); image.src = mediaUrl; image.alt = item.name || '资产预览'; image.loading = 'lazy'; image.onerror = () => {image.remove(); fileMark(thumb,item.kind);}; thumb.append(image);}
     else if (mediaUrl && !item.missing && item.kind === 'video') {const video = document.createElement('video'); video.src = mediaUrl; video.muted = true; video.preload = 'metadata'; thumb.append(video);}

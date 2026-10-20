@@ -1,0 +1,96 @@
+/* A quiet, shared interaction layer. Only actual action surfaces move.
+   Do not add .node, #world, media players or canvas viewport transforms here. */
+html.studio-interactions {
+  --dw-feedback-tint:#ffffff07;
+  --dw-feedback-pressed:#ffffff0d;
+  --dw-feedback-brightness:1.06;
+  --dw-feedback-in:140ms;
+  --dw-feedback-out:200ms;
+  --dw-feedback-down:70ms;
+  --dw-feedback-ease:cubic-bezier(.2,.7,.2,1);
+}
+html.studio-interactions.studio-milk,
+html.studio-interactions.studio-v2:not(.studio-graphite):not(.theme-dark):not(.studio-theme-dark) {
+  --dw-feedback-tint:#40604b08;
+  --dw-feedback-pressed:#40604b12;
+  --dw-feedback-brightness:.985;
+}
+/* Component colours, selected tabs and destructive actions remain intact.
+   The explicit transition properties never animate layout or world coordinates. */
+html.studio-interactions :is(button,summary,[role=button],a[href],[role=link]) {
+  -webkit-tap-highlight-color:transparent;
+  transition:background-color var(--dw-feedback-in),border-color var(--dw-feedback-in),color var(--dw-feedback-in),box-shadow var(--dw-feedback-in),filter var(--dw-feedback-in),scale var(--dw-feedback-out) var(--dw-feedback-ease)!important;
+}
+html.studio-interactions :is(button,summary,[role=button],a[href],[role=link]):focus-visible {
+  outline:2px solid var(--dw-accent,#b9e7cf);
+  outline-offset:3px;
+}
+@media(hover:hover) and (pointer:fine) {
+  html.studio-interactions [data-dw-hover]:not(:disabled,[inert],[aria-disabled=true],[aria-busy=true],.busy):not(:where([inert] *,[aria-disabled=true] *,[aria-busy=true] *,.busy *)) {
+    background-image:linear-gradient(var(--dw-feedback-tint),var(--dw-feedback-tint))!important;
+    filter:brightness(var(--dw-feedback-brightness));
+  }
+}
+html.studio-interactions [data-dw-press]:not(:disabled,[inert],[aria-disabled=true],[aria-busy=true],.busy):not(:where([inert] *,[aria-disabled=true] *,[aria-busy=true] *,.busy *)) {
+  background-image:linear-gradient(var(--dw-feedback-pressed),var(--dw-feedback-pressed))!important;
+  filter:brightness(.94);
+  transition-duration:var(--dw-feedback-down)!important;
+}
+@media(prefers-reduced-motion:no-preference) {
+  html.studio-interactions :is(button,summary,[role=button],a.button,a.small-button,.studio-history-card-actions>a)[data-dw-press]:not(:disabled,[inert],[aria-disabled=true],[aria-busy=true],.busy):not(:where([inert] *,[aria-disabled=true] *,[aria-busy=true] *,.busy *)) {scale:.975}
+  html.studio-interactions .ws-card[role=link][data-dw-press] {scale:.993}
+}
+/* Avoid stacking old hover lifts with the new press spring. */
+html.studio-interactions :is(.workspace-quickstart button,#workspaceCanvasRail>button,.asset-card) {transform:none!important}
+html.studio-interactions .workspace-quickstart button>svg:first-child,
+html.studio-interactions .workspace-quickstart button>svg:last-child {
+  transition:background-color var(--dw-feedback-in),color var(--dw-feedback-in),translate var(--dw-feedback-out) var(--dw-feedback-ease);
+}
+html.studio-interactions .workspace-quickstart button[data-dw-hover]>svg:first-child {background:var(--dw-accent-soft);color:var(--dw-accent-hover)}
+@media(prefers-reduced-motion:no-preference) {
+  html.studio-interactions .workspace-quickstart button[data-dw-hover]>svg:last-child {translate:3px 0}
+  html.studio-interactions .workspace-quickstart button[data-dw-press]>svg:last-child {translate:1px 0}
+}
+/* Picture feedback belongs to the clickable cover, never to decorative art.
+   Nested project menu buttons have their own state, so they do not zoom covers. */
+html.studio-interactions :is(.home-canvas-cover>img,.home-cover-excerpt,.asset-card>.thumb>img,.studio-history-preview>img) {
+  transition:scale 240ms var(--dw-feedback-ease),filter var(--dw-feedback-in);
+}
+html.studio-interactions .ws-card[role=link][data-dw-hover] .home-canvas-cover>img,
+html.studio-interactions .asset-card>.thumb[data-dw-hover]>img,
+html.studio-interactions .studio-history-preview:has(>.studio-history-image-preview[data-dw-hover])>img {filter:brightness(1.06)}
+@media(prefers-reduced-motion:no-preference) {
+  html.studio-interactions .ws-card[role=link][data-dw-hover] .home-canvas-cover>img,
+  html.studio-interactions .asset-card>.thumb[data-dw-hover]>img,
+  html.studio-interactions .studio-history-preview:has(>.studio-history-image-preview[data-dw-hover])>img {scale:1.025}
+  html.studio-interactions .ws-card[role=link][data-dw-hover] .home-cover-excerpt {scale:1.015}
+  html.studio-interactions .ws-card[role=link][data-dw-press] .home-canvas-cover>img,
+  html.studio-interactions .asset-card>.thumb[data-dw-press]>img,
+  html.studio-interactions .studio-history-preview:has(>.studio-history-image-preview[data-dw-press])>img {scale:1.008;filter:brightness(.97);transition-duration:var(--dw-feedback-down)}
+}
+/* Full-image history preview uses a real button; native video/audio controls
+   retain their space and interaction. Error/retry UI is above this button. */
+html.studio-interactions .studio-history-view .studio-history-image-preview {
+  inset:0;width:100%;height:100%;min-height:0;margin:0;padding:0;border:0;border-radius:0;
+  background:transparent!important;scale:none!important;filter:none!important;z-index:2;
+}
+html.studio-interactions .studio-history-image-preview:focus-visible {outline-offset:-4px}
+.studio-history-image-preview .studio-history-preview-caption {
+  position:absolute;right:12px;bottom:12px;padding:6px 10px;border:1px solid var(--dw-line-strong);
+  border-radius:7px;background:var(--dw-surface);color:var(--dw-ink);font-size:12px;line-height:1.5;
+  transition:background-color 140ms,border-color 140ms;
+}
+.studio-history-image-preview:is([data-dw-hover],:focus-visible) .studio-history-preview-caption {background:var(--dw-panel);border-color:var(--dw-accent-line)}
+.studio-history-image-preview[data-dw-press] .studio-history-preview-caption {background:var(--dw-raised)}
+html.studio-interactions .asset-card>button.thumb {width:100%;padding:0;border:0;border-radius:0;font:inherit;color:inherit}
+html.studio-interactions .asset-card>button.thumb:focus-visible {outline-offset:-4px}
+/* Disabled/inert actions never acquire visual feedback; preserve their native
+   disabled styling rather than repainting them as enabled controls. */
+html.studio-interactions :is(:disabled,[aria-disabled=true]) {cursor:not-allowed}
+@media(prefers-reduced-motion:reduce) {
+  html.studio-interactions {--dw-feedback-in:0ms;--dw-feedback-out:0ms;--dw-feedback-down:0ms}
+  html.studio-interactions :is(button,summary,[role=button],a[href],[role=link]),
+  html.studio-interactions :is(.home-canvas-cover>img,.home-cover-excerpt,.asset-card>.thumb>img,.studio-history-preview>img,.workspace-quickstart button>svg) {
+    transition:none!important;animation:none!important;scale:none!important;translate:none!important;
+  }
+}

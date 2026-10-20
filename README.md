@@ -2,10 +2,11 @@
 
 本仓库是 `344996/deepwhite-studio-collab` 的开发副本，来源于 [aslancootl/deepwhite-studio-collab](https://github.com/aslancootl/deepwhite-studio-collab)，原始导入提交为 `d59a0225f5a0329e5dee7e888b96cbab71b0621e`。原仓库保持不变。
 
-当前版本为 **0.11.0-studio.3**。本次参考 LibTV 公开首页统一创作工作台、两种画布和生成记录的视觉与交互，补充小屏与键盘体验。前版的 MCP 诊断、登录自动 API 配置、节点内编辑、左侧设置、意见反馈及内置助手移除继续保留。独立画廊 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery) 仍为 **0.4.0 / schema 4**，尚未部署公网。原源码、许可证及历史继续保留。
+当前版本为 **0.11.0-studio.4**。本次细化按钮悬停、按压回弹和可点击图片反馈，支持直接点击记录图片放大，补键盘与触屏取消体验。沿用上一版参考 LibTV 的工作台布局。前版的 MCP 诊断、登录自动 API 配置、节点内编辑、左侧设置、意见反馈及内置助手移除继续保留。独立画廊 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery) 仍为 **0.4.0 / schema 4**，尚未部署公网。原源码、许可证及历史继续保留。
 
 - **[统一文档入口](docs/README.md)**：本次变更、AI 开发、架构接口和维护说明。
-- **[本次界面设计、修改入口与测试](docs/界面设计与维护指南.md)**（源码和本机预览，新版尚未打包发行）
+- **[本次按钮、图片与动效维护](docs/交互细节与动效维护.md)**（含本轮测试与修改入口）
+- **[界面设计、修改入口与测试](docs/界面设计与维护指南.md)**（源码和本机预览，新版尚未打包发行）
 - [上一版生成记录改进与测试](docs/生成记录界面-1020第9项.md)（源码及本机预览，尚未打包为新版发行）
 - [已公开版本下载](https://github.com/344996/deepwhite-studio-collab/releases) · [上一版 0.11.0-studio.1 Windows 本地构建与验证](docs/发行产物-20261020.md) · [发行与更新维护](docs/Windows发行与更新.md)
 - [本次交付和测试](docs/交付与验证-20261020.md)
@@ -20,7 +21,7 @@
 - [微信登录、画廊、更新和 MCP 评估](docs/扩展功能评估.md)
 - [第一批可复查测试摘要](docs/phase1-verification.json)
 - [第一批修改说明](第一批修复说明.md)
-- [当前累计功能与缺口](app/docs/releases/0.11.0-studio.3-status.md)
+- [当前累计功能与缺口](app/docs/releases/0.11.0-studio.4-status.md)
 - [开发步骤](tasks/plan.md)
 
 源码启动：准备 Python 3.12，安装根目录 `requirements.lock.txt`，运行 `python -B app/studio_server.py`，浏览器打开 `http://127.0.0.1:3848/`。建议使用独立虚拟环境，完整 PowerShell 步骤见开发指南。Windows 便携发行包自带运行环境，完整解压后双击 Start.cmd。

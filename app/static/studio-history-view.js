@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const css = document.createElement('link');
-  css.rel = 'stylesheet'; css.href = '/static/studio-generation-history.css?v=0.11.0-studio.3';
+  css.rel = 'stylesheet'; css.href = '/static/studio-generation-history.css?v=0.11.0-studio.4';
   document.head.append(css);
   const element = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -232,6 +232,12 @@
       const count = element('span', 'studio-history-output-count', (kinds[record.kind] || '作品') + (outputs.length > 1 ? ' · ' + outputs.length + ' 项' : ''));
       const preview = button('放大预览 ↗', () => window.StudioNodeComposer?.preview(record.outputs[0]), 'studio-history-preview-button');
       preview.setAttribute('aria-label', '预览 ' + record.name);
+      if (media.tagName === 'IMG') {
+        preview.classList.add('studio-history-image-preview');
+        preview.replaceChildren(element('span', 'studio-history-preview-caption', '放大预览 ↗'));
+        media.addEventListener('history-media-error', () => {preview.hidden = true;});
+        media.addEventListener('load', () => {preview.hidden = false;});
+      }
       stage.append(count, preview);
     } else if (record.text) {
       stage.classList.add('studio-history-text-preview');

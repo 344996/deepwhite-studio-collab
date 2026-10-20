@@ -386,6 +386,8 @@
   window.addEventListener('keydown',e=>{
     if(!canvas||e.isComposing)return;const typing=editable(e.target)||activeDialog(),key=e.key.toLowerCase();
     if(typing){if((e.ctrlKey||e.metaKey)&&key==='g')e.stopImmediatePropagation();return;}
+    // Space/Enter belong to a focused control; only the canvas surface pans.
+    if(['Enter',' '].includes(e.key)&&e.target.closest?.('button,summary,a[href],[role="button"],[role="link"],audio,video'))return;
     if(e.code==='Space'){e.preventDefault();e.stopImmediatePropagation();space=true;update();return;}
     // Shift adds to selection; the old wire-cutting gesture is retained on X.
     if(e.key==='Shift'&&!e.altKey){e.stopImmediatePropagation();setKnifeMode(false);return;}
