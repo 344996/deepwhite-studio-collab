@@ -82,7 +82,7 @@ async function fixture(kind){
   assert.equal(await page.locator('[data-tab][aria-selected=true]').textContent(),'账户与 API');assert(await page.locator('#modelManager').isHidden());
   await page.locator('#providerName').fill('未保存的测试名称');await page.locator('[data-tab="models"]').click();assert(await page.locator('#modelManager').isVisible());assert(await page.locator('#baseUrl').isHidden());
   await page.locator('[data-tab="api"]').click();assert.equal(await page.locator('#providerName').inputValue(),'未保存的测试名称');
-  for(const tab of ['general','control','comfy','storage','feedback','dreamina']){await page.locator(`[data-tab="${tab}"]`).click();assert(await page.locator('#'+tab+'Panel').isVisible());assert.equal(await page.locator('main>section:visible').count(),1);}
+  for(const tab of ['general','control','comfy','storage','feedback','dreamina']){await page.locator(`[data-tab="${tab}"]`).click();await page.waitForFunction(value=>document.documentElement.dataset.settingsTab===value,tab);assert(await page.locator('#'+tab+'Panel').isVisible());assert.equal(await page.locator('main>section:visible').count(),1);}
   await page.locator('[data-tab="storage"]').click();assert(await page.locator('#studioProjectStorage').isVisible());
   await page.locator('[data-tab="api"]').click();await page.screenshot({path:path.join(evidence,'settings-sidebar.png')});
   for(const width of [768,390,320]){await page.setViewportSize({width,height:900});await page.locator('[data-tab="api"]').click();const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);assert(overflow<2,'settings no horizontal page overflow at '+width+': '+overflow);}

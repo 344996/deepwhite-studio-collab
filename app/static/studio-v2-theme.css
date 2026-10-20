@@ -1,25 +1,29 @@
-/* Shared production palette. Studio V2 defaults match the reviewed prototype.
-   Existing light / dark / milk choices remain usable; components contain no palette. */
+/* Shared DeepWhite materials. Legacy gold tokens alias the accent so existing
+   tools, saved theme choices and both canvas engines share the same palette. */
 :root {
-  --dw-bg:#17181a; --dw-canvas:#121315; --dw-surface:#202226; --dw-panel:#292c31;
-  --dw-raised:#33363c; --dw-hover:#3b3f46; --dw-ink:#f1f0ec; --dw-muted:#b5b8bf; --dw-faint:#969ba4;
-  --dw-gold:#e3bd83; --dw-gold-hover:#efd1a5; --dw-gold-soft:#e3bd8314; --dw-gold-line:#e3bd8359; --dw-on-gold:#30291d;
-  --dw-line:#e0e8cf13; --dw-line-strong:#e0e8cf29; --dw-success:#a9c9b1; --dw-danger:#e6a093;
-  --dw-scrim:#090e0bab; --dw-shadow:#050b0860; --dw-grid:#cad6c915; --dw-blue:#a4bebf;
+  --dw-bg:#141616; --dw-canvas:#101212; --dw-surface:#1c1f1f; --dw-panel:#242828;
+  --dw-raised:#2e3332; --dw-hover:#343b38; --dw-ink:#f2f3ef; --dw-muted:#b5bdb9; --dw-faint:#929e98;
+  --dw-accent:#b9e7cf; --dw-accent-hover:#cef3df; --dw-accent-soft:#b9e7cf10; --dw-accent-line:#b9e7cf50;
+  --dw-gold:var(--dw-accent); --dw-gold-hover:var(--dw-accent-hover); --dw-gold-soft:var(--dw-accent-soft); --dw-gold-line:var(--dw-accent-line); --dw-on-gold:#17271e;
+  --dw-primary:#f1f3ec; --dw-primary-hover:#ffffff; --dw-on-primary:#191e1b;
+  --dw-line:#e0eee413; --dw-line-strong:#e0eee428; --dw-success:#b9e7cf; --dw-danger:#f0a69e;
+  --dw-scrim:#060b0ace; --dw-shadow:#00000040; --dw-grid:#c1d0c418; --dw-blue:#b5ccd8;
   --dw-fast:150ms; --dw-ease:220ms; --dw-radius:12px; --dw-media-scheme:dark;
+  --dw-motion:cubic-bezier(.2,.7,.2,1);
 }
 html.studio-v2.studio-milk,
 html.studio-v2:not(.studio-graphite):not(.theme-dark):not(.studio-theme-dark) {
-  --dw-bg:#f5f3ec; --dw-canvas:#eeeee6; --dw-surface:#fffef7; --dw-panel:#f5f3e9;
-  --dw-raised:#e8e9dd; --dw-hover:#e0e3d5; --dw-ink:#283229; --dw-muted:#596653; --dw-faint:#6e7865;
-  --dw-gold:#8b622c; --dw-gold-hover:#a47433; --dw-gold-soft:#8b622c12; --dw-gold-line:#8b622c66; --dw-on-gold:#fff9ed;
-  --dw-line:#35452f19; --dw-line-strong:#35452f33; --dw-success:#426d4e; --dw-danger:#b24738;
+  --dw-bg:#f5f5f0; --dw-canvas:#eeefe8; --dw-surface:#fffffa; --dw-panel:#f0f2eb;
+  --dw-raised:#e5e9df; --dw-hover:#e0e7db; --dw-ink:#26352c; --dw-muted:#526559; --dw-faint:#627367;
+  --dw-accent:#34674c; --dw-accent-hover:#27563c; --dw-accent-soft:#34674c0c; --dw-accent-line:#34674c4d; --dw-on-gold:#ffffff;
+  --dw-primary:#243c2f; --dw-primary-hover:#355440; --dw-on-primary:#ffffff;
+  --dw-line:#29452e17; --dw-line-strong:#29452e30; --dw-success:#326546; --dw-danger:#b24738;
   --dw-shadow:#16251b12; --dw-grid:#35452f20; --dw-blue:#416b70; --dw-media-scheme:light;
 }
 html.studio-v2:not(.studio-graphite):not(.studio-milk).theme-dark,
 html.studio-v2:not(.studio-graphite):not(.studio-milk).studio-theme-dark {
-  --dw-bg:#191e22; --dw-canvas:#151a1e; --dw-surface:#252c31; --dw-panel:#2c3439;
-  --dw-raised:#343e44; --dw-hover:#3e4a50; --dw-ink:#eeeade; --dw-muted:#b0bbc0; --dw-faint:#86959b;
+  --dw-bg:#171c1d; --dw-canvas:#131819; --dw-surface:#202829; --dw-panel:#293233;
+  --dw-raised:#323d3e; --dw-hover:#3b4748; --dw-ink:#f2f3ef; --dw-muted:#b8c2be; --dw-faint:#94a49e;
 }
 html.studio-v2, html.studio-v2 body, html.studio-v2 #shell {
   --page:var(--dw-bg)!important; --panel:var(--dw-surface)!important; --card:var(--dw-panel)!important;
@@ -29,7 +33,10 @@ html.studio-v2, html.studio-v2 body, html.studio-v2 #shell {
   --strong:var(--dw-gold)!important; --strong-text:var(--dw-on-gold)!important; --shadow:var(--dw-shadow)!important;
 }
 html.studio-v2 body {color:var(--dw-ink);font-family:'Segoe UI','Microsoft YaHei',sans-serif;-webkit-font-smoothing:antialiased}
-html.studio-v2 :is(button,input,textarea,select,summary):focus-visible {outline:2px solid var(--dw-gold);outline-offset:3px}
+html.studio-v2 :is(button,a,input,textarea,select,summary,[tabindex]):focus-visible {outline:2px solid var(--dw-accent);outline-offset:3px}
+html.studio-v2 ::selection {background:var(--dw-accent);color:var(--dw-on-gold)}
+html.studio-v2 :is(input,textarea,select) {color-scheme:var(--dw-media-scheme);accent-color:var(--dw-accent)}
+html.studio-v2 :is(button,a,summary) {-webkit-tap-highlight-color:transparent}
 html.studio-v2 :is(button,a) {transition:background var(--dw-fast),border-color var(--dw-fast),color var(--dw-fast),box-shadow var(--dw-fast)}
 html.studio-v2 dialog::backdrop {background:var(--dw-scrim);backdrop-filter:blur(3px)}
 html.studio-v2 dialog {color:var(--dw-ink);background:var(--dw-surface);border:1px solid var(--dw-line-strong);border-radius:16px;box-shadow:0 24px 80px var(--dw-shadow)}

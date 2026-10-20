@@ -1,0 +1,126 @@
+{
+  "version": "0.11.0-studio.3",
+  "checked_at": "2026-10-20T08:53:12.454468+00:00",
+  "baseline_commit": "71cbfc3a828e887460653dd78b970e7aaec0be45",
+  "repository": "https://github.com/344996/deepwhite-studio-collab",
+  "group_checks": 45,
+  "suites": [
+    {
+      "name": "首页与键盘",
+      "command": "node app/tests/check-workspace-polish.cjs",
+      "passed": true,
+      "groups": 13,
+      "checks": [
+        "real local project cards, prompt data and covers load without account or generation",
+        "home grid fits 320, 768, 1024 and 1440 px with reachable creation and search",
+        "search, no results, grid/list and saved view use real existing cards",
+        "card action menu supports keyboard dismissal and restores its trigger",
+        "mobile navigation supports keyboard, Escape, backdrop and inert hidden controls",
+        "mobile trash restores a real local canvas and project selection closes navigation",
+        "quick actions create classic and smart canvases with correct project and persistent titles",
+        "hero create modal is reachable on mobile and Escape restores its trigger",
+        "light, milk and dark themes remain readable; reduced motion disables ambient animation",
+        "navigation opens local assets and public gallery configuration without invented actions",
+        "API settings opens its real embedded page and remains inside every viewport",
+        "prompt-only cover shows a safe excerpt while preserving the complete saved prompt",
+        "no browser exceptions, external traffic, generation or unintended writes"
+      ],
+      "report_sha256": "58b62608f6592371636e0cc3b98c33b74a284e064cb541c4e0d1a9e09ffd68d7"
+    },
+    {
+      "name": "两种画布外观",
+      "command": "node app/tests/check-canvas-chrome-polish.cjs",
+      "passed": true,
+      "groups": 6,
+      "checks": [
+        "classic: visible controls stay aligned, clickable and in bounds at 320/768/1024/1440",
+        "classic: short viewport retains scroll access to every rail tool",
+        "classic: light theme, keyboard focus and reduced motion remain usable",
+        "smart: visible controls stay aligned, clickable and in bounds at 320/768/1024/1440",
+        "smart: short viewport retains scroll access to every rail tool",
+        "smart: light theme, keyboard focus and reduced motion remain usable"
+      ],
+      "report_sha256": "b80e5143a6b3861cd5ab89b183ed261df9243a2ba140c7fddaae93e92b93e981"
+    },
+    {
+      "name": "生成记录",
+      "command": "node app/tests/check-history-refinement.cjs",
+      "passed": true,
+      "groups": 18,
+      "checks": [
+        "empty history explains where records come from",
+        "classic responsive layout at 320, 768, 1024 and 1440 px",
+        "type, status, task search, date and reset combine correctly",
+        "full prompt, additional output and raw parameters remain available",
+        "image enlargement and real video/audio controls use local media",
+        "missing preview has retry and keeps download and canvas actions",
+        "paid amount, unknown fee, errors and reduced motion stay honest",
+        "closing history pauses media playback",
+        "download and reuse settings retain native behavior without generation",
+        "place media, save and reload preserve the resulting node",
+        "loading, load failure and explicit retry are recoverable",
+        "closing during fetch and reopening cannot revive stale records",
+        "classic light theme and keyboard close",
+        "smart history uses the same responsive surface and output types",
+        "smart filter-empty state, keyboard focus cycle and Escape",
+        "smart prompt reuse preserves the complete original text",
+        "closed multi-output details do not load original or additional media",
+        "explicit prompt/error copy preserves text and reports failure"
+      ],
+      "report_sha256": "0df650839f4e11084a4031d14deb6a6029c4379f2002cb46b111996f506fff72"
+    },
+    {
+      "name": "1020原界面回归",
+      "command": "node app/tests/check-feedback-1020-ui.cjs",
+      "passed": true,
+      "groups": 8,
+      "checks": [
+        "classic: media preview precedes native prompt and parameters; no fixed inspector",
+        "classic: prompt editing saves, undo/redo works and text wheel does not zoom",
+        "classic: native model popup, parameters and generation count remain editable",
+        "classic: node drag, port connect and saved reload retain graph",
+        "history: preview grid, status/query filters, readable error and honest unknown fee",
+        "settings: left categories preserve edits, model native controls, storage and feedback",
+        "smart: no inspector and native composer/selection remain available",
+        "smart history: thumbnails, search/status filters and prompt reuse"
+      ],
+      "report_sha256": "0747a386ab23e399163781fb1e557b8d44039a431a723ee53c9bfc41678d99b2"
+    }
+  ],
+  "additional_regressions": [
+    {
+      "command": "node app/tests/check-home-v2.cjs",
+      "passed": true,
+      "coverage": "Native CRUD, project isolation, lazy covers, stale responses, themes; 3 concurrent covers max."
+    },
+    {
+      "command": "node app/tests/check-mj-history-0929.cjs",
+      "passed": true,
+      "coverage": "Statuses, uncertain safety, archive recovery and native reuse."
+    }
+  ],
+  "javascript_syntax_checks": 9,
+  "synthetic_test_data": true,
+  "external_requests": 0,
+  "paid_generation_requests": 0,
+  "live_preview": {
+    "url": "http://127.0.0.1:3849/",
+    "version": "0.11.0-studio.3",
+    "page_errors": 0,
+    "existing_canvas_cards": 3,
+    "backup": "../local-preview/backups/before-ui-polish-20261020-165109-479/canvas-demo-data",
+    "backup_verified_files": 17
+  },
+  "publication": {
+    "source": "344996 repository, normal commit history",
+    "windows_package_built": false,
+    "github_release_published": false,
+    "public_update_channel_changed": false
+  },
+  "not_verified": [
+    "Real paid model requests",
+    "Customer other computer MCP",
+    "Production gallery",
+    "Touch hardware and long-running large-canvas performance"
+  ]
+}

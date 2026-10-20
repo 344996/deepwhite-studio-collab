@@ -1,26 +1,36 @@
 /* Fixed chrome only; world/node positions must always follow pointer input directly. */
-.studio-canvas-workspace .workspace-save-state{font-size:11px;color:var(--dw-muted);white-space:nowrap;line-height:16px}
+.studio-canvas-workspace .workspace-save-state{font-size:11px;color:var(--dw-muted);white-space:nowrap;line-height:16px;font-weight:400}
 .workspace-save-state::before{content:'';display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:var(--dw-success)}
 .workspace-save-state[data-state=dirty]::before,.workspace-save-state[data-state=saving]::before{background:var(--dw-gold)}
 .workspace-save-state[data-state=error],.workspace-save-state[data-state=conflict]{color:var(--dw-danger)}
 .workspace-save-state[data-state=error]::before,.workspace-save-state[data-state=conflict]::before{background:currentColor}
 html.studio-canvas-workspace .sv2-header{height:70px}
-.studio-canvas-workspace .sv2-heading{gap:2px}.studio-canvas-workspace .sv2-eyebrow{font-size:9px}
+.studio-canvas-workspace .sv2-heading{gap:3px}.studio-canvas-workspace .sv2-eyebrow{font-size:10px;letter-spacing:.06em}
 .studio-canvas-workspace .workspace-canvas-tools{gap:8px}
 .studio-v2-canvas.studio-canvas-workspace .workspace-canvas-tools{z-index:90}
 html.studio-v2-canvas.studio-canvas-workspace .topbar{z-index:90;zoom:1!important}
+html.studio-v2.studio-canvas-workspace :is(.topbar,.sv2-header){background:var(--dw-bg);border-bottom:1px solid var(--dw-line);box-shadow:0 1px 0 var(--dw-canvas)}
+.studio-canvas-workspace .workspace-canvas-tools>button,.studio-canvas-workspace .workspace-canvas-tools>details>summary{min-height:36px;border-radius:9px;border-color:var(--dw-line);font-weight:500}
+.studio-canvas-workspace .workspace-canvas-tools>:is(#workspaceSave,#smartV2Save){background:var(--dw-panel);color:var(--dw-ink);border-color:var(--dw-line-strong)}
+.studio-canvas-workspace .workspace-canvas-tools>:is(#workspaceSave,#smartV2Save):hover{background:var(--dw-hover)}
+.studio-canvas-workspace .workspace-canvas-tools>button:not(#studioAccountButton):hover,.studio-canvas-workspace .workspace-canvas-tools>details>summary:hover{border-color:var(--dw-line-strong);background:var(--dw-hover)}
 .studio-canvas-workspace .workspace-canvas-tools [data-workspace-tasks]{position:static!important;transform:none!important;zoom:1!important;width:auto!important;height:36px!important;padding:8px 12px!important;font-size:12px}
-html.studio-v2.studio-canvas-workspace #workspaceCanvasRail{left:16px;top:104px;width:68px;padding:6px;gap:4px;max-height:calc(100dvh - 200px);overflow:visible;border-radius:12px;box-shadow:0 6px 20px var(--dw-shadow);background:var(--dw-surface);z-index:60}
-html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button{display:flex!important;flex-direction:column;width:54px!important;min-width:54px;min-height:56px;height:56px;padding:8px 2px!important;gap:6px;font-size:10px;color:var(--dw-muted);border:0;border-radius:8px;background:transparent}
-html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button>span{display:block!important;font-size:10px;line-height:14px;white-space:nowrap}
-html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button svg{width:18px;height:18px;flex:none}
-html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button[aria-pressed=true]{color:var(--dw-ink)!important;background:var(--dw-raised)!important;box-shadow:inset 0 0 0 1px var(--dw-line-strong)!important}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail{left:20px;top:104px;width:68px;padding:6px;gap:6px;max-height:calc(100dvh - 200px);overflow:visible;border:1px solid var(--dw-line-strong);border-radius:14px;box-shadow:0 6px 24px var(--dw-shadow);background:var(--dw-surface);z-index:60}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button{position:relative!important;inset:auto!important;display:flex!important;flex-direction:column;width:54px!important;min-width:54px;min-height:56px;height:56px;padding:8px 2px!important;gap:6px;font-size:11px;color:var(--dw-muted);border:0;border-radius:9px;background:transparent}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button>span{display:block!important;font-size:11px;line-height:14px;white-space:nowrap}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button svg{width:19px;height:19px;flex:none;stroke-width:1.6}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button:hover{color:var(--dw-ink)!important;background:var(--dw-hover)!important}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button[aria-pressed=true]{color:var(--dw-gold)!important;background:var(--dw-gold-soft)!important;box-shadow:inset 0 0 0 1px var(--dw-gold-line)!important}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button:not(#studioV2Add,#smartV2Add)[aria-pressed=true]::after{content:'';position:absolute;left:0;top:20px;width:2px;height:16px;border-radius:2px;background:currentColor}
 .workspace-extra-tools{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid var(--dw-line);padding-top:12px;width:100%}
 .workspace-extra-tools button{display:inline-flex;gap:6px;align-items:center}.workspace-extra-tools svg{width:16px;height:16px}
-html.studio-canvas-workspace .workspace-viewport{right:20px;bottom:20px;min-height:48px;padding:6px;gap:4px;border:1px solid var(--dw-line-strong);border-radius:12px;background:var(--dw-surface);box-shadow:0 6px 20px var(--dw-shadow);z-index:65}
-.workspace-viewport button{min-width:32px;min-height:32px;border:0;border-radius:7px;background:transparent;color:var(--dw-ink)}.workspace-viewport svg{width:16px;height:16px}.workspace-viewport #smartV2Fit span,.workspace-viewport #workspaceMinimap span{display:none}
-html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>:is(#studioV2Add,#smartV2Add){background:var(--dw-gold)!important;color:var(--dw-on-gold)!important}
+html.studio-canvas-workspace .workspace-viewport{right:20px;bottom:20px;min-height:48px;padding:6px;gap:4px;border:1px solid var(--dw-line-strong);border-radius:12px;background:var(--dw-surface);box-shadow:0 6px 24px var(--dw-shadow);z-index:65}
+.workspace-viewport button{min-width:32px;min-height:32px;border:0;border-radius:7px;background:transparent;color:var(--dw-muted);font-size:12px}.workspace-viewport button:hover{color:var(--dw-ink);background:var(--dw-hover)}.workspace-viewport svg{width:16px;height:16px}.workspace-viewport #smartV2Fit span,.workspace-viewport #workspaceMinimap span{display:none}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>:is(#studioV2Add,#smartV2Add){background:var(--dw-primary,var(--dw-ink))!important;color:var(--dw-on-primary,var(--dw-bg))!important;margin-bottom:4px}
+html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>:is(#studioV2Add,#smartV2Add):hover{opacity:.9}
 html.studio-canvas-workspace :is(#minimap,.smart-minimap){right:20px;bottom:84px}
+/* The native toolbar's percent width referred to its old full-window parent. */
+html.studio-v2-canvas.studio-canvas-workspace #studioGridLayoutTools{width:max-content;max-width:none;flex:none;justify-content:flex-start}
 .studio-canvas-workspace :is(button,summary,input,textarea,select):focus-visible{outline:2px solid var(--dw-gold);outline-offset:3px}
 .studio-canvas-workspace .workspace-extra-tools .sv2-advanced-panel{position:static;box-shadow:none;margin-top:8px;width:100%}
 @media(max-width:1100px){
@@ -31,19 +41,26 @@ html.studio-canvas-workspace :is(#minimap,.smart-minimap){right:20px;bottom:84px
 @media(max-width:768px){
   html.studio-canvas-workspace .sv2-header{height:124px}
   html.studio-v2.studio-canvas-workspace #workspaceCanvasRail{left:12px;top:140px;width:60px;padding:4px}
-  html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button{width:50px!important;min-width:50px;min-height:50px;height:50px}
+  html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button{width:50px!important;min-width:50px;min-height:50px;height:50px;font-size:11px;gap:4px}
   .studio-canvas-workspace .workspace-canvas-tools{gap:5px}
   .studio-canvas-workspace .workspace-canvas-tools #workspaceSave span,.studio-canvas-workspace .workspace-canvas-tools #smartV2Save span{display:none}
   .studio-canvas-workspace .workspace-canvas-tools [data-workspace-tasks]{padding:8px 5px!important;font-size:11px;width:auto;height:36px;position:static;transform:none}
   .studio-canvas-workspace .workspace-more-panel{position:fixed;left:auto;right:12px;top:118px;width:min(320px,calc(100vw - 24px))}
   html.studio-canvas-workspace .workspace-viewport{bottom:12px;right:12px}
+  html.studio-v2-canvas.studio-canvas-workspace .studio-canvas-corner-0929{left:12px;bottom:72px;max-width:calc(100vw - 24px)}
+  html.studio-v2-canvas.studio-canvas-workspace #studioGridLayoutTools{display:flex;flex-wrap:nowrap;min-height:42px}
   .studio-canvas-workspace .sv2-save-status{position:static}.studio-canvas-workspace .sv2-eyebrow{display:none}
   .studio-canvas-workspace .v2-brand{display:none!important}
   html.studio-canvas-workspace .canvas-nav{max-width:calc(100vw - 24px);padding:0;border:0}
 }
 @media(prefers-reduced-motion:no-preference){
   .studio-canvas-workspace #workspaceCanvasRail>button:active{transform:translateY(1px)}
-  .studio-canvas-workspace #workspaceCanvasRail>button{transition:transform 120ms ease,opacity 120ms ease}
+  .studio-canvas-workspace #workspaceCanvasRail>button{transition:transform 120ms ease,opacity 120ms ease,background 140ms ease,color 140ms ease}
+  .studio-canvas-workspace :is(.workspace-canvas-tools>button,.workspace-viewport button){transition:background 140ms ease,color 140ms ease,border-color 140ms ease}
+}
+@media(max-height:620px){
+  html.studio-v2.studio-canvas-workspace #workspaceCanvasRail{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+  html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button{flex:none}
 }
 .studio-canvas-workspace #shell.workspace-hand,.studio-canvas-workspace #shell.workspace-hand .image-node{cursor:grab!important}
 .studio-canvas-workspace #shell.panning{cursor:grabbing!important}

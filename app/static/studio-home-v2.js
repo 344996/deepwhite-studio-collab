@@ -45,7 +45,7 @@
     document.getElementById('homeFolderTitle').textContent = currentProject()?.name || '项目画布';
   }
   search.oninput = filter;
-  // Cache only a cover URL, never complete canvas documents. GET does not generate media.
+  // Cache only a local cover URL and a short prompt excerpt, never complete documents.
   const cache = new Map(), queue = []; let active = 0;
   const localImage = value => {
     const raw = typeof value === 'string' ? value : value?.url || value?.src || value?.path;
@@ -68,9 +68,21 @@
     return '';
   }
   function current(job) { return job.card.isConnected && !job.card.hidden && job.project === currentProjectId && job.card.dataset.canvasId === job.id && job.card.dataset.coverKey === job.key; }
-  function paint(job, url) {
-    if (!url || !current(job)) return;
+  function previewFor(document) {
+    const nodes = Array.isArray(document?.nodes) ? document.nodes : [];
+    const prompt = nodes.flatMap(node => [node.studioPrompt, node.prompt, node.text, node.content, node.data?.prompt])
+      .find(value => typeof value === 'string' && value.trim());
+    return {url:coverFor(document), prompt:prompt ? prompt.trim().slice(0, 180) : ''};
+  }
+  function paint(job, preview) {
+    if (!preview || !current(job)) return;
     const cover = job.card.querySelector('.home-canvas-cover'), image = new Image(); image.alt = ''; image.decoding = 'async';
+    const {url, prompt} = preview;
+    if (prompt) {
+      const excerpt = cover.querySelector('.home-cover-excerpt');
+      if (excerpt) {excerpt.textContent = prompt; excerpt.hidden = false; cover.classList.add('has-prompt');}
+    }
+    if (!url) return;
     image.onload = () => { if (current(job)) { cover.replaceChildren(image); cover.classList.add('has-image'); } };
     image.src = url;
   }
@@ -81,7 +93,7 @@
       (async () => {
         try { const response = await fetch(`/api/canvases/${encodeURIComponent(job.id)}`); if (!response.ok) return; const data = await response.json(); const document = data.canvas || data;
           if (document.id !== job.id || String(document.project || 'default') !== job.project) return;
-          const url = coverFor(document); cache.set(job.key, url); if (cache.size > 80) cache.delete(cache.keys().next().value); paint(job, url);
+          const preview = previewFor(document); cache.set(job.key, preview); if (cache.size > 80) cache.delete(cache.keys().next().value); paint(job, preview);
         } catch { /* A cover failure must leave the real card usable. */ }
         finally { job.card.dataset.coverQueued = ''; active--; pump(); }
       })();
@@ -99,7 +111,9 @@
   const nativeBuild = buildCard;
   buildCard = function(c) {
     const card = nativeBuild(c); card.dataset.coverKey = `${c.project || 'default'}:${c.id}:${c.updated_at || 0}:${c.node_count || 0}`;
-    const cover = card.querySelector('.home-canvas-cover'); cover.innerHTML = '<div class="v2-cover-art"><span></span><span></span><span></span></div><small>等待你的下一幕</small>';
+    const cover = card.querySelector('.home-canvas-cover');
+    cover.innerHTML = '<div class="v2-cover-art" aria-hidden="true"><span></span><span></span><span></span></div><p class="home-cover-excerpt" hidden></p><small>灵感，从这里继续</small>';
+    cover.dataset.kind = c.kind === 'smart' ? 'smart' : 'classic';
     if (c.pinned) { const label = document.createElement('span'); label.className = 'v2-home-pinned'; label.textContent = '已置顶'; card.querySelector('.ws-card-top').prepend(label); }
     card.setAttribute('aria-label', `${c.title}，${c.kind === 'smart' ? '智能画布' : '普通画布'}`); return card;
   };
@@ -119,6 +133,32 @@
     const result = nativeSelectProject(pid);
     if (currentProjectId === pid) { const url = new URL(location.href); url.searchParams.set('project', pid); history.replaceState(history.state, '', url); }
     return result;
+  };
+  // Native menu actions remain authoritative; the presentation layer owns focus.
+  const nativeOpenMenu = openCardMenu, nativeCloseMenu = closeCardMenu;
+  let menuAnchor;
+  closeCardMenu = function() {
+    const pop = document.querySelector('.ws-card-pop'), restore = pop?.contains(document.activeElement);
+    nativeCloseMenu();
+    menuAnchor?.setAttribute('aria-expanded', 'false');
+    if (restore && menuAnchor?.isConnected) menuAnchor.focus();
+  };
+  openCardMenu = function(id, anchor) {
+    nativeOpenMenu(id, anchor);
+    const pop = document.querySelector('.ws-card-pop'); if (!pop) return;
+    menuAnchor = anchor; anchor.setAttribute('aria-haspopup', 'menu'); anchor.setAttribute('aria-expanded', 'true');
+    pop.setAttribute('role', 'menu'); pop.setAttribute('aria-label', '画布操作');
+    const items = [...pop.querySelectorAll('button')];
+    items.forEach(button => button.setAttribute('role', 'menuitem'));
+    pop.addEventListener('keydown', event => {
+      const index = items.indexOf(document.activeElement);
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        items[next]?.focus();
+      } else if (event.key === 'Tab') closeCardMenu();
+    });
+    items[0]?.focus();
   };
   // Keep the original classic/smart POST and menu actions, with an accessible modal.
   const nativeOpenCreate = openCreateCard, nativeCloseCreate = closeCreateCard; let createDialog, createTrigger;

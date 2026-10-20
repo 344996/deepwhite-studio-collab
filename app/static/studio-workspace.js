@@ -51,18 +51,34 @@
     if (home) {
       const sidebar = document.querySelector('.ws-sidebar'), main = document.querySelector('.ws-main');
       const heading = document.querySelector('.v2-home-heading'); heading.classList.add('workspace-create-hero');
-      heading.firstElementChild.innerHTML = '<small>深白片场 · 本地创作空间</small><h1>创作，从画布开始。</h1><p>整理灵感、连接素材，让每一步创作都有迹可循。</p>';
+      const copy = heading.firstElementChild; copy.className = 'workspace-hero-copy';
+      copy.innerHTML = '<small><span></span> DEEPWHITE · 创作空间</small><h1>让灵感，<br>在画布上发生。</h1><p>从一句提示词，到一个完整的视觉世界。<br>连接想法与素材，开始你的下一幕。</p>';
+      const heroActions = document.createElement('div'); heroActions.className = 'workspace-hero-actions';
+      heroActions.append(newCanvasBtn); copy.append(heroActions);
+      const heroArt = document.createElement('div'); heroArt.className = 'workspace-hero-art'; heroArt.setAttribute('aria-hidden', 'true');
+      // Repository-owned AI samples illustrate the workflow; never masquerade as user work.
+      heroArt.innerHTML = '<div class="workspace-art-wire"></div><div class="workspace-art-prompt"><span><i data-lucide="text-cursor-input"></i> 灵感起点</span><p>暮色中的长街，<br>让故事从这一帧开始。</p><i class="workspace-art-port"></i></div><div class="workspace-art-scene"><img src="/static/design-review/assets/scene-v1.png" alt="" decoding="async" width="1536" height="1024"><span><i data-lucide="image"></i> 场景探索</span><i class="workspace-art-port"></i></div><div class="workspace-art-character"><img src="/static/design-review/assets/character-v1.png" alt="" decoding="async" width="1536" height="1024"><span>CHARACTER STUDY / 01</span></div><small class="workspace-art-caption">提示词 → 画面 → 故事<span>AI 创作示意</span></small>';
+      heading.append(heroArt);
+      const welcome = document.createElement('div'); welcome.className = 'workspace-welcome';
+      welcome.innerHTML = '<div><span>工作空间</span><h2>今天，想创造点什么？</h2></div><span class="workspace-local-badge"><i data-lucide="hard-drive" aria-hidden="true"></i> 本地工作台</span>';
+      heading.before(welcome);
       const create = kind => {
         newCanvasBtn.click();
         document.querySelector(`#homeCreateDialog [data-kind="${kind}"]`)?.click();
       };
       const assets = () => location.assign('/static/studio-assets.html?project=' + encodeURIComponent(currentProjectId || 'default'));
       const quickstart = document.createElement('nav'); quickstart.className = 'workspace-quickstart'; quickstart.setAttribute('aria-label', '快速开始');
-      for (const [label, icon, action, kind] of [
-        ['经典画布', 'layout-dashboard', () => create('classic'), 'classic'],
-        ['智能画布', 'workflow', () => create('smart'), 'smart'],
-        ['本地资产', 'folder-open', assets], ['选择 API 服务', 'sliders-horizontal', () => settings.click()]
-      ]) {const button = makeButton(label, icon, action); if (kind) button.dataset.workspaceCreate = kind; quickstart.append(button);}
+      for (const [label, icon, action, kind, description] of [
+        ['经典画布', 'layout-dashboard', () => create('classic'), 'classic', '编排与连接灵感'],
+        ['智能画布', 'workflow', () => create('smart'), 'smart', '以画面延展创作'],
+        ['本地资产', 'folder-open', assets, '', '让素材随时就绪'],
+        ['选择 API 服务', 'sliders-horizontal', () => settings.click(), '', '连接创作工具']
+      ]) {
+        const button = makeButton(label, icon, action), text = button.querySelector('span');
+        text.className = 'workspace-quick-copy'; const hint = document.createElement('small'); hint.textContent = description; text.append(hint);
+        const arrow = document.createElement('i'); arrow.dataset.lucide = 'arrow-up-right'; arrow.setAttribute('aria-hidden','true'); button.append(arrow);
+        if (kind) button.dataset.workspaceCreate = kind; quickstart.append(button);
+      }
       heading.after(quickstart);
       const nav = document.createElement('nav'); nav.className = 'workspace-nav'; nav.setAttribute('aria-label', '工作空间');
       const menu = makeButton('导航', 'menu', () => setSidebar(!root.classList.contains('workspace-sidebar-open')));
@@ -73,6 +89,10 @@
       function setSidebar(open) {
         root.classList.toggle('workspace-sidebar-open', open); menu.setAttribute('aria-expanded', String(open));
         scrim.hidden = !open || !narrow.matches; sidebar.inert = narrow.matches && !open;
+        // A mobile drawer owns keyboard focus until it closes.
+        for (const child of main.children) if (!child.classList.contains('ws-topbar')) child.inert = open && narrow.matches;
+        document.querySelector('.ws-topbar-right').inert = open && narrow.matches;
+        sidebar.setAttribute('aria-label', '工作空间导航');
         if (open) nav.querySelector('button')?.focus();
       }
       for (const [label, icon, action] of [
@@ -81,11 +101,39 @@
         ['本地资产', 'folder-open', assets], ['公共画廊', 'images', openGallery], ['API 服务', 'sliders-horizontal', () => settings.click()]
       ]) nav.append(makeButton(label, icon, () => {setSidebar(false); action();}));
       nav.firstElementChild.setAttribute('aria-current', 'page'); sidebar.querySelector('.ws-side-head').before(nav);
+      // Native folder/trash entries live outside the new nav. They must release
+      // the same drawer before handing keyboard and pointer access back to main.
+      sidebar.addEventListener('click', event => {
+        if (!narrow.matches) return;
+        if (event.target.closest('#trashEntry')) {
+          setSidebar(false); document.getElementById('trashClose').focus();
+        } else if (event.target.closest('.ws-project-row') && !event.target.closest('button,input')) {
+          setSidebar(false); document.getElementById('homeSearch').focus();
+        }
+      });
+      document.getElementById('trashClose').addEventListener('click', () => {if (narrow.matches) menu.focus();});
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && narrow.matches && trashPanel.classList.contains('active')) {
+          closeTrashView(); menu.focus();
+        }
+      }, true);
       scrim.onclick = () => {setSidebar(false); menu.focus();};
-      document.addEventListener('keydown', event => {if(event.key === 'Escape' && root.classList.contains('workspace-sidebar-open')) {setSidebar(false); menu.focus();}});
+      document.addEventListener('keydown', event => {
+        if (!root.classList.contains('workspace-sidebar-open') || !narrow.matches) return;
+        if (event.key === 'Escape') {setSidebar(false); menu.focus();}
+        if (event.key === 'Tab') {
+          const items = [...sidebar.querySelectorAll('button,input,a,[tabindex="0"]')].filter(el => !el.disabled && !el.closest('[hidden]') && el.getClientRects().length);
+          if (event.shiftKey && document.activeElement === items[0]) {event.preventDefault(); items.at(-1)?.focus();}
+          else if (!event.shiftKey && document.activeElement === items.at(-1)) {event.preventDefault(); items[0]?.focus();}
+        }
+      });
       narrow.addEventListener('change', () => setSidebar(false)); setSidebar(false);
-      const note = document.createElement('p'); note.className = 'workspace-local-note'; note.textContent = '本地画布可直接使用。登录用于 API 网站账户，也可以配置自己的服务。';
+      const note = document.createElement('p'); note.className = 'workspace-local-note'; note.innerHTML = '<i data-lucide="shield-check" aria-hidden="true"></i><span>本地创作，随时开始。登录可连接 API 账户，也支持自选服务。</span>';
       quickstart.after(note); document.querySelector('.v2-home-footer').textContent = '项目与素材保存在本机，生成内容使用你选择的 API 服务。';
+      document.querySelectorAll('.studio-home-views button').forEach(button => {
+        const label = button.textContent; button.setAttribute('aria-label', label); button.title = label;
+        button.innerHTML = `<i data-lucide="${button.dataset.view === 'grid' ? 'layout-grid' : 'list'}" aria-hidden="true"></i>`;
+      });
     } else {
       const controls = document.createElement('nav'); controls.className = 'workspace-canvas-tools'; controls.setAttribute('aria-label', '画布操作');
       const more = document.createElement('details'); more.id = 'workspaceMoreTools';

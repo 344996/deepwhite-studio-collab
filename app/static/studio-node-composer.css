@@ -1,30 +1,32 @@
 /* The media and its controls form one node; geometry follows the native world. */
 html.studio-v2.studio-node-composers #nodes .node.studio-media-composer-node{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;overflow:visible;min-height:0!important}
 html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.node-head{background:transparent!important;border:0!important;padding:0 4px 10px!important;min-height:30px;height:auto;color:var(--dw-muted);cursor:grab}
+html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.node-head .node-title{flex:1;min-width:0;text-align:left;font-size:13px}
 html.studio-v2.studio-node-composers #nodes .studio-media-composer-node.selected>.node-head{color:var(--dw-ink)}
 html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.node-body{padding:0!important;overflow:visible}
 html.studio-v2.studio-node-composers #nodes .studio-media-composer-node.selected{outline:none!important}
-.studio-node-composers .studio-node-media{position:relative;width:100%;height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;box-sizing:border-box;background:var(--dw-panel);border:1px solid var(--dw-line-strong);border-radius:12px;color:var(--dw-muted)}
-.studio-node-composers .selected .studio-node-media{border-color:var(--dw-gold);box-shadow:0 0 0 1px var(--dw-gold-line)}
+.studio-node-composers .studio-node-media{position:relative;width:100%;height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;box-sizing:border-box;background:var(--dw-panel);border:1px solid var(--dw-line-strong);border-radius:14px;color:var(--dw-muted);box-shadow:0 8px 24px var(--dw-shadow)}
+.studio-node-composers .selected .studio-node-media{border-color:var(--dw-gold);box-shadow:0 0 0 1px var(--dw-gold-line),0 8px 24px var(--dw-shadow)}
 .studio-node-media>img,.studio-node-media>video{display:block;max-width:100%;width:100%;height:100%;object-fit:contain;background:var(--dw-canvas)}
 .studio-node-media>strong{font-size:14px;font-weight:500;color:var(--dw-muted)}
 .studio-node-media>p{font-size:12px;margin:0}
-.studio-media-placeholder-icon{width:54px;height:54px;color:var(--dw-faint)}
+.studio-media-placeholder-icon{width:44px;height:44px;color:var(--dw-faint)}
 .studio-media-placeholder-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2}
 .studio-node-media button{font-family:inherit;font-size:12px;border:1px solid var(--dw-line-strong);border-radius:8px;background:var(--dw-surface);color:var(--dw-ink);padding:8px 12px;cursor:pointer}
 .studio-node-media button:hover{border-color:var(--dw-gold)}
-.studio-node-media .studio-preview-open{position:absolute;right:12px;bottom:12px}
+.studio-node-media .studio-preview-open{position:absolute;right:12px;bottom:12px;padding:8px 14px;font-size:12px;font-weight:500;background:var(--dw-surface);box-shadow:0 3px 10px var(--dw-shadow)}
 .studio-media-task-badge{position:absolute;top:12px;left:12px;background:var(--dw-surface);padding:6px 10px;border:1px solid var(--dw-line-strong);border-radius:7px;color:var(--dw-ink);font-size:11px}
 .studio-media-task-badge[data-state=running],.studio-media-task-badge[data-state=queued]{color:var(--dw-gold)}
 .studio-media-task-badge[data-state=failed],.studio-media-task-badge[data-state=uncertain]{color:var(--dw-danger)}
-html.studio-v2.studio-node-composers #nodes .studio-node-composer{margin-top:12px;padding:14px 16px 10px;background:var(--dw-surface);border:1px solid var(--dw-line-strong);border-radius:12px;box-sizing:border-box}
+html.studio-v2.studio-node-composers #nodes .studio-node-composer{margin-top:12px;padding:16px 18px 12px;background:var(--dw-surface);border:1px solid var(--dw-line-strong);border-radius:14px;box-sizing:border-box;box-shadow:0 8px 24px var(--dw-shadow)}
 html.studio-v2.studio-node-composers #nodes .selected .studio-node-composer{border-color:var(--dw-gold-line)}
 html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-prompt-title{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-node-prompt{margin:0}
-html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-prompt-input{height:96px!important;min-height:72px!important;max-height:260px;border:0!important;background:transparent!important;padding:10px 0!important;font:14px/1.8 inherit;color:var(--dw-ink);resize:vertical;box-shadow:none!important}
-html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-prompt-input:focus{outline:0}
+html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-prompt-input{height:96px!important;min-height:72px!important;max-height:260px;border:0!important;background:transparent!important;padding:10px 4px!important;font-family:inherit;font-size:14px;line-height:1.8;color:var(--dw-ink);resize:vertical;box-shadow:none!important}
+html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-prompt-input:focus-visible{outline:2px solid var(--dw-gold-line);outline-offset:3px}
+html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-prompt-input::placeholder{color:var(--dw-muted);opacity:1}
 html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-reference-strip{margin:0 0 4px;gap:6px}
-html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-image-footer{padding-top:8px!important;gap:6px!important;border-top:1px solid var(--dw-line)!important}
+html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-image-footer{padding-top:12px!important;gap:8px!important;border-top:1px solid var(--dw-line)!important}
 html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-image-settings{font-size:11px;min-width:90px;max-width:195px}
 html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-footer-model{min-width:130px;flex:1 1 170px}
 html.studio-v2.studio-node-composers #nodes .studio-node-composer .studio-basics{margin:0;gap:8px}
@@ -35,7 +37,7 @@ html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port{to
 html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port.in{left:-43px}
 html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port.out{right:-43px}
 html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port::after{background:var(--dw-canvas);border-color:var(--dw-muted)}
-.studio-node-composers .workspace-node-actions{z-index:64;max-width:calc(100vw - 24px);overflow-x:auto;scrollbar-width:thin;border-radius:9px!important;padding:5px!important;gap:4px}
+.studio-node-composers .workspace-node-actions{z-index:64;max-width:calc(100vw - 24px);overflow-x:auto;scrollbar-width:thin;border-radius:10px!important;padding:6px!important;gap:4px;border-color:var(--dw-line-strong);box-shadow:0 8px 24px var(--dw-shadow)}
 .workspace-node-actions .v2-selection-count{padding:0 7px;font-size:11px}
 .workspace-node-actions button{flex:none;min-height:32px}
 .studio-media-preview-dialog{width:min(1100px,calc(100vw - 40px));max-height:92vh;padding:16px;background:var(--dw-surface);color:var(--dw-ink);border:1px solid var(--dw-line-strong);border-radius:12px}
@@ -45,12 +47,13 @@ html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port::a
 .studio-media-preview-dialog button{padding:9px 14px;border:1px solid var(--dw-line-strong);border-radius:8px;background:var(--dw-panel);color:var(--dw-ink);cursor:pointer}
 .studio-media-preview-dialog a{color:var(--dw-ink)}
 /* Smart canvas uses the same node-linked editor, with its native provider pills. */
-.studio-node-composers.studio-v2-smart .composer-card{border-radius:12px;padding:14px 16px 10px;gap:10px;box-shadow:0 8px 24px var(--dw-shadow)}
+.studio-node-composers.studio-v2-smart .composer-card{border-radius:14px;padding:16px 18px 12px;gap:12px;box-shadow:0 8px 24px var(--dw-shadow)}
 .studio-node-composers.studio-v2-smart .composer-head{border:0;padding-bottom:0}
-.studio-node-composers.studio-v2-smart .composer .prompt-input{background:transparent;border:0;padding:10px 32px 10px 0}
+.studio-node-composers.studio-v2-smart .composer .prompt-input{background:transparent;border:0;padding:10px 32px 10px 4px}
+.studio-node-composers.studio-v2-smart .composer .prompt-input:focus-visible{outline:2px solid var(--dw-gold-line);outline-offset:3px}
 .studio-node-composers.studio-v2-smart .dynamic-params{gap:6px}
-.studio-node-composers.studio-v2-smart .smart-pill{border:0;background:var(--dw-panel);border-radius:7px}
-.studio-node-composers.studio-v2-smart .composer-actions{padding-top:8px;gap:6px}
+.studio-node-composers.studio-v2-smart .smart-pill{border:1px solid var(--dw-line);background:var(--dw-panel);border-radius:8px;min-height:32px}
+.studio-node-composers.studio-v2-smart .composer-actions{padding-top:12px;gap:8px}
 .studio-node-composers.studio-v2-smart .image-node.empty-node{border-radius:12px;box-shadow:none}
 .studio-node-composers.studio-v2-smart .node-port{opacity:1}
 @media(prefers-reduced-motion:no-preference){

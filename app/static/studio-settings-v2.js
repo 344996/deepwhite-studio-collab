@@ -14,7 +14,7 @@
     }catch{return 'graphite';}
   }
   function paint(){const value=selectedTheme();root.classList.toggle('studio-graphite',value==='graphite');root.classList.toggle('studio-milk',value==='milk');select.value=value;root.style.colorScheme=['graphite','dark'].includes(value)?'dark':'light';}
-  select.replaceChildren(...[['graphite','炭灰暖金'],['milk','牛奶白'],['light','浅色'],['dark','深色']].map(([value,label])=>new Option(label,value)));
+  select.replaceChildren(...[['graphite','深色 · 薄荷'],['milk','牛奶白'],['light','浅色'],['dark','深色']].map(([value,label])=>new Option(label,value)));
   select.onchange=()=>{
     const value=select.value;
     try{if(['graphite','milk'].includes(value))localStorage.setItem(key,value);else localStorage.removeItem(key);}catch{}

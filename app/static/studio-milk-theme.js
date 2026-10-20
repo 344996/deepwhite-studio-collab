@@ -2,7 +2,7 @@
   const key='deepwhite_canvas_material',root=document.documentElement;
   const select=document.createElement('select');
   select.id='studioCanvasTheme';select.setAttribute('aria-label','画布主题');select.title='画布主题';select.className='tool-btn';select.style.cssText='width:128px;cursor:pointer;font-size:11px;padding:0 8px';
-  select.innerHTML='<option value="light">原白</option><option value="dark">原黑</option><option value="milk">牛奶白 · 布纹</option><option value="graphite">炭灰暖金</option>';
+  select.innerHTML='<option value="light">浅色</option><option value="dark">深色</option><option value="milk">牛奶白</option><option value="graphite">深色 · 薄荷</option>';
   document.querySelector('#quickToolbar .toolbar-fixed')?.append(select);
   function setMaterial(value){
     for(const element of [root,document.body,document.getElementById('shell')]){

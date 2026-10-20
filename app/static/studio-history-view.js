@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const css = document.createElement('link');
-  css.rel = 'stylesheet'; css.href = '/static/studio-generation-history.css?v=0.11.0-studio.2';
+  css.rel = 'stylesheet'; css.href = '/static/studio-generation-history.css?v=0.11.0-studio.3';
   document.head.append(css);
   const element = (tag, className, text) => {
     const node = document.createElement(tag);

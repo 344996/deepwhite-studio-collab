@@ -26,8 +26,8 @@ html.studio-v2-settings,html.studio-v2-settings body {--bg:var(--dw-bg);--ink:va
 .studio-v2-settings input:disabled {color:var(--dw-faint)}
 .studio-v2-settings button {color:var(--dw-ink);background:var(--dw-panel);border-color:var(--dw-line-strong);border-radius:7px;font-size:12px;box-shadow:none}
 .studio-v2-settings button:hover {background:var(--dw-raised);border-color:var(--dw-gold-line)}
-.studio-v2-settings :is(button.accent,button.primary) {background:var(--dw-gold);color:var(--dw-on-gold);border-color:var(--dw-gold)}
-.studio-v2-settings :is(button.accent,button.primary):hover {background:var(--dw-gold-hover)}
+.studio-v2-settings :is(button.accent,button.primary) {background:var(--dw-primary);color:var(--dw-on-primary);border-color:var(--dw-primary)}
+.studio-v2-settings :is(button.accent,button.primary):hover {background:var(--dw-primary-hover)}
 .studio-v2-settings :is(.notice,.dreamina-result) {background:var(--dw-bg);color:var(--dw-muted);border-color:var(--dw-line-strong);font-size:12px;line-height:1.7}
 .studio-v2-settings .notice[data-error=true] {color:var(--dw-danger);border-color:var(--dw-danger)}
 .studio-v2-settings :is(small,.muted,.key-meta,.picker p,.control-card p,.dreamina-card p) {color:var(--dw-muted);line-height:1.7}
