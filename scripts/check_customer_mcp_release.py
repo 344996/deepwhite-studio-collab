@@ -143,15 +143,16 @@ class CustomerInstallation(Rehearsal):
         return response.json()
 
 
-class CodexClient:
-    """Small JSON-lines app-server client; never issues an inference turn."""
-    def __init__(self, executable, environment, workspace, stderr):
+class JsonLinesClient:
+    """Persistent JSON-lines client; responses must arrive before stdin closes."""
+    def __init__(self, command, environment, workspace, stderr, *, json_rpc=False):
         self.process = subprocess.Popen(
-            [str(executable), "app-server", "--stdio"], cwd=workspace,
+            command, cwd=workspace,
             env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=stderr, text=True, encoding="utf-8",
             creationflags=CREATE_NO_WINDOW,
         )
+        self.json_rpc = json_rpc
         self.messages = queue.Queue()
         self.serial = 0
         self.reader = threading.Thread(target=self._read, daemon=True)
@@ -169,15 +170,17 @@ class CodexClient:
 
     def send(self, method, parameters, request_id=None):
         message = {"method": method, "params": parameters}
+        if self.json_rpc:
+            message["jsonrpc"] = "2.0"
         if request_id is not None:
             message["id"] = request_id
         self.process.stdin.write(json.dumps(message) + "\n")
         self.process.stdin.flush()
 
-    def call(self, method, parameters):
+    def call(self, method, parameters, timeout=60):
         self.serial += 1
         self.send(method, parameters, self.serial)
-        deadline = time.monotonic() + 60
+        deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             try:
                 message = self.messages.get(
@@ -186,10 +189,14 @@ class CodexClient:
             except queue.Empty as exc:
                 raise TimeoutError(method) from exc
             if message.get("_closed"):
-                raise RuntimeError("Codex app-server exited before " + method)
+                raise RuntimeError("The JSON-lines process exited before " + method)
             if message.get("id") == self.serial:
                 if "error" in message:
-                    raise RuntimeError("Codex rejected " + method)
+                    # This verifier uses fixture configuration and content only.
+                    # Keep the actual error so a client failure can be diagnosed.
+                    raise RuntimeError(method + ": " + json.dumps(
+                        message["error"], ensure_ascii=False
+                    ))
                 return message["result"]
         raise TimeoutError(method)
 
@@ -224,6 +231,12 @@ def unpack_release(release, installation, report):
         assert archive.testzip() is None, "The release ZIP is damaged"
         names = archive.namelist()
         assert {"Start.cmd", "Start.ps1", "current.json", "userdata/", "updates/"} <= set(names)
+        guide = f'versions/{built["version"]}/references/docs/客户安装与Codex连接.md'
+        assert "客户使用说明.txt" in names and guide in names, (
+            "The portable package is missing its customer onboarding guides"
+        )
+        for documentation in ("客户使用说明.txt", guide):
+            assert "自动配置 Codex" in archive.read(documentation).decode("utf-8-sig")
         for name in names:
             relative = PurePosixPath(name)
             assert not relative.is_absolute() and ".." not in relative.parts
@@ -270,37 +283,31 @@ def verify_stdio(installation, config, codex_home, workspace, label, canvas_id):
     assert checked.returncode == 0, "Packaged MCP preflight failed; see fixture log"
     preflight = json.loads(checked.stdout.decode("utf-8-sig"))
     assert preflight["ok"] is True
-    requests = [
-        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
-            "protocolVersion": "2025-06-18", "capabilities": {},
-            "clientInfo": {"name": "customer-release-verification", "version": "1"}}},
-        {"jsonrpc": "2.0", "method": "notifications/initialized"},
-        {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
-        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
-            "name": "list_projects", "arguments": {}}},
-        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {
-            "name": "list_canvases", "arguments": {"project_id": "default"}}},
-    ]
-    completed = subprocess.run(
-        command, cwd=workspace, env=environment, timeout=45,
-        input=("\n".join(json.dumps(item) for item in requests) + "\n").encode(),
-        capture_output=True, creationflags=CREATE_NO_WINDOW,
-    )
-    (workspace / (label + "-stdio.stderr.log")).write_bytes(completed.stderr)
-    assert completed.returncode == 0, "Packaged MCP stdio failed; see fixture log"
-    replies = {}
-    for line in completed.stdout.decode("utf-8-sig").splitlines():
-        reply = json.loads(line)
-        if reply.get("id") is not None:
-            replies[reply["id"]] = reply
-    assert all(key in replies and "error" not in replies[key] for key in (1, 2, 3, 4))
-    tools = sorted(item["name"] for item in replies[2]["result"]["tools"])
-    assert len(tools) == 13 and {"list_projects", "list_canvases"} <= set(tools)
-    projects = result_value(replies[3]["result"])
-    canvases = result_value(replies[4]["result"])
+    client = None
+    with (workspace / (label + "-stdio.stderr.log")).open("w", encoding="utf-8") as log:
+        try:
+            client = JsonLinesClient(command, environment, workspace, log, json_rpc=True)
+            initialized = client.call("initialize", {
+                "protocolVersion": "2025-06-18", "capabilities": {},
+                "clientInfo": {"name": "customer-release-verification", "version": "1"},
+            }, timeout=30)
+            client.send("notifications/initialized", {})
+            inventory = client.call("tools/list", {}, timeout=30)
+            tools = sorted(item["name"] for item in inventory["tools"])
+            assert len(tools) == 13 and {"list_projects", "list_canvases"} <= set(tools)
+            projects = result_value(client.call("tools/call", {
+                "name": "list_projects", "arguments": {},
+            }, timeout=30))
+            canvases = result_value(client.call("tools/call", {
+                "name": "list_canvases", "arguments": {"project_id": "default"},
+            }, timeout=30))
+        finally:
+            if client:
+                client.close()
     assert any(item["id"] == canvas_id for item in canvases["items"])
     (workspace / (label + "-stdio.json")).write_bytes(canonical({
-        "preflight": preflight, "tools": tools, "projects": projects,
+        "preflight": preflight, "initialize": initialized,
+        "persistent_stdin": True, "tools": tools, "projects": projects,
         "canvas_count": len(canvases["items"]),
     }))
     return tools
@@ -315,7 +322,9 @@ def verify_real_codex(executable, codex_home, workspace, label, expected_tools):
     client = None
     with (workspace / (label + "-codex.stderr.log")).open("w", encoding="utf-8") as log:
         try:
-            client = CodexClient(executable, environment, workspace, log)
+            client = JsonLinesClient(
+                [str(executable), "app-server", "--stdio"], environment, workspace, log
+            )
             initialized = client.call("initialize", {
                 "clientInfo": {"name": "deepwhite_customer_verification", "version": "1"},
                 "capabilities": {"experimentalApi": True},
@@ -330,6 +339,11 @@ def verify_real_codex(executable, codex_home, workspace, label, expected_tools):
                 "threadId": thread_id, "serverName": SERVER_NAME,
                 "detail": "toolsAndAuthOnly",
             })
+            evidence = {
+                "version": version, "initialize": initialized, "inventory": inventory,
+                "inference_used": False, "provider_generation_used": False,
+            }
+            (workspace / (label + "-codex.json")).write_bytes(canonical(evidence))
             def tool(name):
                 return result_value(client.call("mcpServer/tool/call", {
                     "threadId": thread_id, "server": SERVER_NAME,
@@ -338,11 +352,8 @@ def verify_real_codex(executable, codex_home, workspace, label, expected_tools):
             projects = tool("list_projects")
             schema = tool("get_node_schema")
             assert sorted(schema["input_schemas"]) == expected_tools
-            (workspace / (label + "-codex.json")).write_bytes(canonical({
-                "version": version, "initialize": initialized, "inventory": inventory,
-                "tools": expected_tools, "projects": projects,
-                "inference_used": False, "provider_generation_used": False,
-            }))
+            evidence.update(tools=expected_tools, projects=projects, passed=True)
+            (workspace / (label + "-codex.json")).write_bytes(canonical(evidence))
         finally:
             if client:
                 client.close()

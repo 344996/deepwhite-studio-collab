@@ -3,10 +3,12 @@ import io
 import json
 import os
 from pathlib import Path
+import queue
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import tomllib
 import unittest
 from unittest.mock import patch
@@ -90,6 +92,90 @@ class DiagnosticsTests(unittest.TestCase):
 
 @unittest.skipUnless(os.name == "nt", "Windows portable bootstrap")
 class PortableBridgeTests(unittest.TestCase):
+    def test_persistent_bootstrap_flushes_each_request_and_drains_both_outputs(self):
+        """A real MCP client keeps stdin open between individual requests."""
+        with tempfile.TemporaryDirectory(prefix="dw-mcp-persistent-") as temporary:
+            root = Path(temporary) / "客户 & (副本)"
+            version = "0.11.0-studio.5"
+            app = root / "versions" / version / "app"
+            python = app.parent / "python"
+            app.mkdir(parents=True)
+            python.mkdir()
+            runtime = root / "userdata"
+            runtime.mkdir()
+            shutil.copy2(sys.executable, python / "python.exe")
+            (python / "pyvenv.cfg").write_text(
+                f"home = {sys.base_prefix}\ninclude-system-site-packages = false\n",
+                encoding="utf-8")
+            (app / "VERSION").write_text(version, encoding="utf-8")
+            shutil.copy2(ROOT / "studio_mcp_bootstrap.ps1", app / "studio_mcp_bootstrap.ps1")
+            (app / "studio_mcp.py").write_text(
+                "import json,sys\n"
+                "for line in sys.stdin.buffer:\n"
+                "    request=json.loads(line)\n"
+                "    count=request.pop('stderr_bytes',0)\n"
+                "    if count:\n"
+                "        sys.stderr.buffer.write(b'e'*count)\n"
+                "        sys.stderr.buffer.flush()\n"
+                "    response=(json.dumps(request,ensure_ascii=False)+'\\n').encode('utf-8')\n"
+                "    sys.stdout.buffer.write(response)\n"
+                "    sys.stdout.buffer.flush()\n",
+                encoding="utf-8")
+            (root / "current.json").write_text(json.dumps({"version": version}), encoding="utf-8")
+            config = client_configuration(sys.executable, app, runtime,
+                                           "http://127.0.0.1:39901", root)
+            entry = config["client_config"]["mcpServers"]["deepwhite-studio"]
+            process = subprocess.Popen(
+                [entry["command"], *entry["args"]], stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                env=dict(os.environ, PSExecutionPolicyPreference="Restricted"))
+            replies = queue.Queue()
+            errors = []
+
+            def read_replies():
+                for line in iter(process.stdout.readline, b""):
+                    replies.put(line)
+
+            def read_errors():
+                errors.append(process.stderr.read())
+
+            readers = [threading.Thread(target=read_replies, daemon=True),
+                       threading.Thread(target=read_errors, daemon=True)]
+            for reader in readers:
+                reader.start()
+            try:
+                for index, prompt in enumerate(("你好", "逐条请求", "图片提示词" * 15000)):
+                    request = {"id": index, "prompt": prompt}
+                    payload = dict(request, stderr_bytes=200000 if index == 2 else 0)
+                    process.stdin.write((json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
+                    process.stdin.flush()
+                    # Never close stdin to obtain a response: that used to hide buffering.
+                    try:
+                        response = replies.get(timeout=10)
+                    except queue.Empty:
+                        self.fail("No response while stdin is open; the bootstrap must flush every request.")
+                    self.assertEqual(json.loads(response), request)
+                    self.assertIsNone(process.poll())
+                process.stdin.close()
+                self.assertEqual(process.wait(timeout=10), 0)
+                for reader in readers:
+                    reader.join(timeout=5)
+                    self.assertFalse(reader.is_alive())
+                self.assertEqual(b"".join(errors), b"e" * 200000)
+            finally:
+                if process.poll() is None:
+                    # EOF also lets the old, faulty relay exit after a failing assertion.
+                    process.stdin.close()
+                    try:
+                        process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait(timeout=5)
+                for reader in readers:
+                    reader.join(timeout=5)
+                process.stdout.close()
+                process.stderr.close()
+
     def test_stable_bootstrap_uses_new_version_and_preserves_unicode_stdio(self):
         with tempfile.TemporaryDirectory(prefix="dw-mcp-bootstrap-") as temporary:
             root = Path(temporary) / "中文 & (副本)"

@@ -74,14 +74,41 @@ try {
     $start.RedirectStandardError = $true
     $start.EnvironmentVariables['DEEPWHITE_STUDIO_RUNTIME_DIR'] = Join-Path $root 'userdata'
     $start.EnvironmentVariables['PYTHONUTF8'] = '1'
-    # Copy raw streams. Windows PowerShell cannot reliably inherit a piped stdin
-    # through Process.Start, and its ordinary native pipeline re-encodes text.
+    # MCP keeps stdin open between requests. CopyToAsync can leave small writes
+    # buffered until EOF, so flush each chunk without re-encoding any JSON bytes.
+    # Run all three pumps concurrently so stderr cannot block protocol traffic.
+    Add-Type -TypeDefinition @'
+using System.IO;
+using System.Threading.Tasks;
+
+namespace DeepWhitePortable {
+    public static class RawStreamRelay {
+        public static Task CopyFlushedAsync(Stream source, Stream destination) {
+            return Task.Run(async delegate {
+                var buffer = new byte[16384];
+                int count;
+                while ((count = await source.ReadAsync(buffer, 0, buffer.Length)
+                        .ConfigureAwait(false)) != 0) {
+                    await destination.WriteAsync(buffer, 0, count).ConfigureAwait(false);
+                    await destination.FlushAsync().ConfigureAwait(false);
+                }
+            });
+        }
+    }
+}
+'@ | Out-Null
     $process = [System.Diagnostics.Process]::Start($start)
-    $inputCopy = [Console]::OpenStandardInput().CopyToAsync($process.StandardInput.BaseStream)
-    $outputCopy = $process.StandardOutput.BaseStream.CopyToAsync([Console]::OpenStandardOutput())
-    $errorCopy = $process.StandardError.BaseStream.CopyToAsync([Console]::OpenStandardError())
+    $inputCopy = [DeepWhitePortable.RawStreamRelay]::CopyFlushedAsync(
+        [Console]::OpenStandardInput(), $process.StandardInput.BaseStream)
+    $outputCopy = [DeepWhitePortable.RawStreamRelay]::CopyFlushedAsync(
+        $process.StandardOutput.BaseStream, [Console]::OpenStandardOutput())
+    $errorCopy = [DeepWhitePortable.RawStreamRelay]::CopyFlushedAsync(
+        $process.StandardError.BaseStream, [Console]::OpenStandardError())
     $inputClosed = $false
     while (-not $process.WaitForExit(50)) {
+        foreach ($copy in @($inputCopy, $outputCopy, $errorCopy)) {
+            if ($copy.IsFaulted) { throw $copy.Exception }
+        }
         if (-not $inputClosed -and $inputCopy.IsCompleted) {
             $process.StandardInput.Close()
             $inputClosed = $true
@@ -90,6 +117,11 @@ try {
     [System.Threading.Tasks.Task]::WaitAll(@($outputCopy, $errorCopy))
     exit $process.ExitCode
 } catch {
+    if ($null -ne $process) {
+        try {
+            if (-not $process.HasExited) { $process.Kill(); $process.WaitForExit() }
+        } catch { }
+    }
     # No raw exception text (can contain local account names or sensitive paths).
     [Console]::Error.WriteLine('MCP bootstrap failed. Check that the complete portable installation is present and that current.json selects a valid version. Re-copy configuration from this canvas.')
     exit 2

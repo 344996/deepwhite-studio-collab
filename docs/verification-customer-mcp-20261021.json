@@ -3,7 +3,7 @@
   "version": "0.11.0-studio.5",
   "source_tests": {
     "codex_setup_and_http": 18,
-    "mcp_diagnostics_and_portable_bridge": 8,
+    "mcp_diagnostics_and_portable_bridge": 9,
     "studio_control": 19,
     "windows_release": 13,
     "passed": true
