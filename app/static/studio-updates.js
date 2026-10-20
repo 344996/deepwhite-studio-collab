@@ -8,10 +8,11 @@
     queued: '已收到请求，正在准备重启…', stopping: '正在停止服务…', backing_up: '正在备份本机数据…',
     switching: '正在切换程序版本…', validating: '正在验证新版本能否正常启动…', installed: '更新完成。可以重新打开画布。',
     rolled_back: '已回退到可用版本，用户数据已保留。', reverted: '上次更新已回退。',
+    restarting: '正在安全重启画布，请稍候…', restarted: '新版启动器已生效，可以继续使用画布。',
     check_failed: '检查失败，可以重试。', download_failed: '下载未完成，可以重试。', failed: '操作未完成，请查看下面的说明。',
     recovery_required: '需要恢复，请保留安装目录并查看本机 updates/server.log。'
   };
-  const busy = new Set(['downloading','verifying','queued','stopping','backing_up','switching','validating']);
+  const busy = new Set(['downloading','verifying','queued','stopping','backing_up','switching','validating','restarting']);
   let current = null, timer = null, pending = false, action = 'install', disconnectedAt = null;
   function render(value) {
     current = value;
@@ -29,6 +30,8 @@
     $('install').disabled = working;
     $('rollback').hidden = !value.can_rollback;
     $('rollback').disabled = working;
+    $('restart').hidden = !value.restart_required;
+    $('restart').disabled = working;
     $('progress').hidden = value.phase !== 'downloading';
     if (value.total) { $('progress').max = value.total; $('progress').value = value.bytes || 0; }
   }
@@ -57,6 +60,7 @@
     try {
       await request(operation, payload);
       if (operation === 'install' && current) current.phase = 'queued';
+      if (operation === 'restart' && current) current.phase = 'restarting';
       pending = false; await refresh();
     } catch (error) {
       pending = false; if (current) render(current);
@@ -67,15 +71,20 @@
   $('download').addEventListener('click', () => perform('download'));
   function confirm(selected) {
     action = selected; $('saved').checked = false; $('confirmAction').disabled = true;
-    $('confirmTitle').textContent = selected === 'rollback' ? '回退程序并保留当前数据' : '安装并重启画布';
-    $('confirmAction').textContent = selected === 'rollback' ? '开始回退' : '开始安装';
+    $('confirm').returnValue = '';
+    $('confirmTitle').textContent = selected === 'restart' ? '完成更新并重启画布' : selected === 'rollback' ? '回退程序并保留当前数据' : '安装并重启画布';
+    $('confirmAction').textContent = selected === 'restart' ? '安全重启' : selected === 'rollback' ? '开始回退' : '开始安装';
+    $('confirmDescription').textContent = selected === 'restart' ? '请保存并关闭其他画布标签页。程序会安全退出当前服务，再自动打开新版启动器，用户数据保持不变。' : '请确认项目已经保存，其他画布标签页已经关闭。系统将先备份用户数据，再切换程序版本。';
     $('confirm').showModal();
   }
   $('install').addEventListener('click', () => confirm('install'));
   $('rollback').addEventListener('click', () => confirm('rollback'));
+  $('restart').addEventListener('click', () => confirm('restart'));
   $('saved').addEventListener('change', () => { $('confirmAction').disabled = !$('saved').checked; });
   $('confirm').addEventListener('close', () => {
-    if ($('confirm').returnValue === 'confirm' && $('saved').checked) perform('install', {action, saved_and_closed:true});
+    if ($('confirm').returnValue === 'confirm' && $('saved').checked) {
+      perform(action === 'restart' ? 'restart' : 'install', action === 'restart' ? {saved_and_closed:true} : {action, saved_and_closed:true});
+    }
   });
   document.addEventListener('visibilitychange', () => {
     clearTimeout(timer); if (!document.hidden) refresh();

@@ -9,21 +9,27 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
   const socket=net.createServer();await new Promise(r=>socket.listen(0,'127.0.0.1',r));const port=socket.address().port;await new Promise(r=>socket.close(r));
   const base='http://127.0.0.1:'+port;
-  server=spawn(process.env.PYTHON_EXECUTABLE||'python',['-B','studio_server.py'],{cwd:root,windowsHide:true,env:{...process.env,PYTHONUTF8:'1',DEEPWHITE_INSTALL_ROOT:'',DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,DEEPWHITE_STUDIO_PORT:String(port)}});
+  server=spawn(process.env.PYTHON_EXECUTABLE||'python',['-B','studio_server.py'],{cwd:root,windowsHide:true,env:{...process.env,PYTHONUTF8:'1',PYTHONDONTWRITEBYTECODE:'1',CODEX_HOME:path.join(runtime,'codex'),DEEPWHITE_INSTALL_ROOT:'',DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,DEEPWHITE_STUDIO_PORT:String(port)}});
   server.stdout.on('data',d=>log+=d);server.stderr.on('data',d=>log+=d);
   for(let i=0;i<250;i++){try{if((await fetch(base+'/api/studio/health')).ok)break;}catch{}await wait(100);if(i===249)throw Error(log);}
   browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})});
   const page=await browser.newPage({viewport:{width:1280,height:900}});page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',route=>{if(new URL(route.request().url()).origin!==base){external.push(route.request().url());return route.abort();}return route.continue();});
-  await page.goto(base+'/updates');await page.locator('#status').getByText(/源码运行版/).waitFor();assert(await page.locator('#check').isDisabled());checks.push('Actual source server reports source mode and disables program replacement');
+  await page.goto(base+'/updates');await page.locator('#status').getByText(/源码运行版/).waitFor();assert(await page.locator('#check').isDisabled());assert(await page.locator('#restart').isHidden());checks.push('Actual source server reports source mode and disables program replacement');
   const compatibility=await(await fetch(base+'/api/check-update')).json();assert.equal(compatibility.latest_version,null);assert.equal(compatibility.phase,'source');checks.push('Legacy update check no longer falsely claims latest release');
   let state={managed:true,phase:'available',current_version:'0.10.2-studio.16',latest_version:'0.10.2-studio.17',notes:'<img src=x onerror=alert(1)> Synthetic release',can_install:false,can_rollback:false},calls=[];
+  let disconnected=false,restartReject=false;
   await page.route('**/api/studio/updates/**',async route=>{
     const action=new URL(route.request().url()).pathname.split('/').pop();
-    if(action==='status')return route.fulfill({json:state});
+    if(action==='status')return disconnected?route.abort('connectionrefused'):route.fulfill({json:state});
     calls.push({action,body:route.request().postDataJSON()});
     if(action==='download')state={...state,phase:'ready',can_install:true};
     if(action==='install')state={...state,phase:route.request().postDataJSON().action==='rollback'?'rolled_back':'installed',current_version:route.request().postDataJSON().action==='rollback'?'0.10.2-studio.16':'0.10.2-studio.17',can_install:false,can_rollback:true};
+    if(action==='restart'){
+      if(restartReject){state={...state,phase:'failed',maintenance:false,error:'Fixture restart helper could not start'};return route.fulfill({status:409,json:{detail:state.error}});}
+      state={...state,phase:'restarting',maintenance:true,error:null,message:null};
+      await wait(200);
+    }
     return route.fulfill({json:{accepted:true}});
   });
   await page.reload();await page.locator('#download').waitFor();assert.equal(await page.locator('#notes img').count(),0);checks.push('Signed release notes are displayed as text, not HTML');
@@ -32,6 +38,36 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
   await page.locator('#install').click();await page.locator('#saved').check();await page.locator('#confirmAction').click();await page.locator('#status').getByText('更新完成。可以重新打开画布。',{exact:true}).waitFor();
   assert.deepEqual(calls.find(c=>c.action==='install').body,{action:'install',saved_and_closed:true});checks.push('Confirmed install returns successful new-version status');
   await page.locator('#rollback').click();await page.locator('#saved').check();await page.locator('#confirmAction').click();await page.locator('#status').getByText(/已回退到可用版本/).waitFor();checks.push('Manual rollback uses a separate confirmation and action');
+  state={...state,phase:'installed',current_version:'0.11.0-studio.6',latest_version:'0.11.0-studio.6',supervisor_version:'0.11.0-studio.5',restart_required:true,can_install:false,can_rollback:false,error:null};
+  const refresh=async()=>page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+  await refresh();await page.locator('#restart').waitFor();assert(await page.locator('#install').isHidden());assert(await page.locator('#rollback').isHidden());
+  const restartCalls=()=>calls.filter(call=>call.action==='restart');
+  let before=restartCalls().length;
+  await page.locator('#restart').click();assert.equal(await page.locator('#confirmTitle').innerText(),'完成更新并重启画布');assert(await page.locator('#confirmAction').isDisabled());
+  await page.locator('#saved').check();await page.keyboard.press('Escape');await page.waitForTimeout(100);
+  assert.equal(restartCalls().length,before,'Escape must not reuse a previous confirmed dialog return value');
+  await page.locator('#restart').click();await page.locator('#saved').check();await page.locator('#confirm button[value=cancel]').click();
+  assert.equal(restartCalls().length,before);
+  checks.push('Old supervisor exposes only completion restart; both Escape after a prior confirmation and Cancel issue no restart');
+  restartReject=true;
+  await page.locator('#restart').click();await page.locator('#saved').check();await page.locator('#confirmAction').click();
+  await page.locator('#error').getByText('Fixture restart helper could not start',{exact:true}).waitFor();
+  await refresh();await page.waitForFunction(()=>!document.getElementById('restart').disabled);
+  assert(await page.locator('#check').isEnabled());checks.push('Restart launch rejection remains visible and permits retry after the failed state is read');
+  restartReject=false;before=restartCalls().length;
+  await page.locator('#restart').click();await page.locator('#saved').check();await page.locator('#confirmAction').click();
+  assert(await page.locator('#restart').isDisabled());assert(await page.locator('#check').isDisabled());
+  await page.locator('#status').getByText('正在安全重启画布，请稍候…',{exact:true}).waitFor();
+  assert.deepEqual(restartCalls().at(-1).body,{saved_and_closed:true});
+  assert.equal(restartCalls().length,before+1);
+  disconnected=true;await refresh();
+  await page.locator('#status').getByText('服务正在重启，正在等待连接恢复…',{exact:true}).waitFor();
+  assert(await page.locator('#restart').isDisabled());assert.equal(restartCalls().length,before+1);
+  disconnected=false;state={...state,phase:'restarted',supervisor_version:'0.11.0-studio.6',restart_required:false,maintenance:false,can_rollback:true,error:null,message:null};
+  await refresh();await page.locator('#status').getByText('新版启动器已生效，可以继续使用画布。',{exact:true}).waitFor();
+  assert(await page.locator('#restart').isHidden());assert(await page.locator('#check').isEnabled());assert(await page.locator('#rollback').isVisible());
+  checks.push('Confirmed restart sends only saved-and-closed, disables duplicate actions, tolerates disconnect and unlocks after the new supervisor is ready');
+  await page.screenshot({path:path.join(output,'updates-restarted.png'),fullPage:true});
   state={...state,phase:'download_failed',can_rollback:false,error:'Fixture network failure'};await page.reload();await page.locator('#error').getByText('Fixture network failure',{exact:true}).waitFor();assert(await page.locator('#download').isVisible());checks.push('Failure reason is visible and download can retry');
   await page.setViewportSize({width:390,height:844});await page.emulateMedia({reducedMotion:'reduce'});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:path.join(output,'updates-mobile.png'),fullPage:true});checks.push('Update page fits narrow screens and supports reduced motion');
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);

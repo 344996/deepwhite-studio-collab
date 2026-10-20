@@ -35,6 +35,7 @@ from io import BytesIO
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
+from studio_static import VersionedStaticFiles
 from fastapi.responses import FileResponse, Response, StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
@@ -198,7 +199,6 @@ MODELSCOPE_TREE_URL = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infini
 async def startup_event():
     global GLOBAL_LOOP
     GLOBAL_LOOP = asyncio.get_running_loop()
-    sync_static_html_versions()
     # 启动时整理资产库：给所有图片分组（含默认角色/场景）建好文件夹，并把根目录里的旧素材归整进去。
     try:
         await asyncio.to_thread(migrate_asset_library_into_dirs)
@@ -1434,6 +1434,9 @@ def mutate_static_runninghub_provider(mutator):
     return True
 
 def sync_runninghub_provider_workflows_to_static_template(provider):
+    # Managed releases are immutable; user overrides already live in DATA_DIR.
+    if os.getenv("DEEPWHITE_INSTALL_ROOT"):
+        return False
     if not isinstance(provider, dict) or str(provider.get("id") or "").strip().lower() != "runninghub":
         return False
     workflows = []
@@ -1597,7 +1600,7 @@ os.makedirs(WORKFLOW_DIR, exist_ok=True)
 os.makedirs(CONVERSATION_DIR, exist_ok=True)
 os.makedirs(CANVAS_DIR, exist_ok=True)
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static", VersionedStaticFiles(directory=STATIC_DIR, transform=lambda text: versioned_static_html(text)), name="static")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 
@@ -1723,7 +1726,8 @@ def versioned_static_html(html: str) -> str:
     if not version:
         return html
     safe_version = urllib.parse.quote(version, safe="._-")
-    pattern = re.compile(r'(?P<prefix>(?:src|href)=["\']|@import\s+url\(["\'])(?P<url>/static/[^"\')?#]+(?:\.(?:js|css|html)))(?:\?v=[^"\')#]*)?', re.I)
+    # Quoted local URLs also cover import maps and inline module imports.
+    pattern = re.compile(r'(?P<quote>["\'])(?P<url>/static/[^"\'?#\s<>]+\.(?:js|css|html))(?P<query>\?[^"\'#\s<>]*)?(?P<fragment>#[^"\'\s<>]*)?(?P=quote)', re.I)
     def replace(match):
         url = match.group("url")
         cache_version = safe_version
@@ -1735,37 +1739,15 @@ def versioned_static_html(html: str) -> str:
                 cache_version = f"{safe_version}.{int(os.path.getmtime(path))}"
         except Exception:
             pass
-        return f"{match.group('prefix')}{url}?v={cache_version}"
+        query = match.group("query") or ""
+        version_query = re.compile(r"([?&](?:amp;)?v=)[^&]*")
+        if version_query.search(query):
+            query = version_query.sub(lambda item: item.group(1) + cache_version, query)
+        else:
+            separator = ("&amp;" if "&amp;" in query else "&") if len(query) > 1 else "?"
+            query = (query if len(query) > 1 else "") + separator + "v=" + cache_version
+        return f"{match.group('quote')}{url}{query}{match.group('fragment') or ''}{match.group('quote')}"
     return pattern.sub(replace, html)
-
-def sync_static_html_versions():
-    version = current_app_version()
-    if not version:
-        return
-    safe_version = urllib.parse.quote(version, safe="._-")
-    try:
-        for name in os.listdir(STATIC_DIR):
-            # 跳过 macOS 在外置硬盘(ExFAT/NTFS)生成的 ._* Apple Double 元数据文件，
-            # 这些是二进制文件，按 UTF-8 读取会抛 UnicodeDecodeError。
-            if name.startswith("._"):
-                continue
-            if not name.lower().endswith(".html"):
-                continue
-            path = os.path.join(STATIC_DIR, name)
-            if not os.path.isfile(path):
-                continue
-            # 单文件容错：某个文件读写失败不应中断整批同步。
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    old = f.read()
-                new = versioned_static_html(re.sub(r'([?&]v=)[^"\'`\s<>)]*', rf'\g<1>{safe_version}', old))
-                if new != old:
-                    with open(path, "w", encoding="utf-8", newline="") as f:
-                        f.write(new)
-            except Exception as e:
-                print(f"同步静态页面版本号失败({name}): {e}")
-    except Exception as e:
-        print(f"同步静态页面版本号失败: {e}")
 
 def static_html_response(filename: str):
     path = os.path.join(STATIC_DIR, filename)
@@ -18526,7 +18508,7 @@ def generate(req: GenerateRequest):
                     except Exception as e:
                         print(f"Sync upload failed: {e}")
 
-        workflow_path = os.path.join(WORKFLOW_DIR, req.workflow_json)
+        workflow_path = workflow_path_from_name(req.workflow_json)
         if not os.path.exists(workflow_path) and req.workflow_json == "Z-Image.json":
             workflow_path = WORKFLOW_PATH
         if not os.path.exists(workflow_path):
@@ -18742,17 +18724,28 @@ class WorkflowRunRequest(BaseModel):
     config: WorkflowConfig
     client_id: str = ""
 
+def legacy_workflow_store():
+    from studio_legacy_workflows import WorkflowStore
+    return WorkflowStore(DATA_DIR, WORKFLOW_DIR, os.getenv("DEEPWHITE_INSTALL_ROOT"))
+
+
 def workflow_path_from_name(name: str) -> str:
     if not WORKFLOW_NAME_RE.match(name):
         raise HTTPException(status_code=400, detail="Invalid workflow name")
-    path = os.path.abspath(os.path.join(WORKFLOW_DIR, *name.split("/")))
-    workflow_root = os.path.abspath(WORKFLOW_DIR)
-    if os.path.commonpath([workflow_root, path]) != workflow_root:
-        raise HTTPException(status_code=400, detail="Invalid workflow name")
-    return path
+    try:
+        return str(legacy_workflow_store().read_path(name))
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Workflow not found") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
 
 def workflow_config_path(name: str) -> str:
-    return workflow_path_from_name(name).replace(".json", ".config.json")
+    try:
+        return str(legacy_workflow_store().config_path(name))
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Workflow not found") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
 
 def is_builtin_workflow(name: str) -> bool:
     return "/" not in name and os.path.basename(name) in BUILTIN_WORKFLOWS
@@ -19218,32 +19211,28 @@ def save_comfyui_instances(payload: ComfyInstancesPayload):
 
 @app.get("/api/workflows")
 def list_workflows():
-    if not os.path.isdir(WORKFLOW_DIR):
-        return {"workflows": []}
     items = []
-    for root, dirs, files in os.walk(WORKFLOW_DIR):
-        if os.path.abspath(root) == os.path.abspath(WORKFLOW_DIR):
-            dirs[:] = [d for d in dirs if d in {CUSTOM_WORKFLOW_FOLDER, LEGACY_CUSTOM_WORKFLOW_FOLDER}]
-        for fn in sorted(files):
-            if not fn.endswith(".json") or fn.endswith(".config.json"):
-                continue
-            rel = os.path.relpath(os.path.join(root, fn), WORKFLOW_DIR).replace("\\", "/")
-            if is_builtin_workflow(rel):
-                continue
-            cfg = {}
-            cfg_path = workflow_config_path(rel)
-            if os.path.exists(cfg_path):
-                try:
-                    with open(cfg_path, "r", encoding="utf-8") as f:
-                        cfg = json.load(f) or {}
-                except Exception:
-                    cfg = {}
-            items.append({
-                "name": rel,
-                "title": cfg.get("title") or fn.replace(".json", ""),
-                "builtin": False,
-                "field_count": len(cfg.get("fields") or []),
-            })
+    try:
+        names = legacy_workflow_store().names()
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    for rel in names:
+        if is_builtin_workflow(rel):
+            continue
+        cfg = {}
+        cfg_path = workflow_config_path(rel)
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f) or {}
+            except Exception:
+                cfg = {}
+        items.append({
+            "name": rel,
+            "title": cfg.get("title") or os.path.basename(rel).replace(".json", ""),
+            "builtin": False,
+            "field_count": len(cfg.get("fields") or []),
+        })
     items.sort(key=lambda item: (0 if item["name"].startswith(f"{CUSTOM_WORKFLOW_FOLDER}/") else 1, item["title"]))
     return {"workflows": items}
 
@@ -19279,12 +19268,11 @@ def upload_workflow(payload: WorkflowUploadRequest):
     sample = next(iter(payload.workflow.values()), None)
     if not isinstance(sample, dict) or "class_type" not in sample:
         raise HTTPException(status_code=400, detail="不是有效的 ComfyUI API 工作流 JSON（需包含 class_type）")
-    custom_dir = os.path.join(WORKFLOW_DIR, CUSTOM_WORKFLOW_FOLDER)
-    os.makedirs(custom_dir, exist_ok=True)
     stored_name = f"{CUSTOM_WORKFLOW_FOLDER}/{name}"
-    path = workflow_path_from_name(stored_name)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(payload.workflow, f, ensure_ascii=False, indent=2)
+    try:
+        legacy_workflow_store().write_workflow(stored_name, payload.workflow)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
     return {"name": stored_name}
 
 @app.put("/api/workflows/{name:path}/config")
@@ -19294,10 +19282,11 @@ def save_workflow_config(name: str, payload: WorkflowConfig):
     workflow_path = workflow_path_from_name(name)
     if not os.path.exists(workflow_path):
         raise HTTPException(status_code=404, detail="Workflow not found")
-    cfg_path = workflow_config_path(name)
-    with open(cfg_path, "w", encoding="utf-8") as f:
-        json.dump(payload.dict(), f, ensure_ascii=False, indent=2)
-    return {"config": payload.dict()}
+    try:
+        legacy_workflow_store().write_config(name, payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    return {"config": payload.model_dump()}
 
 @app.delete("/api/workflows/{name:path}")
 def delete_workflow(name: str):
@@ -19305,13 +19294,12 @@ def delete_workflow(name: str):
         raise HTTPException(status_code=400, detail="Invalid workflow name")
     if is_builtin_workflow(name):
         raise HTTPException(status_code=400, detail="内置工作流不可删除")
-    workflow_path = workflow_path_from_name(name)
-    cfg_path = workflow_config_path(name)
-    if not os.path.exists(workflow_path):
-        raise HTTPException(status_code=404, detail="Workflow not found")
-    os.remove(workflow_path)
-    if os.path.exists(cfg_path):
-        os.remove(cfg_path)
+    try:
+        legacy_workflow_store().delete(name)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Workflow not found") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
     return {"ok": True}
 
 @app.post("/api/workflows/{name:path}/run")

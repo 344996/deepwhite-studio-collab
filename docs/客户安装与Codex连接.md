@@ -1,6 +1,8 @@
 # 客户安装与 Codex 连接
 
-适用版本：0.11.0-studio.5，Windows x64 完整便携包。
+适用版本：0.11.0-studio.6，Windows x64 完整便携包。
+
+[下载完整 Windows 包](https://github.com/344996/deepwhite-studio-collab/releases/download/v0.11.0-studio.6/deepwhite-0.11.0-studio.6-windows-x64-portable.zip) · [以后使用的最新版入口](https://github.com/344996/deepwhite-studio-collab/releases/latest) · [已有客户在线更新步骤及公开验收](公开发布与在线更新-20261021.md)。
 
 ## 发给客户的操作步骤
 

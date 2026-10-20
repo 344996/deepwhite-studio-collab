@@ -1,8 +1,10 @@
 # 当前开发版本
 
-当前版本：**0.11.0-studio.5**（2026-10-21），开发仓库为 `344996/deepwhite-studio-collab`。
+当前版本：**0.11.0-studio.6**（2026-10-21），开发仓库为 `344996/deepwhite-studio-collab`。
 
-[本版说明](docs/releases/0.11.0-studio.5.md) · [累计状态](docs/releases/0.11.0-studio.5-status.md) · [本次交付与测试](../docs/发行产物-20261021.md) · [源码启动与 AI 开发](../docs/AI开发指南.md)。本版新增客户 Codex 自动配置、备份撤销和搬迁修复；保留 MCP 诊断、登录自动配置 API、节点内操作、左侧设置、生成历史和反馈；内置助手运行入口移除，已有编辑、保存与提示词导入继续保留。网站尚未上线，画廊内直接生成未实现，微信继续暂缓。
+[客户完整 Windows 包](https://github.com/344996/deepwhite-studio-collab/releases/download/v0.11.0-studio.6/deepwhite-0.11.0-studio.6-windows-x64-portable.zip) · [公开发布与在线更新记录](../docs/公开发布与在线更新-20261021.md)。完整解压后双击 `Start.cmd`。
+
+[本版说明](docs/releases/0.11.0-studio.6.md) · [累计状态](docs/releases/0.11.0-studio.6-status.md) · [本次交付与测试](../docs/发行产物-20261021.md) · [源码启动与 AI 开发](../docs/AI开发指南.md)。本版修复回退后重装、安装目录写入和启动器切换；保留客户 Codex 自动配置、备份撤销和搬迁修复；保留 MCP 诊断、登录自动配置 API、节点内操作、左侧设置、生成历史和反馈；内置助手运行入口移除，已有编辑、保存与提示词导入继续保留。网站尚未上线，画廊内直接生成未实现，微信继续暂缓。
 
 以下为历史说明，保留当时语境。
 

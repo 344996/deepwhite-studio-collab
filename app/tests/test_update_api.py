@@ -88,5 +88,71 @@ class UpdateAPITests(unittest.TestCase):
         self.assertEqual(request['version'],self.version)
         self.assertTrue((self.root/'updates'/'maintenance.json').exists())
 
+    def test_old_supervisor_requires_restart_before_next_version_switch(self):
+        api.engine.layout(self.root)
+        atomic_json(self.root/'updates'/'previous.json',{'version':'0.10.2-studio.15'})
+        api.engine.state(self.root,phase='ready',latest_version='0.10.2-studio.17')
+        with patch.object(api,'supervisor_version',return_value='0.10.2-studio.15'),patch.object(api,'_supervisor'):
+            status=self.client.get('/api/studio/updates/status').json()
+            self.assertTrue(status['restart_required'])
+            self.assertFalse(status['can_install'])
+            self.assertFalse(status['can_rollback'])
+            for action in ('install','rollback'):
+                self.assertEqual(self.post('install',{'action':action,'saved_and_closed':True}).status_code,409)
+        self.assertFalse((self.root/'updates'/'request.json').exists())
+
+    def restart_records(self):
+        api.engine.layout(self.root)
+        atomic_json(self.root/'updates'/'supervisor.json',{'pid':4321,'created':123.0,'port':39841})
+        atomic_json(self.root/'updates'/'server-process.json',{'pid':os.getpid(),'created':124.0,'port':39841})
+        def identity(root,record,server=False):
+            return (SimpleNamespace(pid=record['pid'],ppid=lambda:4321),self.version)
+        return patch.object(api,'owned_process',side_effect=identity)
+
+    def test_restart_requires_confirmation_origin_and_no_extra_arguments(self):
+        with patch.object(api,'_supervisor'):
+            self.assertEqual(self.post('restart',{'saved_and_closed':False}).status_code,409)
+            self.assertEqual(self.post('restart',{'saved_and_closed':True},
+                                       headers={'Origin':'https://evil.invalid'}).status_code,403)
+            self.assertEqual(self.post('restart',{'saved_and_closed':True,'pid':123}).status_code,422)
+
+    def test_restart_refuses_active_work_and_incomplete_transaction(self):
+        api.engine.layout(self.root)
+        with patch.object(api,'_supervisor'),patch.object(api.subprocess,'Popen') as spawn:
+            self.core.manager.active_connections=[object()]
+            self.assertEqual(self.post('restart',{'saved_and_closed':True}).status_code,409)
+            self.core.manager.active_connections=[]
+            api._active=1
+            self.assertEqual(self.post('restart',{'saved_and_closed':True}).status_code,409)
+            api._active=0
+            atomic_json(self.root/'updates'/'transaction.json',{'phase':'switching'})
+            self.assertEqual(self.post('restart',{'saved_and_closed':True}).status_code,409)
+            spawn.assert_not_called()
+        self.assertFalse((self.root/'updates'/'maintenance.json').exists())
+
+    def test_restart_launches_current_bundled_helper_with_exact_owned_pids(self):
+        with self.restart_records(),patch.object(api,'_supervisor'),patch.object(api.subprocess,'Popen') as spawn:
+            response=self.post('restart',{'saved_and_closed':True})
+            self.assertEqual(response.status_code,200,response.text)
+            command=spawn.call_args.args[0]
+            self.assertEqual(command[0],str(self.release/'python'/'python.exe'))
+            self.assertEqual(command[3],str(self.release/'app'/'studio_restart.py'))
+            self.assertEqual(command[command.index('--root')+1],str(self.root))
+            self.assertEqual(command[command.index('--supervisor-pid')+1],'4321')
+            self.assertEqual(command[command.index('--server-pid')+1],str(os.getpid()))
+            self.assertEqual(spawn.call_args.kwargs['stdin'],api.subprocess.DEVNULL)
+        self.assertTrue((self.root/'updates'/'maintenance.json').exists())
+        self.assertEqual(read_json(self.root/'updates'/'state.json')['phase'],'restarting')
+
+    def test_restart_process_mismatch_and_launch_failure_leave_gate_open(self):
+        with self.restart_records(),patch.object(api,'_supervisor'),patch.object(api.subprocess,'Popen') as spawn:
+            atomic_json(self.root/'updates'/'server-process.json',{'pid':9876,'created':124.0,'port':39841})
+            self.assertEqual(self.post('restart',{'saved_and_closed':True}).status_code,409)
+            spawn.assert_not_called()
+        with self.restart_records(),patch.object(api,'_supervisor'),patch.object(api.subprocess,'Popen',side_effect=OSError('fixture')):
+            self.assertEqual(self.post('restart',{'saved_and_closed':True}).status_code,409)
+        self.assertFalse((self.root/'updates'/'maintenance.json').exists())
+        self.assertEqual(read_json(self.root/'updates'/'state.json')['phase'],'failed')
+
 
 if __name__=='__main__': unittest.main()

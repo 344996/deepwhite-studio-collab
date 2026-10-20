@@ -147,6 +147,13 @@ class Supervisor:
                 if request.exists(): os.replace(request,self.updates/('stale-request-'+str(time.time_ns())+'.json'))
                 self.start(current)
                 if not self.ready(current): raise UpdateError('画布启动失败，请查看 updates/server.log。')
+                # A restart helper can die after the old service exits. A fresh,
+                # healthy supervisor for the selected version completes that
+                # restart as well, so a later Start.cmd cannot remain "busy".
+                state_path=self.updates/'state.json'
+                if (Path(__file__).resolve().parent==self.root/'versions'/current/'app'
+                        and state_path.exists() and read_json(state_path).get('phase')=='restarting'):
+                    updates.state(self.root,phase='restarted',current_version=current,error=None)
                 if not self.no_browser: webbrowser.open(f'http://127.0.0.1:{self.port}/')
                 while self.child and self.child.poll() is None:
                     if request.exists():

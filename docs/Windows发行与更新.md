@@ -1,6 +1,6 @@
 # Windows 发行与更新维护
 
-适用：0.10.2-studio.16。这是 Windows x64 便携版的签名更新机制；源码运行版继续用 Git 更新。画廊网站部署和数据库备份独立管理。
+适用：0.10.2-studio.16 起的 Windows x64 便携版签名更新机制，当前版本 0.11.0-studio.6。源码运行版继续用 Git 更新。画廊网站部署和数据库备份独立管理。[本次公开下载与真实升级验收](公开发布与在线更新-20261021.md)。
 
 ## 使用方式
 
@@ -8,7 +8,7 @@
 
 默认地址 `http://127.0.0.1:3848/`。端口已占用时，可在安装根目录新建 `installation.json`，内容例如 `{"port":3858}`，再启动；文件只接受一个整数 port（1024–65535）。显式 `--port` 和 `DEEPWHITE_STUDIO_PORT` 优先于此文件。
 
-设置 → 基础设置 → 关于 → **版本更新、安装与回退**。检查更新、下载、安装是分开的操作；下载不会关闭画布。安装前先保存并关闭其他画布标签页，处理未完成或待核实的生成任务。安装期间暂时禁止 API 读写，健康检查和更新状态仍可查看。
+设置 → 基础设置 → 关于 → **版本更新、安装与回退**；新版也可从“设置 → 存储与更新”进入。检查更新、下载、安装是分开的操作；下载不会关闭画布。安装前先保存并关闭其他画布标签页，处理未完成或待核实的生成任务。安装期间暂时禁止 API 读写，健康检查和更新状态仍可查看。
 
 ```text
 安装目录/
@@ -30,6 +30,8 @@
     state.json / server.log        当前状态与服务日志
     launcher.log                   稳定启动器日志，不占用userdata
 ```
+
+安装成功后如出现“完成更新并重启”，点击并确认保存，程序会安全退出旧服务再启动新版启动器。这个步骤完成前不能再次安装或回退。不要仅重复双击 Start.cmd；它会复用正在运行的服务。
 
 启动器自身是稳定 bootstrap v1。更新清单需要更高 bootstrap 时明确要求完整下载，不尝试替换正在执行的启动器。
 
@@ -53,11 +55,11 @@
 .\.venv\Scripts\python.exe -B scripts\build_windows_release.py `
   --ref HEAD `
   --cache .\release-cache `
-  --output .\dist\0.10.2-studio.16 `
+  --output .\dist\0.11.0-studio.6 `
   --private-key "$env:LOCALAPPDATA\DeepWhiteReleaseSecrets\deepwhite-stable-2026.pem" `
   --key-id deepwhite-stable-2026 `
-  --sequence 16 `
-  --notes-file .\app\docs\releases\0.10.2-studio.16.md
+  --sequence 19 `
+  --notes-file .\app\docs\releases\0.11.0-studio.6.md
 ```
 
 下一版需修改版本及递增 sequence，不能复用已发布的同名版本包。构建目录已存在时保留原产物，使用新的输出目录。构建器验证官方 Python 3.13.16 嵌入式 ZIP 和 PyPI wheel 摘要，使用 cp313/Windows wheels，验证依赖闭包及包内导入；用户启动时无需联网安装依赖。
@@ -97,3 +99,7 @@
 从既有源码工作区迁入便携版：停止旧服务并备份其完整运行目录，将副本放入全新安装目录的 userdata（初次启动前），外部素材路径继续保留；验证画布重开、媒体和任务记录后再决定是否继续使用新版。不能在旧服务运行时复制正在写入的 SQLite 作为可靠迁移。
 
 实现依据：[Python 嵌入式发行说明](https://docs.python.org/3/using/windows.html#the-embeddable-package)、[cryptography Ed25519 接口](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/)。
+
+## 版本目录不可变与旧工作流
+
+从 .6 起，安装目录内 HTML 只在响应时变换缓存版本；上传和自定义配置写 userdata。安装已有同名版本时，必须与签名 ZIP 新鲜解压结果逐文件一致才复用，不移动或覆盖任何已有版本。不同则保留现场并拒绝安装。回退旧程序时，新旧式工作流目录仍保留，但旧程序不可见；重新运行 .6 后恢复。旧版本 custom/自定义 内容只读兼容。

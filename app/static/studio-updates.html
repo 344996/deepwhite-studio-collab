@@ -6,9 +6,9 @@
 <body><div class="settings-top"><header><div><img src="/static/studio-mark.svg" alt=""><strong>深白片场 <span>版本更新</span></strong></div><a href="/settings">返回设置</a></header></div>
 <main><div class="intro"><h1>让作品安心留在本机</h1><p>更新程序、保留项目和连接设置。安装前会自动备份本机数据。</p></div>
 <section class="update-card" aria-labelledby="currentTitle"><p id="currentTitle">当前版本</p><div class="update-version" id="current">正在读取…</div><p id="status" role="status" aria-live="polite">正在读取更新状态…</p><p id="error" role="alert" hidden></p><progress id="progress" hidden aria-label="更新包下载进度"></progress><p id="notes" hidden></p>
-<div class="update-actions"><button id="check" type="button" disabled>检查更新</button><button id="download" type="button" hidden>下载更新包</button><button id="install" class="accent" type="button" hidden>安装并重启</button><button id="rollback" type="button" hidden>回退上一个版本</button></div></section>
+<div class="update-actions"><button id="check" type="button" disabled>检查更新</button><button id="download" type="button" hidden>下载更新包</button><button id="install" class="accent" type="button" hidden>安装并重启</button><button id="restart" class="accent" type="button" hidden>完成更新并重启</button><button id="rollback" type="button" hidden>回退上一个版本</button></div></section>
 <p class="update-hint">安装前，请保存并关闭其他画布标签页。还有生成任务时，请先完成任务或核实任务状态。更新期间暂时不能编辑或生成，完成后重新打开画布即可。</p>
 <p class="update-hint">自动回退保留更新前的数据备份。更新成功后手动回退程序，会保留你最新的项目。外部素材目录保持原位置；请自行备份外部素材。</p>
 <a href="https://github.com/344996/deepwhite-studio-collab/releases" target="_blank" rel="noopener noreferrer">查看版本发布记录</a>
-<dialog id="confirm"><form method="dialog"><h2 id="confirmTitle">安装并重启画布</h2><p>请确认项目已经保存，其他画布标签页已经关闭。系统将先备份用户数据，再切换程序版本。</p><label class="check"><input type="checkbox" id="saved">我已保存并关闭其他画布</label><div class="update-actions"><button value="cancel">暂不操作</button><button value="confirm" id="confirmAction" disabled>开始安装</button></div></form></dialog>
+<dialog id="confirm"><form method="dialog"><h2 id="confirmTitle">安装并重启画布</h2><p id="confirmDescription">请确认项目已经保存，其他画布标签页已经关闭。系统将先备份用户数据，再切换程序版本。</p><label class="check"><input type="checkbox" id="saved">我已保存并关闭其他画布</label><div class="update-actions"><button value="cancel">暂不操作</button><button value="confirm" id="confirmAction" disabled>开始安装</button></div></form></dialog>
 </main><script src="/static/studio-updates.js?v=0.11.0-studio.5"></script></body></html>

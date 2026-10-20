@@ -2,7 +2,9 @@
 
 本仓库是 `344996/deepwhite-studio-collab` 的开发副本，来源于 [aslancootl/deepwhite-studio-collab](https://github.com/aslancootl/deepwhite-studio-collab)，原始导入提交为 `d59a0225f5a0329e5dee7e888b96cbab71b0621e`。原仓库保持不变。
 
-当前版本为 **0.11.0-studio.5**。本次补齐客户 Codex 自动配置、备份撤销和安装目录变更修复，完整 Windows 包包含最近的生成记录、界面和按钮反馈改进。沿用参考 LibTV 的工作台布局。前版的 MCP 诊断、登录自动 API 配置、节点内编辑、左侧设置、意见反馈及内置助手移除继续保留。独立画廊 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery) 仍为 **0.4.0 / schema 4**，尚未部署公网。原源码、许可证及历史继续保留。
+当前版本为 **0.11.0-studio.6**。本次修复回退后再次升级、安装目录只读与更新后安全重启；保留客户 Codex 自动配置、备份撤销和安装目录变更修复，完整 Windows 包包含最近的生成记录、界面和按钮反馈改进。沿用参考 LibTV 的工作台布局。前版的 MCP 诊断、登录自动 API 配置、节点内编辑、左侧设置、意见反馈及内置助手移除继续保留。独立画廊 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery) 仍为 **0.4.0 / schema 4**，尚未部署公网。原源码、许可证及历史继续保留。
+
+**客户下载：[Windows x64 完整便携包](https://github.com/344996/deepwhite-studio-collab/releases/download/v0.11.0-studio.6/deepwhite-0.11.0-studio.6-windows-x64-portable.zip)**。完整解压后双击 `Start.cmd`，无需安装 Python。[发布页](https://github.com/344996/deepwhite-studio-collab/releases/tag/v0.11.0-studio.6) · [公开下载、在线更新与测试记录](docs/公开发布与在线更新-20261021.md)。
 
 - **[统一文档入口](docs/README.md)**：本次变更、AI 开发、架构接口和维护说明。
 - **[客户安装和自动连接 Codex](docs/客户安装与Codex连接.md)** · [本次发行与验收](docs/发行产物-20261021.md)
@@ -22,7 +24,7 @@
 - [微信登录、画廊、更新和 MCP 评估](docs/扩展功能评估.md)
 - [第一批可复查测试摘要](docs/phase1-verification.json)
 - [第一批修改说明](第一批修复说明.md)
-- [当前累计功能与缺口](app/docs/releases/0.11.0-studio.5-status.md)
+- [当前累计功能与缺口](app/docs/releases/0.11.0-studio.6-status.md)
 - [开发步骤](tasks/plan.md)
 
 源码启动：准备 Python 3.12，安装根目录 `requirements.lock.txt`，运行 `python -B app/studio_server.py`，浏览器打开 `http://127.0.0.1:3848/`。建议使用独立虚拟环境，完整 PowerShell 步骤见开发指南。Windows 便携发行包自带运行环境，完整解压后双击 Start.cmd。

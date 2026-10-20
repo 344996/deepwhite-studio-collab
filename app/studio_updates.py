@@ -2,6 +2,7 @@
 import asyncio
 import os
 from pathlib import Path
+import subprocess
 import threading
 import time
 from typing import Literal
@@ -13,6 +14,7 @@ from pydantic import BaseModel, ConfigDict
 
 import studio_update_engine as engine
 from studio_update_core import UpdateError, atomic_json, read_object as read_json
+from studio_restart import owned_process
 
 _lock=threading.Lock()
 _worker=None
@@ -40,10 +42,15 @@ def status(core):
     result=read_json(path) if path.exists() else {'phase':'unchecked'}
     if not isinstance(result.get('phase'),str): raise UpdateError('更新状态记录损坏，请保留诊断文件。')
     latest=result.get('latest_version')
+    running=supervisor_version(root)
+    restart_required=bool(running and running!=current)
     result.update(managed=True,current_version=current,has_update=bool(latest and latest!=current),
-                  update_available=bool(latest and latest!=current),can_install=result['phase']=='ready',
-                  can_rollback=(root/'updates'/'previous.json').exists(),
+                  update_available=bool(latest and latest!=current),can_install=result['phase']=='ready' and not restart_required,
+                  can_rollback=(root/'updates'/'previous.json').exists() and not restart_required,
+                  restart_required=restart_required,supervisor_version=running,
                   maintenance=(root/'updates'/'maintenance.json').exists(),data_schema=1)
+    if restart_required and result['phase']!='restarting':
+        result['message']='程序已更新，请点击“完成更新并重启”，让新版启动器生效后再安装或回退。'
     return result
 
 
@@ -64,13 +71,17 @@ def _root(core):
 def _supervisor(root):
     try:
         info=read_json(root/'updates'/'supervisor.json')
-        process=psutil.Process(info['pid'])
-        argv=process.cmdline()
-        if abs(process.create_time()-info['created'])>.001 or '--root' not in argv or '--serve' in argv:
-            raise ValueError()
-        if Path(argv[argv.index('--root')+1]).resolve()!=root: raise ValueError()
+        process,_=owned_process(root,info)
+        return process
     except (UpdateError,psutil.Error,ValueError,KeyError,IndexError) as exc:
         raise HTTPException(409,'请使用发行包的 Start.cmd 启动画布，再安装更新。') from exc
+
+
+def supervisor_version(root):
+    try:
+        return owned_process(root,read_json(root/'updates'/'supervisor.json'))[1]
+    except (UpdateError,OSError):
+        return None
 
 
 def install(app, core):
@@ -129,6 +140,9 @@ def install(app, core):
     @app.post('/api/studio/updates/install')
     async def queue_install(payload:InstallRequest,request:Request):
         _origin(request); root=_root(core); _supervisor(root)
+        running=supervisor_version(root)
+        if running and running!=engine.layout(root)[4]:
+            raise HTTPException(409,'请先点击“完成更新并重启”，再安装或回退版本。')
         if not payload.saved_and_closed: raise HTTPException(409,'请先保存并关闭其他画布标签页。')
         if not _lock.acquire(blocking=False): raise HTTPException(409,'已有更新操作正在执行。')
         queued=False
@@ -153,4 +167,50 @@ def install(app, core):
             raise HTTPException(409,str(exc) if isinstance(exc,UpdateError) else '无法准备更新，请检查磁盘和文件占用。') from exc
         finally:
             if not queued: engine.gate(root,False)
+            _lock.release()
+
+    class RestartRequest(BaseModel):
+        model_config=ConfigDict(extra='forbid')
+        saved_and_closed:bool
+
+    @app.post('/api/studio/updates/restart')
+    async def queue_restart(payload:RestartRequest,request:Request):
+        _origin(request); root=_root(core); _supervisor(root)
+        if not payload.saved_and_closed:
+            raise HTTPException(409,'请先保存并关闭其他画布标签页。')
+        if not _lock.acquire(blocking=False):
+            raise HTTPException(409,'已有更新操作正在执行。')
+        launched=False
+        try:
+            tx_path=root/'updates'/'transaction.json'
+            if tx_path.exists() and read_json(tx_path).get('phase') not in ('committed','reverted'):
+                raise UpdateError('更新事务尚未完成，请稍后重启。')
+            engine.gate(root,True)
+            if core.manager.active_connections or _active:
+                raise UpdateError('请保存并关闭其他画布标签页后重启。')
+            if engine.busy_jobs(core.RUNTIME_DIR):
+                raise UpdateError('有生成任务未完成或状态待核实，请先处理任务。')
+            supervisor=read_json(root/'updates'/'supervisor.json')
+            server=read_json(root/'updates'/'server-process.json')
+            owner,_=owned_process(root,supervisor)
+            child,selected=owned_process(root,server,server=True)
+            _,release,_,_,current=engine.layout(root)
+            if child.pid!=os.getpid() or child.ppid()!=owner.pid or selected!=current:
+                raise UpdateError('当前服务身份不匹配，未重启任何进程。')
+            command=[str(release/'python'/'python.exe'),'-I','-B',str(release/'app'/'studio_restart.py'),
+                     '--root',str(root),'--supervisor-pid',str(supervisor['pid']),
+                     '--supervisor-created',str(supervisor['created']),
+                     '--server-pid',str(server['pid']),'--server-created',str(server['created'])]
+            engine.state(root,phase='restarting',error=None)
+            with (root/'updates'/'restart.log').open('ab') as log:
+                subprocess.Popen(command,cwd=root,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,
+                                 creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+            launched=True
+            return {'accepted':True,'phase':'restarting'}
+        except (UpdateError,OSError) as exc:
+            message=str(exc) if isinstance(exc,UpdateError) else '无法启动安全重启，请查看本机日志后重试。'
+            engine.state(root,phase='failed',error=message)
+            raise HTTPException(409,message) from exc
+        finally:
+            if not launched: engine.gate(root,False)
             _lock.release()

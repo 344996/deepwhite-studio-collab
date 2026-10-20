@@ -270,16 +270,24 @@ def install(root, stop, start, healthy, *, action='install', now=None):
         if archive.stat().st_size != signed['artifact']['size'] or digest(archive) != signed['artifact']['sha256']:
             raise UpdateError('暂存更新包已改变，请重新下载。')
         new_version = signed['version']
-        new_release = inside(root, root/'versions'/new_version)
+        candidate = root/'versions'/new_version
+        if candidate.is_symlink() or getattr(candidate,'is_junction',lambda:False)():
+            raise UpdateError('已有版本目录是链接，已保留原文件并停止安装。')
+        new_release = inside(root, candidate)
         require_space(root, unpacked=signed['artifact']['unpacked_size'])
-        if new_release.exists():
-            # A failed earlier installation can be retried without deleting evidence.
-            preserved=inside(root,updates/('unused-version-'+new_version+'-'+operation))
-            os.replace(new_release,preserved)
         fresh = updates/'staged'/('install-'+operation)
         extract_package(archive, fresh, signed)
-        new_release.parent.mkdir(exist_ok=True)
-        os.replace(fresh, new_release)
+        if new_release.exists():
+            # The supervisor, bootstrap or an MCP client can still be using this
+            # interpreter after a rollback. Never move or overwrite a version.
+            # Compare against a fresh extraction of the verified ZIP, not mutable
+            # staging or a locally supplied file inventory.
+            if tree_manifest(new_release) != tree_manifest(fresh):
+                raise UpdateError('已有版本文件与已验证的更新包不一致，未替换任何文件。'
+                                  '请保留安装目录和 userdata，按恢复说明使用新的完整便携包。')
+        else:
+            new_release.parent.mkdir(exist_ok=True)
+            os.replace(fresh, new_release)
     else: raise UpdateError('不支持的更新操作。')
     tx = {'id':operation,'old':old_version,'new':new_version,'action':action,'phase':'stopping','backup_complete':False}
     gate(root, True); journal(root, tx)

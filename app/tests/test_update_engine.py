@@ -112,6 +112,52 @@ class UpdateTransactionTests(unittest.TestCase):
         self.assertEqual(self.events,[])
         self.assertEqual(engine.tree_manifest(self.runtime),self.before)
 
+    def test_reinstall_after_rollback_keeps_existing_runtime_at_same_path(self):
+        self.prepare(); self.install()
+        release=self.root/'versions'/self.new
+        executable=release/'python'/'python.exe'
+        identity=executable.stat().st_ino
+        original=engine.tree_manifest(release)
+        self.install(action='rollback')
+        self.events.clear()
+        self.assertEqual(self.install()['phase'],'installed')
+        self.assertEqual(executable.stat().st_ino,identity)
+        self.assertEqual(engine.tree_manifest(release),original)
+        self.assertEqual(list((self.root/'updates').glob('unused-version-*')),[])
+        self.assertEqual(engine.tree_manifest(self.runtime),self.before)
+
+    def test_changed_existing_version_is_preserved_and_rejected_before_stop(self):
+        self.prepare(); self.install(); self.install(action='rollback')
+        release=self.root/'versions'/self.new
+        original=(release/'app'/'studio_server.py').read_bytes()
+        for change in ('modified','missing','extra'):
+            target=release/'app'/('unexpected.py' if change=='extra' else 'studio_server.py')
+            if change=='missing': target.unlink()
+            else: target.write_bytes(b'not the signed package')
+            before=engine.tree_manifest(release)
+            self.events.clear()
+            with self.subTest(change=change),self.assertRaises(UpdateError):
+                self.install()
+            self.assertEqual(engine.tree_manifest(release),before)
+            self.assertEqual(read_json(self.root/'current.json')['version'],self.old)
+            self.assertEqual(engine.tree_manifest(self.runtime),self.before)
+            self.assertEqual(self.events,[])
+            self.assertEqual(list((self.root/'updates').glob('unused-version-*')),[])
+            if change=='extra': target.unlink()
+            else: target.write_bytes(original)
+
+    def test_extraction_failure_never_moves_existing_runtime(self):
+        self.prepare(); self.install(); self.install(action='rollback')
+        release=self.root/'versions'/self.new
+        before=engine.tree_manifest(release)
+        self.events.clear()
+        with patch.object(engine,'extract_package',side_effect=UpdateError('fixture extraction failure')):
+            with self.assertRaises(UpdateError): self.install()
+        self.assertEqual(engine.tree_manifest(release),before)
+        self.assertEqual(self.events,[])
+        self.assertEqual(engine.tree_manifest(self.runtime),self.before)
+        self.assertEqual(read_json(self.root/'current.json')['version'],self.old)
+
     def test_unresolved_jobs_and_corrupt_receipts_block_install(self):
         self.prepare(); directory=self.runtime/'data'/'studio_jobs'; directory.mkdir()
         for content in ['{"status":"running"}','{"status":"uncertain"}','{"status":"paused"}','{broken','[]','null','{}']:
@@ -132,9 +178,9 @@ class UpdateTransactionTests(unittest.TestCase):
         self.assertEqual(result['current_version'],self.old)
         self.assertEqual(engine.tree_manifest(self.runtime),self.before)
         self.assertEqual(self.events,['stop','stop','start:'+self.old,'healthy:'+self.old])
-        # A failed version directory is preserved, and a clean retry is possible.
+        # A verified failed-install directory is reused without moving a runtime.
         self.assertEqual(self.install()['phase'],'installed')
-        self.assertEqual(len(list((self.root/'updates').glob('unused-version-*'))),1)
+        self.assertEqual(len(list((self.root/'updates').glob('unused-version-*'))),0)
 
     def test_interrupted_precommit_recovers_before_server_start(self):
         self.prepare(); operation='b'*32
