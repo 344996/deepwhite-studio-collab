@@ -1,6 +1,6 @@
 # 深白片场 AI 开发指南
 
-适用仓库：`344996/deepwhite-studio-collab`。更新日期：2026-10-19。当前开发版本：`0.10.2-studio.16`。
+适用仓库：`344996/deepwhite-studio-collab`。更新日期：2026-10-20。当前开发版本：`0.11.0-studio.1`。
 
 先读 [统一文档入口](README.md)、[架构与扩展契约](架构与扩展契约.md) 和 [Windows 发行与更新](Windows发行与更新.md)。本版新增统一属性面板、供应商能力说明、真实 Codex 联调、独立 Windows 更新事务；网站画廊当前为 0.3.0。
 
@@ -118,3 +118,7 @@ node app/tests/check-studio-account-registration.cjs
 ## 给后续 AI 的任务模板
 
 > 目标仓库是 344996/deepwhite-studio-collab。先读取 app/AGENTS.md、docs/AI开发指南.md 和当前版本状态。只实现以下功能：[具体功能]。保留经典/智能画布、未登录本地编辑和自选 API；不替换核心引擎，不上传用户数据，不自动调用付费接口。先列修改点及验收条件，分步实现和回归。完成后同步累计功能状态，报告实际测试和未验证项。
+
+## 1020 反馈后的扩展入口
+
+共享模型和画布锁已从内置助手提取到 `studio_models.py`、`studio_canvas_services.py`；不要重新依赖 `studio_agent*`。外接控制遵循 [MCP 与 Skill 指南](EXTERNAL_AGENTS.md)。节点交互从 `studio-node-composer.js`、`studio-canvas-inspector.js` 复用原生编辑与撤销；设置分类见 `studio-settings-navigation.js`。自动账户授权见 [账户 API 文档](ACCOUNT_API_CONNECT.md)，不得给缺失的受管渠道回退到其他账户凭据。反馈的本地保存与网站权限见 [反馈接口](反馈收集与扩展.md)。

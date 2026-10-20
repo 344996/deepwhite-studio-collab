@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-20",
+  "canvas_version": "0.11.0-studio.1",
+  "gallery_version": "0.4.0",
+  "gallery_schema": 4,
+  "repositories": [
+    "344996/deepwhite-studio-collab",
+    "344996/deepwhite-gallery"
+  ],
+  "original_repository_modified": false,
+  "tests": [
+    {
+      "suite": "canvas unittest discovery",
+      "checks": 417,
+      "kind": "unit",
+      "passed": true
+    },
+    {
+      "suite": "gallery unittest discovery",
+      "checks": 64,
+      "kind": "unit",
+      "passed": true
+    },
+    {
+      "suite": "release construction tests",
+      "checks": 13,
+      "kind": "unit",
+      "passed": true
+    },
+    {
+      "suite": "account and security targeted suites (overlap full discovery)",
+      "checks": 84,
+      "kind": "unit",
+      "passed": true
+    },
+    {
+      "suite": "feedback UI",
+      "checks": 8,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "canvas workspace",
+      "checks": 23,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "manual chat modes",
+      "checks": 4,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "feedback cross-application flow",
+      "checks": 5,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "gallery lifecycle browser",
+      "checks": 17,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "gallery prompt reuse browser",
+      "checks": 8,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "gallery CLI backup/restore drill",
+      "checks": 7,
+      "kind": "real CLI",
+      "passed": true
+    },
+    {
+      "suite": "settings browser",
+      "checks": 6,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "account provision browser",
+      "checks": 7,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "MCP configuration browser",
+      "checks": 7,
+      "kind": "browser",
+      "passed": true
+    },
+    {
+      "suite": "Midjourney historical safe recovery",
+      "checks": null,
+      "kind": "browser suite",
+      "passed": true
+    }
+  ],
+  "real_provider_login_verified": false,
+  "paid_generation_used": false,
+  "other_physical_computer_verified": false,
+  "public_release_published": false,
+  "packaged_build_verification": "Recorded after building from this commit",
+  "codex": {
+    "status": "passed",
+    "codex_version": "codex-cli 0.163.0-alpha.10.2",
+    "user_config_unchanged": true,
+    "inference_used": false,
+    "provider_generation_used": false,
+    "tool_count": 13
+  }
+}
