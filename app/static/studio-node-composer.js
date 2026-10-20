@@ -27,37 +27,54 @@
     dialog.onclose=()=>{media.pause?.();dialog.remove();};document.body.append(dialog);dialog.showModal();close.focus();
   }
   function smartHistory() {
-    const panel=document.querySelector('#smartLogModal .log-panel'),list=document.getElementById('smartLogList');
+    const modal=document.getElementById('smartLogModal'),panel=modal?.querySelector('.log-panel'),list=document.getElementById('smartLogList');
     if(!panel||!list)return;
     panel.classList.add('studio-smart-history');
-    const title=panel.querySelector('.log-title');title.textContent='生成记录';title.removeAttribute('data-i18n');
-    const filters=element('div','studio-smart-history-filters');
-    filters.innerHTML='<input type="search" aria-label="搜索生成记录" placeholder="搜索提示词或模型"><select aria-label="筛选生成状态"><option value="">全部状态</option><option value="success">已完成</option><option value="failed">生成失败</option></select><select aria-label="筛选生成类型"><option value="">全部类型</option><option value="image">图片</option><option value="video">视频</option><option value="audio">音频</option><option value="chat">文本</option></select><select aria-label="筛选生成时间"><option value="0">全部时间</option><option value="1">最近 24 小时</option><option value="7">最近 7 天</option><option value="30">最近 30 天</option></select>';
-    list.before(filters);
-    const apply=()=>{
-      const q=filters.querySelector('input').value.trim().toLowerCase(),[status,kind,period]=[...filters.querySelectorAll('select')].map(item=>item.value);let count=0;
-      for(const item of list.querySelectorAll('.log-item')){item.hidden=Boolean(q&&!item.dataset.search.includes(q)||status&&item.dataset.status!==status||kind&&item.dataset.kind!==kind||Number(period)&&Number(item.dataset.created)<Date.now()-Number(period)*86400000);if(!item.hidden)count++;}
-      title.textContent='生成记录 · '+count+' 条';
+    panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','生成记录');
+    panel.querySelector('.log-head')?.remove();
+    window.StudioHistoryView.mount(panel,list,{close:()=>closeSmartCanvasLog()});
+    const labels={succeeded:'已完成',failed:'生成失败',running:'生成中',queued:'排队中',paused:'等待查询',uncertain:'结果待核实',modal:'等待选区确认'};
+    renderSmartCanvasLog=function(){
+      window.StudioHistoryView.clear(panel);
+      for(const log of [...(canvas?.logs||[])].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))){
+        const outputs=(log.outputs||[]).map(smartLogOutputItem).filter(item=>item?.url).map(item=>({...item,kind:item.kind||(outputUrlLooksVideo(item.url)?'video':'image')}));
+        const status=log.status==='success'?'succeeded':log.status||'succeeded';
+        const kind=log.kind||log.request?.kind||outputs[0]?.kind||(log.text?'chat':'image');
+        const card=element('article','log-item');card.dataset.jobId=log.id||'';
+        card.append(element('strong','',log.model||'未记录模型'),element('p','',log.prompt||''));
+        const details=element('details'),summary=element('summary','','参数和任务编号'),pre=element('pre','',JSON.stringify({模型:log.model,参数:log.request||{},耗时毫秒:log.runMs,平台:log.platform},null,2));details.append(summary,pre);card.append(details);
+        if(log.error){const error=element('p','studio-history-error',window.StudioHistoryView.readableError(log.error));error.title=log.error;card.append(error);}
+        card.append(element('p','studio-history-bill','实际费用未知 · 未记录账单'));
+        for(const output of outputs){
+          const row=element('div','studio-history-output'),media=element(output.kind==='video'?'video':output.kind==='audio'?'audio':'img');
+          window.StudioHistoryView.prepareMedia(media,media.tagName==='IMG'?smartMediaPreviewUrl(output,768):displayMediaUrl(output),displayMediaUrl(output));if(media.tagName!=='IMG')media.controls=true;
+          const download=element('a','','下载');download.href=output.url;download.download=output.name||'';
+          const use=element('button','','放入画布');use.type='button';use.onclick=()=>{const point=screenToWorld({clientX:innerWidth/2,clientY:innerHeight/2});createNode(point.x,point.y,[output]);closeSmartCanvasLog();};
+          row.append(media,download,use);card.append(row);
+        }
+        const text=typeof log.text==='string'?log.text:'';
+        if(text){card.append(element('pre','',text));const copy=element('button','','复制文本');copy.type='button';copy.onclick=()=>copyTextToClipboard(text);card.append(copy);}
+        if(log.prompt){const reuse=element('button','','复用提示词');reuse.type='button';reuse.onclick=()=>{const point=screenToWorld({clientX:innerWidth/2,clientY:innerHeight/2});const node=createPromptNode(point.x,point.y);node.text=log.prompt;node.title='历史提示词';render();scheduleSave();closeSmartCanvasLog();};card.append(reuse);}
+        window.StudioHistoryView.decorate(card,{name:log.model||'未记录模型',kind:kind==='text'?'chat':kind,status,stateLabel:labels[status]||status,createdAt:(log.createdAt||0)/1000,prompt:log.prompt||'',taskIds:[log.request?.task_id||log.request?.taskId||log.request?.prompt_id||log.request?.promptId||''],outputs,text},panel);
+        list.append(card);
+      }
+      window.StudioHistoryView.empty(panel);
     };
-    filters.addEventListener('input',apply);filters.addEventListener('change',apply);
-    const native=renderSmartCanvasLog;
-    renderSmartCanvasLog=function(...args){
-      const result=native.apply(this,args);
-      [...list.querySelectorAll('.log-item')].forEach((card,index)=>{
-        const log=canvas.logs[index],outputs=(log.outputs||[]).map(smartLogOutputItem).filter(item=>item?.url);
-        card.dataset.search=[log.model,log.prompt,log.request?.task_id].join(' ').toLowerCase();card.dataset.status=log.status;card.dataset.created=log.createdAt||0;card.dataset.kind=outputs[0]?.kind||(outputs[0]?.url&&outputUrlLooksVideo(outputs[0].url)?'video':'image');
-        const thumbs=card.querySelector('.log-thumbs');card.prepend(thumbs);
-        if(!outputs.length)thumbs.append(element('span','studio-smart-history-empty',log.status==='failed'?'本次生成未产生结果':'文本 / 任务记录'));
-        for(const thumb of thumbs.querySelectorAll('[data-url]'))thumb.onclick=event=>{event.stopPropagation();previewDialog({url:thumb.dataset.url,kind:thumb.dataset.kind||'image'});};
-        const actions=element('div','studio-smart-history-actions');
-        if(log.prompt){const reuse=element('button','','复用提示词');reuse.type='button';reuse.onclick=()=>{const point=screenToWorld({clientX:innerWidth/2,clientY:innerHeight/2});const node=createPromptNode(point.x,point.y);node.text=log.prompt;node.title='历史提示词';render();scheduleSave();closeSmartCanvasLog();};actions.append(reuse);}
-        if(outputs[0]){const output=outputs[0],download=element('a','','下载');download.href=output.url;download.download=output.name||'';actions.append(download);
-          const use=element('button','','放入画布');use.type='button';use.onclick=()=>{const point=screenToWorld({clientX:innerWidth/2,clientY:innerHeight/2});createNode(point.x,point.y,[output]);closeSmartCanvasLog();};actions.append(use);}
-        const details=element('details'),summary=element('summary','','参数与任务详情'),pre=element('pre','',JSON.stringify(log.request||{},null,2));details.append(summary,pre);
-        card.append(details,actions);
-      });
-      apply();return result;
-    };
+    let opener=null;
+    new MutationObserver(()=>{
+      if(modal.classList.contains('open')){opener=document.activeElement;panel.querySelector('[data-history-search]').focus();}
+      else {window.StudioHistoryView.pauseMedia(panel);if(opener?.isConnected)opener.focus();opener=null;}
+    }).observe(modal,{attributes:true,attributeFilter:['class']});
+    panel.addEventListener('keydown',event=>{
+      event.stopPropagation();
+      if(event.key==='Escape'){event.preventDefault();closeSmartCanvasLog();}
+      if(event.key==='Tab'){
+        const items=[...panel.querySelectorAll('button:not(:disabled),input,select,a[href],summary')].filter(item=>item.getClientRects().length);
+        if(!items.length)return;
+        if(event.shiftKey&&document.activeElement===items[0]){event.preventDefault();items.at(-1).focus();}
+        else if(!event.shiftKey&&document.activeElement===items.at(-1)){event.preventDefault();items[0].focus();}
+      }
+    });
   }
   if (document.documentElement.classList.contains('studio-v2-smart')) {
     // The smart engine already keeps media and its active composer linked. Match

@@ -4,9 +4,9 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>设置 · 深白片场</title>
   <link rel="icon" href="/static/studio-mark.svg">
-  <script src="/static/js/theme.js?v=0.11.0-studio.1"></script>
-  <link rel="stylesheet" href="/static/studio-settings.css?v=0.11.0-studio.1">
-  <link rel="stylesheet" href="/static/studio-control.css?v=0.11.0-studio.1">
+  <script src="/static/js/theme.js?v=0.11.0-studio.2"></script>
+  <link rel="stylesheet" href="/static/studio-settings.css?v=0.11.0-studio.2">
+  <link rel="stylesheet" href="/static/studio-control.css?v=0.11.0-studio.2">
 </head>
 <body>
   <div class="settings-top"><header><div><img src="/static/studio-mark.svg" alt=""><strong>深白片场 <span>设置</span></strong></div><button id="closeSettings">返回画布</button></header>
@@ -41,7 +41,7 @@
           <div id="modelRows"></div><div id="pickerResult" class="notice" role="status" aria-live="polite" hidden></div>
           <p class="muted">音频节点仅提供已适配协议的配音、音乐和音效模型。同步成功不代表所有型号都能生成；3D、检测等辅助工具暂不进入画布菜单。</p>
         </section>
-        <details><summary>高级接口选项</summary><label>图片请求方式<select id="imageMode"><option value="openai">OpenAI 标准</option><option value="openai-json">OpenAI JSON</option><option value="openai-video-proxy">OpenAI 中转</option><option value="openai-responses">Responses 接口</option><option value="tudou-async">土豆 GPT-Image-2 异步</option></select></label><p>沿用原项目的接口选项，具体模型需要匹配平台协议。<a href="/static/api-settings.html?v=0.11.0-studio.1" target="_blank" rel="noopener">打开原版高级设置</a></p></details>
+        <details><summary>高级接口选项</summary><label>图片请求方式<select id="imageMode"><option value="openai">OpenAI 标准</option><option value="openai-json">OpenAI JSON</option><option value="openai-video-proxy">OpenAI 中转</option><option value="openai-responses">Responses 接口</option><option value="tudou-async">土豆 GPT-Image-2 异步</option></select></label><p>沿用原项目的接口选项，具体模型需要匹配平台协议。<a href="/static/api-settings.html?v=0.11.0-studio.2" target="_blank" rel="noopener">打开原版高级设置</a></p></details>
         <footer><span id="saveState" role="status" aria-live="polite"></span><button type="submit" id="saveProvider" class="accent">保存连接设置</button></footer>
       </form>
     </section>
@@ -71,7 +71,7 @@
     <section id="comfyPanel" hidden>
       <div class="intro"><h1>ComfyUI</h1><p>管理当前电脑上的本地生成引擎，与 API 平台分别配置。</p></div>
       <div class="settings-feature-card"><h2>本地引擎连接</h2><p>选择现有 ComfyUI 整合包，或者连接已运行的本机服务。设置地址、自动启动方式并查看连接状态。</p><button id="openComfyEngine" type="button" class="accent">配置与检查 ComfyUI</button></div>
-      <div class="settings-feature-card"><h2>工作流与模型</h2><p>导入自己的 ComfyUI 工作流，检查节点和模型依赖，再从画布选择运行。</p><a href="/static/comfyui-settings.html?v=0.11.0-studio.1" target="_blank" rel="noopener">打开 ComfyUI 工作流设置 ↗</a></div>
+      <div class="settings-feature-card"><h2>工作流与模型</h2><p>导入自己的 ComfyUI 工作流，检查节点和模型依赖，再从画布选择运行。</p><a href="/static/comfyui-settings.html?v=0.11.0-studio.2" target="_blank" rel="noopener">打开 ComfyUI 工作流设置 ↗</a></div>
     </section>
     <section id="storagePanel" hidden>
       <div class="intro"><h1>存储与更新</h1><p>本地项目、素材和生成结果保存在独立数据目录中。</p></div>
@@ -79,17 +79,17 @@
     </section>
     <section id="feedbackPanel" data-settings-panel="feedback" hidden>
       <div class="intro"><h1>意见反馈</h1><p>告诉我们遇到的问题或希望增加的功能。</p></div>
-      <iframe class="settings-inline-frame" src="/static/studio-feedback.html?v=0.11.0-studio.1" title="意见反馈" loading="lazy"></iframe>
+      <iframe class="settings-inline-frame" src="/static/studio-feedback.html?v=0.11.0-studio.2" title="意见反馈" loading="lazy"></iframe>
     </section>
   </main>
-  <script src="/static/studio-settings.js?v=0.11.0-studio.1"></script>
-  <script src="/static/studio-provider-capabilities.js?v=0.11.0-studio.1"></script>
-<script src="/static/studio-local-engine.js?v=0.11.0-studio.1"></script>
-<script src="/static/studio-storage.js?v=0.11.0-studio.1"></script>
-<script src="/static/studio-dreamina.js?v=0.11.0-studio.1"></script>
-<script src="/static/studio-control.js?v=0.11.0-studio.1"></script>
-<script src="/static/studio-settings-v2.js?v=0.11.0-studio.1"></script>
-<script src="/static/studio-settings-navigation.js?v=0.11.0-studio.1"></script>
-<link rel="stylesheet" href="/static/studio-settings-navigation.css?v=0.11.0-studio.1">
+  <script src="/static/studio-settings.js?v=0.11.0-studio.2"></script>
+  <script src="/static/studio-provider-capabilities.js?v=0.11.0-studio.2"></script>
+<script src="/static/studio-local-engine.js?v=0.11.0-studio.2"></script>
+<script src="/static/studio-storage.js?v=0.11.0-studio.2"></script>
+<script src="/static/studio-dreamina.js?v=0.11.0-studio.2"></script>
+<script src="/static/studio-control.js?v=0.11.0-studio.2"></script>
+<script src="/static/studio-settings-v2.js?v=0.11.0-studio.2"></script>
+<script src="/static/studio-settings-navigation.js?v=0.11.0-studio.2"></script>
+<link rel="stylesheet" href="/static/studio-settings-navigation.css?v=0.11.0-studio.2">
 </body>
 </html>

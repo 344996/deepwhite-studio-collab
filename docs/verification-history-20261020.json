@@ -1,0 +1,82 @@
+{
+  "version": "0.11.0-studio.2",
+  "date": "2026-10-20",
+  "scope": "1020.docx requirement 9",
+  "original_docx_snapshot_hash_verified": true,
+  "history_ui": {
+    "passed": true,
+    "checks": [
+      "empty history explains where records come from",
+      "classic responsive layout at 320, 768, 1024 and 1440 px",
+      "type, status, task search, date and reset combine correctly",
+      "full prompt, additional output and raw parameters remain available",
+      "image enlargement and real video/audio controls use local media",
+      "missing preview has retry and keeps download and canvas actions",
+      "paid amount, unknown fee, errors and reduced motion stay honest",
+      "closing history pauses media playback",
+      "download and reuse settings retain native behavior without generation",
+      "place media, save and reload preserve the resulting node",
+      "loading, load failure and explicit retry are recoverable",
+      "closing during fetch and reopening cannot revive stale records",
+      "classic light theme and keyboard close",
+      "smart history uses the same responsive surface and output types",
+      "smart filter-empty state, keyboard focus cycle and Escape",
+      "smart prompt reuse preserves the complete original text",
+      "closed multi-output details do not load original or additional media",
+      "explicit prompt/error copy preserves text and reports failure"
+    ],
+    "errors": [],
+    "paid": [],
+    "external": [],
+    "synthetic": true
+  },
+  "existing_ui": {
+    "passed": true,
+    "checks": [
+      "classic: media preview precedes native prompt and parameters; no fixed inspector",
+      "classic: prompt editing saves, undo/redo works and text wheel does not zoom",
+      "classic: native model popup, parameters and generation count remain editable",
+      "classic: node drag, port connect and saved reload retain graph",
+      "history: preview grid, status/query filters, readable error and honest unknown fee",
+      "settings: left categories preserve edits, model native controls, storage and feedback",
+      "smart: no inspector and native composer/selection remain available",
+      "smart history: thumbnails, search/status filters and prompt reuse"
+    ],
+    "errors": [],
+    "external": [],
+    "paid": []
+  },
+  "mj_history": {
+    "passed": true,
+    "script": "app/tests/check-mj-history-0929.cjs"
+  },
+  "data_migration": false,
+  "real_paid_generation": false,
+  "new_portable_build": false,
+  "public_release": false,
+  "local_preview": {
+    "version": "0.11.0-studio.2",
+    "live_url": "http://127.0.0.1:3849",
+    "history_visible": true,
+    "shared_component_loaded": true,
+    "record_count": 0,
+    "errors": [],
+    "read_only_mutations_mocked": true
+  },
+  "independent_review": {
+    "passed": true,
+    "fixed": [
+      "restore explicit prompt and raw error copy",
+      "thumbnail and deferred multi-output media loading"
+    ],
+    "additional_checks": [
+      "clear and rerender media observer",
+      "thumbnail failure falls back to original without false error"
+    ]
+  },
+  "backup": {
+    "location": "local-preview/backups/before-history-ui-20261020-160242-559",
+    "files_verified_sha256": 16,
+    "publicly_uploaded": false
+  }
+}

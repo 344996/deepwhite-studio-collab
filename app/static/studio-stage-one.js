@@ -478,7 +478,8 @@
     return el;
   };
   const history=document.createElement('dialog');history.className='studio-history studio-history-v3';history.setAttribute('aria-label','生成记录');document.body.append(history);
-  const historyCss=document.createElement('link');historyCss.rel='stylesheet';historyCss.href='/static/studio-generation-history.css';document.head.append(historyCss);
+  let historyRequest=0;
+  history.addEventListener('close',()=>{historyRequest++;window.StudioHistoryView.pauseMedia(history);});
   const historyButton=document.createElement('button');historyButton.className='studio-history-button';historyButton.textContent='生成记录';historyButton.type='button';actions.append(historyButton);
   function historyError(card,message){
     let error=card.querySelector(':scope > .studio-history-error');
@@ -486,27 +487,23 @@
     error.textContent=message;return error;
   }
   function filterHistory(){
-    const q=history.querySelector('[data-history-search]').value.trim().toLowerCase(),kind=history.querySelector('[data-history-kind]').value,status=history.querySelector('[data-history-status]').value,days=Number(history.querySelector('[data-history-period]').value);
-    let visible=0;for(const card of history.querySelectorAll('.studio-history-body>article')){card.hidden=Boolean(q&&!card.dataset.search.includes(q)||kind&&card.dataset.kind!==kind||status&&card.dataset.status!==status||days&&Number(card.dataset.created)<Date.now()/1000-days*86400);if(!card.hidden)visible++;}
-    history.querySelector('[data-history-count]').textContent=visible+' 条记录';
-    const empty=history.querySelector('.studio-history-empty');if(empty)empty.hidden=visible>0;
+    window.StudioHistoryView.filter(history);
   }
   function readableHistoryError(message){
-    const text=String(message||'');const bounds=/prompt length must be between (\d+) and (\d+) characters/i.exec(text);
-    if(bounds)return '提示词长度需要在 '+bounds[1]+'–'+bounds[2]+' 个字符之间。请调整后再生成。';
-    if(/insufficient|quota.*exceed|余额不足/i.test(text))return '账户额度不足，请检查所选平台的余额。';
-    if(/invalid.*api.?key|unauthorized|401/i.test(text))return '生成授权无效或已过期，请到设置检查账户与 API 连接。';
-    return text;
+    return window.StudioHistoryView.readableError(message);
   }
   async function refreshHistory(){
     let head=history.querySelector('header'),body=history.querySelector('.studio-history-body');
     if(!history.open||!head||!body){
-      history.replaceChildren();head=document.createElement('header');head.innerHTML='<div><span class="studio-history-eyebrow">创作足迹</span><strong>生成记录</strong><small>参数、任务状态和生成结果都保存在这里</small></div><button type="button" aria-label="关闭生成记录">关闭</button>';head.querySelector('button').onclick=()=>history.close();history.append(head);
-      const filters=document.createElement('div');filters.className='studio-history-filters';filters.innerHTML='<label class="studio-history-search"><span>搜索记录</span><input type="search" data-history-search placeholder="搜索提示词、模型或任务编号" aria-label="搜索生成记录"></label><select data-history-kind aria-label="筛选生成类型"><option value="">全部类型</option><option value="image">图片</option><option value="video">视频</option><option value="audio">音频</option><option value="chat">文本</option></select><select data-history-status aria-label="筛选生成状态"><option value="">全部状态</option><option value="succeeded">已完成</option><option value="failed">生成失败</option><option value="running">生成中</option><option value="queued">排队中</option><option value="paused">等待查询</option><option value="uncertain">结果待核实</option></select><select data-history-period aria-label="筛选生成时间"><option value="0">全部时间</option><option value="1">最近 24 小时</option><option value="7">最近 7 天</option><option value="30">最近 30 天</option></select><span data-history-count role="status"></span>';
-      filters.addEventListener('input',filterHistory);filters.addEventListener('change',filterHistory);history.append(filters);
-      body=document.createElement('div');body.className='studio-history-body';body.textContent='正在读取本地生成记录…';history.append(body);if(!history.open)history.showModal();
+      history.replaceChildren();body=document.createElement('div');history.append(body);
+      head=window.StudioHistoryView.mount(history,body,{close:()=>history.close(),refresh:refreshHistory});
+      window.StudioHistoryView.loading(body);if(!history.open)history.showModal();
     }
-    try{const data=await api('/api/studio/generations?canvas_id='+encodeURIComponent(canvasId()));body.replaceChildren();
+    const request=++historyRequest,origin=canvasId(),reload=history.querySelector('[data-history-refresh]');
+    reload.disabled=true;reload.textContent='读取中…';body.setAttribute('aria-busy','true');
+    try{const data=await api('/api/studio/generations?canvas_id='+encodeURIComponent(origin));
+      if(request!==historyRequest||!history.open||origin!==canvasId())return false;
+      window.StudioHistoryView.clear(history);
       data.items=Array.isArray(data.items)?data.items:[];const taskIds=new Set(data.items.flatMap(j=>j.task_ids||[])),urls=new Set(data.items.flatMap(j=>j.outputs||[]).map(o=>o.url));
       for(const log of canvas?.logs||[]){
         const outs=(log.outputs||[]).map(o=>typeof o==='string'?{url:o,kind:mediaKindForRef(o)}:o);
@@ -514,10 +511,10 @@
         data.items.push({id:log.id,source:'legacy',created_at:(log.createdAt||0)/1000,status:log.status==='success'?'succeeded':log.status,resolved_model:log.model,
           request:{provider_id:log.request?.provider_id||'',model:log.request?.model||log.model,kind:log.request?.kind||log.kind||outs[0]?.kind||'image',prompt:log.prompt||'',params:log.request||{},references:log.refs||[]},task_ids:log.request?.task_id?[log.request.task_id]:[],outputs:outs,text:'',children:[],error:log.error||''});
       }
-      data.items.sort((a,b)=>b.created_at-a.created_at);head.querySelector('strong').textContent='生成记录 · '+data.items.length+' 条';
+      data.items.sort((a,b)=>b.created_at-a.created_at);
 
       for(const job of data.items){
-        const name=apiProviders.find(p=>p.id===job.request.provider_id)?.model_names?.[job.request.model]||job.resolved_model;
+        const name=apiProviders.find(p=>p.id===job.request.provider_id)?.model_names?.[job.request.model]||job.resolved_model||job.request.model||'未记录模型';
         const mj=job.source==='mj',archivePending=mj&&['pending','failed'].includes(job.media_status);
         const stateLabel=mj&&job.remote_status==='succeeded'&&archivePending?(job.media_status==='failed'?'远端已完成 · 保存失败':'远端已完成 · 等待保存'):states[job.status]||({modal:'等待选区确认'})[job.status]||job.status;
         const card=document.createElement('article');card.dataset.jobId=job.id;card.dataset.status=job.status;card.innerHTML=`<strong>${esc(name)}</strong><small>${esc(stateLabel)} · ${new Date(job.created_at*1000).toLocaleString()}</small><p>${esc(job.request.prompt)}</p><details><summary>参数和任务编号</summary><pre>${esc(JSON.stringify({模型:job.resolved_model,参数:job.request.params,参考素材:job.request.references,任务编号:job.task_ids,历史编号:mj?job.id:undefined,远端状态:job.remote_status,媒体状态:job.media_status,用量:(job.children||[]).map(c=>c.usage).filter(Boolean)},null,2))}</pre></details>`;
@@ -531,7 +528,7 @@
         if(mj&&job.status==='uncertain'){const note=document.createElement('p');note.className='studio-history-recovery-note';note.textContent='请先核对平台任务记录；核实前不要再次提交。此记录不会自动恢复或重新生成。';card.append(note);}
         if(job.error){const error=historyError(card,readableHistoryError(job.error));error.title=job.error;}
         if(settled(job)){const bill=document.createElement('p');bill.className='studio-history-bill';bill.textContent=settled(job);card.append(bill);}
-        for(const output of archivePending?[]:job.outputs){const row=document.createElement('div');row.className='studio-history-output';const media=document.createElement(output.kind==='video'?'video':output.kind==='audio'?'audio':'img');media.src=output.url;if(media.tagName==='VIDEO'||media.tagName==='AUDIO')media.controls=true;else media.alt='生成结果';const a=document.createElement('a');a.href=output.url;a.download=output.name||'';a.textContent='下载';const use=document.createElement('button');use.textContent='放入画布';use.onclick=()=>{pushUndo();createImageCardFromUrl(output.url,defaultPoint(),output.name);if(nodes.at(-1)?.url===output.url&&['image','video','audio'].includes(output.kind))nodes.at(-1).mediaKind=output.kind;changed();history.close();};row.append(media,a,use);card.append(row);}
+        for(const output of archivePending?[]:job.outputs){const row=document.createElement('div');row.className='studio-history-output';const media=document.createElement(output.kind==='video'?'video':output.kind==='audio'?'audio':'img');window.StudioHistoryView.prepareMedia(media,output.url);if(media.tagName==='VIDEO'||media.tagName==='AUDIO')media.controls=true;else media.alt='生成结果';const a=document.createElement('a');a.href=output.url;a.download=output.name||'';a.textContent='下载';const use=document.createElement('button');use.textContent='放入画布';use.onclick=()=>{pushUndo();createImageCardFromUrl(output.url,defaultPoint(),output.name);if(nodes.at(-1)?.url===output.url&&['image','video','audio'].includes(output.kind))nodes.at(-1).mediaKind=output.kind;changed();history.close();};row.append(media,a,use);card.append(row);}
         if(job.text){const text=document.createElement('pre');text.textContent=job.text;card.append(text);const copy=document.createElement('button');copy.textContent='复制文本';copy.onclick=()=>copyTextToClipboard(job.text);const save=document.createElement('button');save.textContent='下载文本';save.onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([job.text],{type:'text/plain;charset=utf-8'}));a.download='DeepWhite-文本.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};card.append(copy,save);}
         const restore=document.createElement('button');restore.textContent='复用这次设置';restore.onclick=()=>{pushUndo();const p=defaultPoint(),r=job.request;const n=job.source==='mj'&&r.model!=='midjourney-imagine'?studioAddMj(p):r.kind==='chat'?addLLMNode(p):r.kind==='video'?addVideoNode(p):r.kind==='audio'&&window.studioAddAudioNode?studioAddAudioNode(p,r.params.channel):addGeneratorNode(p);n.apiProvider=r.provider_id;n.llmProvider=r.provider_id;n.model=r.model;n.studioTitle=r.kind==='audio'?'音频':n.studioTitle;n.audioPrompt=r.kind==='audio'?r.prompt:n.audioPrompt;n.studioPrompt=r.input_prompt||r.prompt;n.userInput=r.prompt;n.systemPrompt=r.system_prompt;n.studioRefs=r.references;n.studioParams={...r.params};n.studioParamsModel=r.model;n.multimodal=r.multimodal;n.useFrameRoles=r.frame_mode;n.count=r.count;if(job.source==='mj'){n.studioMjAction=r.model.replace('midjourney-','');n.studioMjParams={...r.params};}changed();history.close();};if(job.source!=='legacy')card.append(restore);
         if(['queued','running','paused'].includes(job.status)||mj&&job.status==='failed'){
@@ -545,25 +542,14 @@
             finally{query.disabled=false;if(query.textContent==='正在查询…'||query.textContent==='正在恢复保存…')query.textContent=label;}
           };card.append(query);
         }
-        card.dataset.kind=job.request.kind||'image';card.dataset.created=job.created_at;card.dataset.search=[name,job.request.prompt,...(job.task_ids||[])].join(' ').toLowerCase();
-        const heading=document.createElement('div');heading.className='studio-history-card-heading';const title=card.querySelector(':scope>strong'),meta=card.querySelector(':scope>small');heading.append(title,meta);
-        const prompt=card.querySelector(':scope>p:not([class])');if(prompt){prompt.className='studio-history-prompt';prompt.title=job.request.prompt;}
-        const outputs=[...card.querySelectorAll('.studio-history-output')];
-        const stage=document.createElement('div');stage.className='studio-history-preview';
-        if(outputs.length){const media=outputs[0].querySelector('img,video,audio');media.preload='metadata';if(media.tagName==='IMG')media.loading='lazy';stage.append(media);const count=document.createElement('span');count.className='studio-history-output-count';count.textContent=(job.request.kind==='video'?'视频':job.request.kind==='audio'?'音频':'图片')+(outputs.length>1?' · '+outputs.length+' 项':'');stage.append(count);
-          const preview=document.createElement('button');preview.type='button';preview.className='studio-history-preview-button';preview.textContent='放大预览';preview.setAttribute('aria-label','预览 '+name);preview.onclick=()=>window.StudioNodeComposer?.preview(job.outputs[0]);stage.append(preview);
-        }else{const mark=document.createElement('span');mark.className='studio-history-placeholder';mark.textContent=job.request.kind==='chat'?'Aa':job.request.kind==='video'?'▷':job.request.kind==='audio'?'♫':'◇';const label=document.createElement('small');label.textContent=job.text?job.text.slice(0,160):job.status==='failed'?'这次生成未产生结果':stateLabel;stage.append(mark,label);}
-        const details=document.createElement('details');details.className='studio-history-details';const summary=document.createElement('summary');summary.textContent='查看参数与详情';details.append(summary);
-        const params=card.querySelector(':scope>details');if(params){const pre=params.querySelector('pre');if(pre)details.append(pre);params.remove();}
-        for(const extra of outputs.slice(1))details.append(extra);
-        const text=card.querySelector(':scope>pre');if(text)details.append(text);
-        const actionBar=document.createElement('div');actionBar.className='studio-history-card-actions';for(const action of [...card.querySelectorAll(':scope>button')])actionBar.append(action);if(outputs[0]){actionBar.prepend(...outputs[0].querySelectorAll('a,button'));outputs[0].remove();}
-        card.prepend(stage,heading);card.append(details,actionBar);body.append(card);
-        if(job.diagnosis){const p=document.createElement('p');p.textContent=job.diagnosis;card.append(p);}
+        if(job.diagnosis){const p=document.createElement('p');p.className='studio-history-recovery-note';p.textContent=job.diagnosis;card.append(p);}
+        window.StudioHistoryView.decorate(card,{name,kind:job.request.kind||'image',status:job.status,stateLabel,createdAt:job.created_at,prompt:job.request.prompt,taskIds:job.task_ids,text:job.text,outputs:job.outputs},history);
+        body.append(card);
       }
-      const empty=document.createElement('div');empty.className='studio-history-empty';empty.innerHTML='<strong>暂无匹配的生成记录</strong><p>生成完成后会保留结果和参数，也可以调整上方筛选条件。</p>';body.append(empty);filterHistory();
+      window.StudioHistoryView.empty(history);filterHistory();
       return true;
-    }catch(e){if(body.querySelector('article'))historyError(body,e.message);else body.textContent=e.message;return false;}
+    }catch(e){if(request!==historyRequest||!history.open)return false;if(body.querySelector('article'))historyError(body,e.message);else window.StudioHistoryView.loadError(body,e.message,refreshHistory);return false;}
+    finally{if(request===historyRequest){reload.disabled=false;reload.textContent='刷新';body.setAttribute('aria-busy','false');}}
   }
   historyButton.onclick=refreshHistory;
   async function load(){try{capabilities=(await api('/api/studio/capabilities')).providers;if(typeof canvas!=='undefined'&&canvas)render();}catch(e){setStatus('模型参数读取失败，请刷新页面。');}}

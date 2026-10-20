@@ -25,7 +25,7 @@ function saveCanvas(){return Promise.resolve()}function render(){}function sched
 function renderGeneratorBody(){return document.createElement('div')}function renderVideoBody(){return document.createElement('div')}function renderLLMBody(){return document.createElement('div')}function renderNode(){const el=document.createElement('div');el.innerHTML='<span class="node-title">node</span>';return el}
 function callCanvasLLM(){}function setStatus(message){fixtureActions.push(message)}function defaultPoint(){return {x:10,y:20}}function pushUndo(){fixtureActions.push('undo')}function createImageCardFromUrl(url,point,name){fixtureActions.push({use:url,name})}
 function addGeneratorNode(point){const n={id:'restored-'+nodes.length,type:'generator',...point};nodes.push(n);return n}function addLLMNode(point){const n=addGeneratorNode(point);n.type='llm';return n}function addVideoNode(point){const n=addGeneratorNode(point);n.type='video';return n}function studioAddMj(point){return addGeneratorNode(point)}function copyTextToClipboard(text){fixtureActions.push({copy:text})}
-</script><script src="/static/studio-stage-one.js"></script></body></html>`;
+</script><script src="/static/studio-history-view.js"></script><script src="/static/studio-stage-one.js"></script></body></html>`;
 
 function job(id, status, fields = {}) {
   return { id, source: 'mj', status, created_at: 1800000000, resolved_model: 'midjourney-imagine', request: { canvas_id: 'mock-canvas', node_id: 'absent-node', provider_id: 'mock-channel', model: 'midjourney-imagine', kind: 'image', prompt: '独立测试提示词', params: { ratio: '16:9', version: '8.2', speed: 'relax' }, references: [], count: 1 }, task_ids: ['original-' + id], outputs: [], text: '', children: [], error: '', remote_status: 'pending', media_status: 'not_required', ...fields };
@@ -54,6 +54,7 @@ async function run() {
     if (url.origin !== base) { forbidden.push(request.url()); return route.abort(); }
     if (url.pathname === '/') return route.fulfill({ contentType: 'text/html', body: host });
     if (url.pathname === '/static/studio-stage-one.js') return route.fulfill({ contentType: 'application/javascript', body: source });
+    if (url.pathname === '/static/studio-history-view.js') return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(root, 'static/studio-history-view.js'), 'utf8') });
     if (url.pathname === '/static/studio-stage-one.css') return route.fulfill({ contentType: 'text/css', body: css });
     if (url.pathname === '/static/studio-generation-history.css') return route.fulfill({ contentType: 'text/css', body: fs.readFileSync(path.join(root, 'static/studio-generation-history.css'), 'utf8') });
     if (url.pathname === '/api/studio/capabilities') return route.fulfill({ json: { providers: {} } });
@@ -106,7 +107,7 @@ async function run() {
     }
 
     const archiveButton = card('mj_archive').getByRole('button', { name: '重试保存结果', exact: true });
-    await archiveButton.click(); await page.waitForFunction(() => document.querySelector('[data-job-id="mj_archive"] button:last-child').disabled);
+    await archiveButton.click(); await page.waitForFunction(() => document.querySelector('[data-job-id="mj_archive"] .studio-history-card-actions>button:last-child').disabled);
     await card('mj_archive').locator('button:disabled').evaluate(button => button.onclick());
     await page.waitForFunction(() => document.querySelector('[data-job-id="mj_archive"]')?.dataset.status === 'succeeded');
     assert.equal(mjPosts().filter(r => r.path.includes('/mj_archive/')).length, 1, 'disabled button blocks duplicate recovery');
