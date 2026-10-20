@@ -432,6 +432,31 @@ def install(app):
     @app.get('/api/studio/control/settings')
     async def get_settings(request: Request): return _settings(_load(), str(request.base_url).rstrip('/'))
 
+    def codex_configuration(request):
+        return client_configuration(sys.executable, Path(__file__).parent,
+            Path(core.DATA_DIR).parent, str(request.base_url).rstrip('/'),
+            os.environ.get('DEEPWHITE_INSTALL_ROOT'))
+
+    @app.get('/api/studio/control/codex')
+    async def codex_status(request: Request):
+        import studio_codex_setup
+        return studio_codex_setup.status(codex_configuration(request))
+
+    @app.post('/api/studio/control/codex')
+    async def codex_setup(payload: dict, request: Request):
+        import studio_codex_setup
+        # A client-config write is explicitly initiated by this local settings
+        # page. It is never an MCP tool and cannot target a caller-supplied path.
+        if (request.headers.get('origin') != str(request.base_url).rstrip('/') or
+                request.headers.get('content-type', '').split(';')[0].strip() != 'application/json'):
+            raise HTTPException(403, '请从这台电脑的画布设置页面配置 Codex。')
+        if payload.get('action') == 'install' and not _load().get('enabled'):
+            raise HTTPException(403, '请先启用 MCP 访问，再自动配置 Codex。')
+        try:
+            return studio_codex_setup.configure(codex_configuration(request), payload)
+        except studio_codex_setup.SetupError as exc:
+            raise HTTPException(exc.status_code, str(exc)) from None
+
     @app.get('/api/studio/control/skill')
     async def skill_template():
         from fastapi.responses import PlainTextResponse

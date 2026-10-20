@@ -12,3 +12,4 @@ pydantic==2.11.7
 psutil==7.1.0
 websockets==15.0.1
 cryptography==50.0.2
+tomlkit==0.13.3

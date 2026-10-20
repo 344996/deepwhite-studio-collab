@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-21",
+  "version": "0.11.0-studio.5",
+  "source_tests": {
+    "codex_setup_and_http": 18,
+    "mcp_diagnostics_and_portable_bridge": 8,
+    "studio_control": 19,
+    "windows_release": 13,
+    "passed": true
+  },
+  "browser_mock": {
+    "passed": true,
+    "checks": [
+      "首次打开仅读取状态；未启用时不能安装，主流程默认不显示路径或配置代码",
+      "键盘启用与安装、重复提交保护、安装失败在步骤旁显示并可重试，成功后提示重连和只读测试",
+      "高级配置可用键盘展开，Codex 与其他客户端配置、复制及检查结果导出保留；本机检查不冒充 Codex 联调",
+      "检测其他安装位置后必须确认替换，取消无写入；撤回单独确认且成功后重置检查状态",
+      "文件并发修改会刷新状态并重新确认，禁止隐式覆盖；读取失败与损坏配置显示阻塞原因并可刷新恢复",
+      "待确认生成、提示词、费用、开关禁用、批准与拒绝、过期授权回到逐次确认仍正常",
+      "自动刷新只轮询待确认请求，不轮询或修改 Codex 配置",
+      "深浅主题、键盘焦点、折叠操作、390/320px 窄屏与减少动画设置正常"
+    ],
+    "scope": "真实面板 HTML/CSS/JS；浏览器接口和剪贴板均为隔离模拟，不修改真实 Codex 配置，不调用真实生成。",
+    "browser_errors": [],
+    "setup_posts": 6,
+    "screenshots": [
+      "desktop-codex-first-run.png",
+      "desktop-codex-setup.png",
+      "mobile-codex-setup.png",
+      "desktop-codex-setup-light.png"
+    ]
+  },
+  "browser_live": {
+    "passed": true,
+    "version": "0.11.0-studio.5",
+    "checks": [
+      "独立端口和临时 CODEX_HOME / 画布数据目录；真实后端状态读取不改动配置",
+      "实际设置页面按需读取；未启用时禁止安装，启用访问不会自动写入 Codex 配置",
+      "浏览器真实 Origin / JSON 请求成功安装；保留模型、其他 MCP 与注释，创建备份，路径与端口来自本次独立安装",
+      "真实后端启动 MCP 桥接进程并完成本机只读检查；界面仍要求客户在 Codex 发送提示词确认",
+      "通过界面撤回上次配置，真实配置文件逐字节恢复，其他 MCP 和用户设置保留"
+    ],
+    "page_errors": [],
+    "setup_writes": 2,
+    "external_requests_blocked": [],
+    "original_config_hash": "9f0178647b0c9e4d1a896c365cb212df85be56e3c816cdace04276cb79b0770c",
+    "restored_config_hash": "9f0178647b0c9e4d1a896c365cb212df85be56e3c816cdace04276cb79b0770c",
+    "diagnostic_checks": [
+      {
+        "step": "本机地址",
+        "ok": true,
+        "code": "ok"
+      },
+      {
+        "step": "画布服务与安装",
+        "ok": true,
+        "code": "ok"
+      },
+      {
+        "step": "本机控制配置",
+        "ok": true,
+        "code": "ok"
+      },
+      {
+        "step": "控制授权",
+        "ok": true,
+        "code": "ok"
+      },
+      {
+        "step": "工具定义",
+        "ok": true,
+        "code": "ok"
+      }
+    ],
+    "scope": "实际设置页面与真实本机配置接口、MCP 桥接进程；临时 CODEX_HOME 与数据目录，第三方生成请求禁用。未改动用户真实配置，未启动真实 Codex 会话。",
+    "screenshots": [
+      "actual-settings-first-run.png",
+      "actual-settings-connected.png"
+    ]
+  },
+  "actual_release": "recorded in a separate post-build evidence commit",
+  "user_config_modified": false,
+  "paid_generation": false
+}

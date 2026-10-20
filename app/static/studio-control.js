@@ -3,27 +3,13 @@
   if (!panel) return;
   const $ = id => document.getElementById(id);
   const endpoint = '/api/studio/control/settings';
-  let state = null, busy = false, pollTimer = 0, opened = false, diagnosticReport = null;
-  const configHost = $('controlClientConfig').parentElement;
-  const clientLabel = document.createElement('label'); clientLabel.className = 'control-client-label';
-  clientLabel.textContent = '外接客户端';
-  const clientSelect = document.createElement('select'); clientSelect.id = 'controlClientType';
-  for (const [value, text] of [['codex_toml','Codex · TOML'], ['claude_json','Claude / 通用 · JSON']]) {
-    const option = document.createElement('option'); option.value = value; option.textContent = text; clientSelect.append(option);
-  }
-  clientLabel.append(clientSelect); configHost.insertBefore(clientLabel, $('controlClientConfig'));
-  const clientHelp = document.createElement('p'); clientHelp.className = 'muted'; clientHelp.id = 'controlClientHelp';
-  configHost.insertBefore(clientHelp, $('controlClientConfig'));
-  const connectionInfo = document.createElement('p'); connectionInfo.className = 'control-connection-info';
-  connectionInfo.textContent = 'MCP 连接这台电脑的画布。请先启动画布，再在同一电脑的外接客户端添加配置；API 网站地址用于生成服务。';
-  configHost.append(connectionInfo);
-  const diagnosticActions = document.createElement('div'); diagnosticActions.className = 'control-diagnostic-actions';
-  const checkButton = document.createElement('button'); checkButton.id = 'controlCheck'; checkButton.type = 'button'; checkButton.textContent = '检查本机连接';
-  const exportButton = document.createElement('button'); exportButton.id = 'controlExportDiagnostics'; exportButton.type = 'button'; exportButton.textContent = '导出检查结果'; exportButton.hidden = true;
-  const commandButton = document.createElement('button'); commandButton.id = 'controlCopyCheck'; commandButton.type = 'button'; commandButton.textContent = '复制客户端检查命令';
-  const skillLink = document.createElement('a'); skillLink.href = '/api/studio/control/skill'; skillLink.download = 'SKILL.md'; skillLink.textContent = '下载画布 Skill 示例'; skillLink.className = 'control-skill-link';
-  diagnosticActions.append(checkButton, commandButton, exportButton, skillLink); configHost.append(diagnosticActions);
-  const diagnosticBox = document.createElement('div'); diagnosticBox.id = 'controlDiagnostics'; diagnosticBox.setAttribute('aria-live', 'polite'); diagnosticBox.hidden = true; configHost.append(diagnosticBox);
+  const codexEndpoint = '/api/studio/control/codex';
+  const testPrompt = '请用 deepwhite-studio 列出我的画布，不修改或生成内容。';
+  let state = null, codex = null, busy = false, pollTimer = 0, opened = false, diagnosticReport = null;
+  let settingsRead = 0, codexRead = 0;
+  const clientSelect = $('controlClientType'), clientHelp = $('controlClientHelp');
+  const checkButton = $('controlCheck'), exportButton = $('controlExportDiagnostics');
+  const commandButton = $('controlCopyCheck'), diagnosticBox = $('controlDiagnostics');
 
   async function api(url, method = 'GET', body) {
     const response = await fetch(url, {method, headers:{'Content-Type':'application/json'}, ...(body === undefined ? {} : {body:JSON.stringify(body)})});
@@ -39,11 +25,82 @@
   function say(message, error = false) {
     const box = $('controlResult'); box.hidden = !message; box.textContent = message || ''; box.dataset.error = String(error);
   }
+  function setupSay(message, error = false) {
+    const box = $('controlSetupResult');
+    box.hidden = !message; box.textContent = message || ''; box.dataset.error = String(error);
+    box.setAttribute('role', error ? 'alert' : 'status');
+  }
+  function applyAvailability() {
+    $('controlInstallCodex').disabled = busy || !state?.enabled || !codex?.can_install || codex.state === 'installed';
+    $('controlUndoCodex').disabled = busy || !codex?.can_undo;
+    checkButton.disabled = busy || !state?.enabled;
+    $('controlCopyPrompt').disabled = busy || !state?.enabled;
+    panel.querySelectorAll('.control-request button.accent').forEach(el => { el.disabled = busy || !state?.enabled; });
+  }
   function setBusy(value) {
     busy = value;
     panel.querySelectorAll('button,input,select').forEach(el => { el.disabled = value; });
-    $('controlAutoRefresh').disabled = value;
-    if (!value) panel.querySelectorAll('.control-request button.accent').forEach(el => { el.disabled = !state?.enabled; });
+    $('controlPanel').setAttribute('aria-busy', String(value));
+    applyAvailability();
+  }
+  function renderSetup() {
+    const enabled = Boolean(state?.enabled), installed = codex?.state === 'installed';
+    $('controlStepAccess').dataset.complete = String(enabled);
+    $('controlAccessStatus').textContent = enabled ? '已启用' : '未启用';
+    $('controlStepCodex').dataset.complete = String(installed);
+    $('controlCodexBadge').textContent = ({missing:'尚未配置', installed:'已配置', different:'需要更新', blocked:'需处理'})[codex?.state] || '待检查';
+    $('controlCodexStatus').textContent = codex?.message || '正在检查这台电脑的 Codex 配置…';
+    $('controlInstallCodex').textContent = installed ? '已配置 Codex' : codex?.state === 'different' ? '更新 Codex 配置' : '自动配置 Codex';
+    $('controlInstallHelp').textContent = !enabled
+      ? '先启用访问，再配置这台电脑上的 Codex。'
+      : installed ? '配置已就绪。请重启或重新连接 Codex，再执行下面的测试。'
+      : '点击后自动填写本机配置，并备份原有文件。';
+    $('controlCodexPath').textContent = codex?.config_path || '配置位置暂不可用，请刷新状态。';
+    $('controlInstallType').textContent = codex?.portable === true
+      ? '便携发行版 · 使用内置运行环境，版本更新后会自动选择新程序。'
+      : codex?.portable === false
+        ? '源码运行模式 · 当前连接使用此源码副本的运行环境。客户使用请分发完整便携发行包。'
+        : '安装信息暂未就绪，请刷新状态后重试。';
+    const checked = enabled && Boolean(diagnosticReport?.ok);
+    $('controlStepCheck').dataset.complete = String(checked);
+    $('controlCheckStatus').textContent = checked ? '本机检查通过' : diagnosticReport && enabled ? '检查未通过' : '尚未检查';
+    applyAvailability();
+  }
+  function clearDiagnostics() {
+    diagnosticReport = null; diagnosticBox.hidden = true; diagnosticBox.replaceChildren(); exportButton.hidden = true;
+  }
+  async function refreshCodex(showError = true) {
+    const request = ++codexRead;
+    try {
+      const result = await api(codexEndpoint);
+      if (request !== codexRead) return;
+      if (codex && (codex.revision !== result.revision || codex.state !== result.state)) clearDiagnostics();
+      codex = result; renderSetup();
+    } catch (error) {
+      if (request !== codexRead) return;
+      codex = {state:'blocked', message:'暂时无法读取本机 Codex 配置。请刷新状态重试。', can_install:false, can_undo:false};
+      clearDiagnostics();
+      renderSetup();
+      if (showError) setupSay(error.message, true);
+    }
+  }
+  async function configureCodex(action) {
+    if (busy || !codex) return;
+    if (action === 'install' && (!state?.enabled || !codex.can_install)) return;
+    if (action === 'undo' && !codex.can_undo) return;
+    const replace = action === 'install' && codex.state === 'different';
+    if (replace && !window.confirm('这台电脑已有另一份深白连接配置。是否将它更新为当前画布？只调整深白连接，并备份原有文件。')) return;
+    if (action === 'undo' && !window.confirm('撤回上次通过此入口完成的 Codex 配置变更？撤回后需重启或重新连接 Codex。')) return;
+    setBusy(true); ++codexRead;
+    setupSay(action === 'install' ? '正在配置这台电脑上的 Codex…' : '正在撤回上次配置…');
+    try {
+      codex = await api(codexEndpoint, 'POST', {action, expected_revision:codex.revision, replace_existing:replace});
+      clearDiagnostics(); renderSetup();
+      setupSay(codex.message || (action === 'install' ? '已完成配置。请重启或重新连接 Codex，再发送测试提示词。' : '已撤回上次配置。'));
+    } catch (error) {
+      setupSay(error.message, true);
+      await refreshCodex(false);
+    } finally { setBusy(false); }
   }
   function configText(config) {
     if (typeof config === 'string') return config;
@@ -53,8 +110,8 @@
     const selected = clientSelect.value;
     $('controlClientConfig').textContent = configText(state?.client_configs?.[selected] || state?.client_config);
     clientHelp.textContent = selected === 'codex_toml'
-      ? 'Codex：将此段合并到用户目录 .codex/config.toml；已有同名配置时替换该段，然后重启 MCP 连接。不要把 JSON 粘贴进 TOML。'
-      : 'Claude：合并到客户端的 MCP JSON 配置，然后重新启动该连接。不同客户端的入口名称可能不同。';
+      ? '手动配置 Codex：将此段合并到上方的配置文件，保留其他设置；同名深白配置只保留一份。保存后重启或重新连接 Codex。'
+      : '其他客户端：合并到客户端的 MCP JSON 配置，再重启该连接。入口及格式因客户端而异；此处自动配置仅支持 Codex。';
     if (state?.launcher_warning) clientHelp.textContent += ' ' + state.launcher_warning;
     else if (state?.stable_launcher) clientHelp.textContent += ' 当前使用固定启动入口，更新版本后会自动选择新程序。';
   }
@@ -100,6 +157,7 @@
     }
   }
   function render(data) {
+    if (state?.enabled !== Boolean(normalize(data).enabled)) clearDiagnostics();
     state = normalize(data);
     const enabled = Boolean(state.enabled);
     $('controlEnabled').checked = enabled;
@@ -117,18 +175,25 @@
     $('controlEndSession').hidden = !activeSession;
     renderConfig();
     renderPending(state.pending);
+    renderSetup();
     $('controlLoadError').hidden = true;
   }
-  async function refresh(showError = true) {
+  async function refresh(showError = true, includeCodex = true) {
     if (busy) return;
-    try { render(await api(endpoint)); }
-    catch (error) { if (showError) { $('controlLoadError').hidden = false; $('controlLoadError').textContent = error.message; } }
+    const request = ++settingsRead;
+    const setup = includeCodex ? refreshCodex(showError) : Promise.resolve();
+    try { const value = await api(endpoint); if (request === settingsRead) render(value); }
+    catch (error) { if (showError && request === settingsRead) { $('controlLoadError').hidden = false; $('controlLoadError').textContent = error.message; } }
+    await setup;
   }
   async function update(body, success) {
     if (busy) return;
-    setBusy(true); say('正在保存…');
-    try { render(await api(endpoint, 'PUT', body)); say(success); }
-    catch (error) { if (state) render(state); say(error.message, true); }
+    ++settingsRead; setBusy(true); say('正在保存…');
+    try {
+      render(await api(endpoint, 'PUT', body)); say(success);
+      if (Object.hasOwn(body, 'enabled')) setupSay(state.enabled ? 'MCP 访问已启用，可以配置 Codex。' : 'MCP 访问已关闭，智能体无法再操作此画布。');
+    }
+    catch (error) { if (state) render(state); say(error.message, true); if (Object.hasOwn(body, 'enabled')) setupSay(error.message, true); }
     finally { setBusy(false); }
   }
   async function decide(id, action) {
@@ -144,11 +209,15 @@
     } catch (error) { say(error.message, true); }
     finally { setBusy(false); }
   }
-  async function copyText(text, message) {
-    try { await navigator.clipboard.writeText(text); say(message); }
+  async function copyText(text, message, report = say) {
+    try { await navigator.clipboard.writeText(text); report(message); }
     catch {
+      const focused = document.activeElement;
       const area = document.createElement('textarea'); area.value = text; area.style.position = 'fixed'; area.style.opacity = '0'; document.body.append(area); area.select();
-      const copied = document.execCommand('copy'); area.remove(); say(copied ? message : '复制失败，请检查浏览器剪贴板权限。', !copied);
+      let copied = false;
+      try { copied = document.execCommand('copy'); } catch { /* Older or restricted browsers may reject the fallback too. */ }
+      finally { area.remove(); if (focused instanceof HTMLElement) focused.focus({preventScroll:true}); }
+      report(copied ? message : '复制失败，请检查浏览器剪贴板权限。', !copied);
     }
   }
   async function copyConfig() {
@@ -156,7 +225,7 @@
     await copyText($('controlClientConfig').textContent, '客户端配置已复制。');
   }
   async function checkConnection() {
-    if (busy) return;
+    if (busy || !state?.enabled) return;
     setBusy(true); diagnosticBox.hidden = false; diagnosticBox.textContent = '正在检查启动入口、本机画布和控制授权…';
     try {
       diagnosticReport = await api('/api/studio/control/diagnostics', 'POST');
@@ -170,10 +239,14 @@
       const scope = document.createElement('p'); scope.className = 'muted';
       scope.textContent = diagnosticReport.scope || '这是画布进程的检查结果；请在 Codex 中确认能够发现并调用工具。';
       diagnosticBox.append(scope); exportButton.hidden = false;
+      setupSay(diagnosticReport.ok
+        ? '本机画布检查通过。请重启或重新连接 Codex，并发送测试提示词；能列出画布后，才表示 Codex 接入成功。'
+        : '本机连接检查未通过，请按下方提示处理后重试。', !diagnosticReport.ok);
     } catch (error) {
       diagnosticBox.textContent = error.message; diagnosticReport = null; exportButton.hidden = true;
+      setupSay(error.message, true);
     }
-    finally { setBusy(false); }
+    finally { renderSetup(); setBusy(false); }
   }
   function tabChanged(tab) {
     panel.hidden = tab !== 'control';
@@ -182,7 +255,7 @@
   }
   function syncPolling() {
     clearInterval(pollTimer); pollTimer = 0;
-    if ($('controlAutoRefresh').checked && !panel.hidden) pollTimer = setInterval(() => refresh(false), 8000);
+    if ($('controlAutoRefresh').checked && !panel.hidden) pollTimer = setInterval(() => refresh(false, false), 8000);
   }
 
   // The settings sidebar owns navigation; this module only manages its own panel.
@@ -199,13 +272,21 @@
   $('controlEnabled').onchange = () => update({enabled:$('controlEnabled').checked}, 'MCP 访问设置已保存。');
   $('controlConfirm').onclick = () => update({generation_mode:'confirm'}, '已切换为逐次确认。');
   $('controlSession').onclick = () => {
-    if (!window.confirm('授权本地智能体在接下来最多 30 分钟或 20 次生成内直接执行。现在开启本次授权？')) return refresh(false);
+    if (!window.confirm('授权本地智能体在接下来最多 30 分钟或 20 次生成内直接执行。现在开启本次授权？')) return refresh(false, false);
     update({generation_mode:'session'}, '本次授权已开启；最多 30 分钟或 20 次生成。');
   };
   $('controlEndSession').onclick = () => update({generation_mode:'confirm'}, '本次授权已结束，后续生成将逐次确认。');
   $('controlCopyConfig').onclick = copyConfig;
   $('controlRefresh').onclick = () => refresh();
   $('controlAutoRefresh').onchange = syncPolling;
+  $('controlInstallCodex').onclick = () => configureCodex('install');
+  $('controlUndoCodex').onclick = () => configureCodex('undo');
+  $('controlRefreshCodex').onclick = async () => {
+    if (busy) return;
+    setupSay(''); setBusy(true);
+    try { await refreshCodex(); } finally { setBusy(false); }
+  };
+  $('controlCopyPrompt').onclick = () => copyText(testPrompt, '测试提示词已复制。请在 Codex 中发送，确认能读取你的画布。', setupSay);
   clientSelect.onchange = renderConfig;
   checkButton.onclick = checkConnection;
   commandButton.onclick = () => state?.check_command

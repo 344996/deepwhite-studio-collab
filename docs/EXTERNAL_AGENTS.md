@@ -2,10 +2,12 @@
 
 MCP 是客户端调用画布工具的协议，不是某个网站。此项目使用本机 stdio 桥接：Codex 或其他客户端启动一个本机进程，该进程访问本机画布的 loopback 端口。`127.0.0.1` 永远指执行进程所在的电脑；不能把开发者电脑的配置直接复制到另一台电脑，也不能把 API 网站填进这个本机地址。
 
+完整客户操作、搬迁和恢复说明：[客户安装与 Codex 连接](客户安装与Codex连接.md)。
+
 ## Codex 接入
 
 1. 在运行 Codex 的电脑启动深白画布。进入“设置 → 外接智能体”，开启 MCP。
-2. 选择“Codex · TOML”，复制配置到该用户的 `.codex/config.toml`。已有同名 `[mcp_servers.deepwhite-studio]` 时替换该段，保留其他配置。
+2. 点击“自动配置 Codex”。程序按这台电脑的安装位置和当前用户目录配置，先备份原文件并保留其他设置。旧连接不一致时明确确认更新。原始 TOML、手动复制和撤销在高级选项。
 3. 在画布点击“检查本机连接”。需要定位 Codex 的环境问题时，复制“客户端检查命令”，在运行 Codex 的同一 Windows 环境执行。
 4. 重启 Codex 中的 MCP 连接，确认可发现 `list_projects`、`get_canvas` 等工具。画布检查成功只证明画布进程环境可用，仍需在客户端调用一个读取工具。
 
@@ -17,7 +19,7 @@ Claude 和其他支持 stdio 的客户端可复制“Claude / 通用 · JSON”�
 
 设置会在 `userdata/integrations/deepwhite-mcp.ps1` 写入固定启动入口。配置只指向这个入口和安装根目录；每次启动读取 `current.json`，选择当前版本的内置 Python 与桥接程序，因此普通版本更新不需要重新配置 MCP。
 
-脚本继承标准输入输出，不把 JSON-RPC 交给 PowerShell 转码；桥接仍会校验服务身份、安装目录和本机控制凭证。移动整个安装目录或切换电脑后，应从新的画布重新复制配置。若数据目录不可写，界面会明确提示当前暂用版本路径，升级后需要重新复制。
+脚本继承标准输入输出，不把 JSON-RPC 交给 PowerShell 转码；桥接仍会校验服务身份、安装目录和本机控制凭证。移动整个安装目录或切换电脑后，从新的画布重新点击自动配置。若固定入口不可写，自动配置会明确报错；修复完整安装或权限后再试，不把失败的便携入口静默安装为开发路径。
 
 启动入口沿用便携版 `Start.cmd` 的单进程 `-ExecutionPolicy Bypass`，使默认 Restricted 环境能运行程序生成的本地脚本；不会调用 `Set-ExecutionPolicy`，也不会修改计算机、用户或组织策略。组织强制策略仍优先，阻止执行时应由管理员处理，不会自动绕过组织限制。本地源码运行采用当前 Python 和 `app/studio_mcp.py`，不依赖便携版引导。
 
@@ -29,7 +31,7 @@ Claude 和其他支持 stdio 的客户端可复制“Claude / 通用 · JSON”�
 
 | code | 含义与下一步 |
 |---|---|
-| `connection_refused` | 画布未启动或端口不一致。启动本机画布并重新复制配置。 |
+| `connection_refused` | 画布未启动或端口不一致。启动本机画布并重新自动配置。 |
 | `connection_permission_denied` | 执行进程无权访问本机端口。检查客户端所在环境或组织权限策略。 |
 | `connection_timeout` | 本机服务超时。确认画布没有卡住、退出或更新。 |
 | `wrong_service` / `wrong_installation` | 地址指向其他应用或另一个副本。使用当前画布生成的配置。 |
@@ -54,6 +56,7 @@ Claude 和其他支持 stdio 的客户端可复制“Claude / 通用 · JSON”�
 - `app/studio_graph.py`：结构编辑、同一画布文件内原子保存的幂等记录与撤销。
 - `app/studio_control.py`：本机授权、工具路由、受控生成和诊断。
 - `app/studio_mcp.py`：stdio 协议、参数校验、错误分层和只读预检。
+- `app/studio_codex_setup.py`：客户 Codex 配置保留式合并、原子写入、备份和撤销。
 - `app/studio_mcp_config.py` / `app/studio_mcp_bootstrap.ps1`：客户端格式与便携版固定入口。
 
 旧 `studio_agent*` 模块仅保留源码兼容和历史测试，运行时不注册内置助手会话、计划或内置 Agent 路由。既有会话文件原样保留。扩展外接工具时应使用以上公共服务，不能重新依赖旧助手模块。

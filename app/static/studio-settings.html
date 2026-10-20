@@ -4,9 +4,9 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>设置 · 深白片场</title>
   <link rel="icon" href="/static/studio-mark.svg">
-  <script src="/static/js/theme.js?v=0.11.0-studio.4"></script>
-  <link rel="stylesheet" href="/static/studio-settings.css?v=0.11.0-studio.4">
-  <link rel="stylesheet" href="/static/studio-control.css?v=0.11.0-studio.4">
+  <script src="/static/js/theme.js?v=0.11.0-studio.5"></script>
+  <link rel="stylesheet" href="/static/studio-settings.css?v=0.11.0-studio.5">
+  <link rel="stylesheet" href="/static/studio-control.css?v=0.11.0-studio.5">
 </head>
 <body>
   <div class="settings-top"><header><div><img src="/static/studio-mark.svg" alt=""><strong>深白片场 <span>设置</span></strong></div><button id="closeSettings">返回画布</button></header>
@@ -41,7 +41,7 @@
           <div id="modelRows"></div><div id="pickerResult" class="notice" role="status" aria-live="polite" hidden></div>
           <p class="muted">音频节点仅提供已适配协议的配音、音乐和音效模型。同步成功不代表所有型号都能生成；3D、检测等辅助工具暂不进入画布菜单。</p>
         </section>
-        <details><summary>高级接口选项</summary><label>图片请求方式<select id="imageMode"><option value="openai">OpenAI 标准</option><option value="openai-json">OpenAI JSON</option><option value="openai-video-proxy">OpenAI 中转</option><option value="openai-responses">Responses 接口</option><option value="tudou-async">土豆 GPT-Image-2 异步</option></select></label><p>沿用原项目的接口选项，具体模型需要匹配平台协议。<a href="/static/api-settings.html?v=0.11.0-studio.4" target="_blank" rel="noopener">打开原版高级设置</a></p></details>
+        <details><summary>高级接口选项</summary><label>图片请求方式<select id="imageMode"><option value="openai">OpenAI 标准</option><option value="openai-json">OpenAI JSON</option><option value="openai-video-proxy">OpenAI 中转</option><option value="openai-responses">Responses 接口</option><option value="tudou-async">土豆 GPT-Image-2 异步</option></select></label><p>沿用原项目的接口选项，具体模型需要匹配平台协议。<a href="/static/api-settings.html?v=0.11.0-studio.5" target="_blank" rel="noopener">打开原版高级设置</a></p></details>
         <footer><span id="saveState" role="status" aria-live="polite"></span><button type="submit" id="saveProvider" class="accent">保存连接设置</button></footer>
       </form>
     </section>
@@ -53,16 +53,47 @@
       </details><h2>关于</h2><p id="version" class="muted"></p><p><a href="/updates">版本更新、安装与回退</a></p>
     </section>
     <section id="controlPanel" hidden>
-      <div class="intro"><h1>外接智能体 / MCP</h1><p>让你选择的桌面智能体连接深白片场。你可以逐次确认每次生成，或临时授权最多 30 分钟、20 次生成。</p></div>
+      <div class="intro"><h1>外接智能体 / MCP</h1><p>用 Codex 读取与编辑画布，让创作工具在自己的电脑上协同工作。</p></div>
       <div id="controlLoadError" class="notice" role="alert" hidden></div>
+      <section class="control-card control-onboarding" aria-labelledby="controlConnectTitle">
+        <div class="control-connect-heading"><div><span class="control-eyebrow">连接你的创作助手</span><h2 id="controlConnectTitle">在这台电脑连接 Codex</h2></div><span class="control-local-badge"><span aria-hidden="true"></span>本机连接</span></div>
+        <p class="control-connect-intro">画布和 Codex 需要运行在同一台电脑。每台电脑首次使用时，在这里配置一次；程序会自动使用当前安装位置。</p>
+        <ol class="control-setup-steps" aria-label="Codex 连接步骤">
+          <li id="controlStepAccess" class="control-setup-step">
+            <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">1</span><h3>启用访问</h3><span id="controlAccessStatus" class="control-step-status">未启用</span></div>
+            <p>允许智能体读取项目、编辑普通画布。生成内容仍按下方授权设置执行。</p>
+            <label class="check control-toggle"><input id="controlEnabled" type="checkbox">启用 MCP 访问</label>
+          </li>
+          <li id="controlStepCodex" class="control-setup-step">
+            <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">2</span><h3>自动配置 Codex</h3><span id="controlCodexBadge" class="control-step-status">待检查</span></div>
+            <p id="controlCodexStatus" aria-live="polite">正在检查这台电脑的 Codex 配置…</p>
+            <div class="control-step-actions"><button id="controlInstallCodex" class="accent" type="button" disabled>自动配置 Codex</button><button id="controlRefreshCodex" class="control-quiet-button" type="button">刷新状态</button></div>
+            <small id="controlInstallHelp">先启用访问，再配置这台电脑上的 Codex。</small>
+          </li>
+          <li id="controlStepCheck" class="control-setup-step">
+            <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">3</span><h3>检查并试用</h3><span id="controlCheckStatus" class="control-step-status">尚未检查</span></div>
+            <p>配置后重启或重新连接 Codex，再发送测试提示词，确认能列出你的画布。</p>
+            <div class="control-step-actions"><button id="controlCheck" type="button">检查本机连接</button><button id="controlCopyPrompt" type="button">复制测试提示词</button></div>
+            <small>测试只读取画布，不修改内容，也不调用生成服务。</small>
+          </li>
+        </ol>
+        <div id="controlSetupResult" class="notice control-setup-result" role="status" aria-live="polite" hidden></div>
+        <div id="controlDiagnostics" aria-live="polite" hidden></div>
+        <p class="control-connection-info">API 网站负责图片、视频等生成服务；MCP 负责让智能体操作这台电脑上的画布。</p>
+        <details id="controlAdvanced" class="control-advanced">
+          <summary>高级 / 其他客户端<span>手动配置、安装信息与检查记录</span></summary>
+          <div class="control-install-info"><p id="controlInstallType" class="muted"></p><p class="muted">本机 Codex 配置位置</p><code id="controlCodexPath">尚未读取</code><button id="controlUndoCodex" type="button" disabled>撤回上次配置</button><small>仅撤回由此入口完成的最近一次配置变更。配置文件后来被修改时，请先刷新状态。</small></div>
+          <div class="control-config"><div class="row"><div><h2>手动连接配置</h2><p>需要自行管理配置，或使用其他兼容 MCP 的客户端时使用。</p></div><button type="button" id="controlCopyConfig">复制客户端配置</button></div><label class="control-client-label">外接客户端<select id="controlClientType"><option value="codex_toml">Codex · TOML</option><option value="claude_json">Claude / 通用 · JSON</option></select></label><p id="controlClientHelp" class="muted"></p><pre id="controlClientConfig" aria-label="MCP 客户端配置">正在读取配置…</pre></div>
+          <div class="control-diagnostic-actions"><button id="controlCopyCheck" type="button">复制客户端检查命令</button><button id="controlExportDiagnostics" type="button" hidden>导出检查结果</button><a href="/api/studio/control/skill" download="SKILL.md" class="control-skill-link">下载画布 Skill 示例</a></div>
+        </details>
+      </section>
       <section class="control-card" aria-labelledby="controlAccessTitle">
-        <div class="control-card-head"><div><h2 id="controlAccessTitle">访问控制</h2><p>启用后，智能体可读取项目、新建普通画布、编辑文字和连线、移动节点；这些操作不会生成内容。关闭后禁止全部 MCP 访问。</p></div><label class="check control-toggle"><input id="controlEnabled" type="checkbox">启用 MCP 访问</label></div>
+        <div class="control-card-head"><div><h2 id="controlAccessTitle">生成授权</h2><p>读取、编辑和连线不触发生成。生成图片或视频时，使用以下授权方式；关闭 MCP 访问会禁止全部 MCP 操作。</p></div></div>
         <div class="control-modes" role="group" aria-label="生成确认方式">
           <button type="button" id="controlConfirm" aria-pressed="true"><strong>逐次确认</strong><small>每次生成前都需要你批准。</small></button>
           <button type="button" id="controlSession" aria-pressed="false"><strong>本次授权</strong><small>最多 30 分钟或 20 次生成，到期自动结束。</small></button>
         </div>
         <div class="row control-session-row"><span id="controlSessionStatus" class="muted">正在读取授权状态…</span><button type="button" id="controlEndSession" hidden>结束本次授权</button></div>
-        <div class="control-config"><div class="row"><div><h2>客户端连接配置</h2><p>复制后粘贴到兼容 MCP 的桌面智能体配置中。配置由本地服务生成，无需手动填写。</p></div><button type="button" id="controlCopyConfig">复制客户端配置</button></div><pre id="controlClientConfig" aria-label="MCP 客户端配置">正在读取配置…</pre></div>
         <label class="check control-poll"><input id="controlAutoRefresh" type="checkbox">自动刷新待确认请求 <small>默认关闭；开启后每 8 秒仅读取一次状态。</small></label>
       </section>
       <section class="control-card" aria-labelledby="controlPendingTitle"><div class="row"><div><h2 id="controlPendingTitle">待确认生成</h2><p>批准会立即执行该生成请求。请先查看提示词、模型和费用信息。</p></div><button type="button" id="controlRefresh">刷新</button></div><div id="controlPending" class="control-pending" aria-live="polite">尚未读取待确认请求。</div></section>
@@ -71,7 +102,7 @@
     <section id="comfyPanel" hidden>
       <div class="intro"><h1>ComfyUI</h1><p>管理当前电脑上的本地生成引擎，与 API 平台分别配置。</p></div>
       <div class="settings-feature-card"><h2>本地引擎连接</h2><p>选择现有 ComfyUI 整合包，或者连接已运行的本机服务。设置地址、自动启动方式并查看连接状态。</p><button id="openComfyEngine" type="button" class="accent">配置与检查 ComfyUI</button></div>
-      <div class="settings-feature-card"><h2>工作流与模型</h2><p>导入自己的 ComfyUI 工作流，检查节点和模型依赖，再从画布选择运行。</p><a href="/static/comfyui-settings.html?v=0.11.0-studio.4" target="_blank" rel="noopener">打开 ComfyUI 工作流设置 ↗</a></div>
+      <div class="settings-feature-card"><h2>工作流与模型</h2><p>导入自己的 ComfyUI 工作流，检查节点和模型依赖，再从画布选择运行。</p><a href="/static/comfyui-settings.html?v=0.11.0-studio.5" target="_blank" rel="noopener">打开 ComfyUI 工作流设置 ↗</a></div>
     </section>
     <section id="storagePanel" hidden>
       <div class="intro"><h1>存储与更新</h1><p>本地项目、素材和生成结果保存在独立数据目录中。</p></div>
@@ -79,18 +110,18 @@
     </section>
     <section id="feedbackPanel" data-settings-panel="feedback" hidden>
       <div class="intro"><h1>意见反馈</h1><p>告诉我们遇到的问题或希望增加的功能。</p></div>
-      <iframe class="settings-inline-frame" src="/static/studio-feedback.html?v=0.11.0-studio.4" title="意见反馈" loading="lazy"></iframe>
+      <iframe class="settings-inline-frame" src="/static/studio-feedback.html?v=0.11.0-studio.5" title="意见反馈" loading="lazy"></iframe>
     </section>
   </main>
-  <script src="/static/studio-settings.js?v=0.11.0-studio.4"></script>
-  <script src="/static/studio-provider-capabilities.js?v=0.11.0-studio.4"></script>
-<script src="/static/studio-local-engine.js?v=0.11.0-studio.4"></script>
-<script src="/static/studio-storage.js?v=0.11.0-studio.4"></script>
-<script src="/static/studio-dreamina.js?v=0.11.0-studio.4"></script>
-<script src="/static/studio-control.js?v=0.11.0-studio.4"></script>
-<script src="/static/studio-settings-v2.js?v=0.11.0-studio.4"></script>
-<script src="/static/studio-settings-navigation.js?v=0.11.0-studio.4"></script>
-<link rel="stylesheet" href="/static/studio-settings-navigation.css?v=0.11.0-studio.4">
-<script src="/static/studio-interactions.js?v=0.11.0-studio.4"></script>
+  <script src="/static/studio-settings.js?v=0.11.0-studio.5"></script>
+  <script src="/static/studio-provider-capabilities.js?v=0.11.0-studio.5"></script>
+<script src="/static/studio-local-engine.js?v=0.11.0-studio.5"></script>
+<script src="/static/studio-storage.js?v=0.11.0-studio.5"></script>
+<script src="/static/studio-dreamina.js?v=0.11.0-studio.5"></script>
+<script src="/static/studio-control.js?v=0.11.0-studio.5"></script>
+<script src="/static/studio-settings-v2.js?v=0.11.0-studio.5"></script>
+<script src="/static/studio-settings-navigation.js?v=0.11.0-studio.5"></script>
+<link rel="stylesheet" href="/static/studio-settings-navigation.css?v=0.11.0-studio.5">
+<script src="/static/studio-interactions.js?v=0.11.0-studio.5"></script>
 </body>
 </html>

@@ -210,6 +210,8 @@ def install_runtime(archive, wheels, lock, target):
             'assert sys.version_info[:3]==(3,13,16);assert sys.flags.isolated;'
             'assert all("site-packages" not in p or p.startswith(sys.prefix) for p in sys.path);'
             'print(sys.version);print("Bundled runtime imports passed")')
+    if 'tomlkit' in parse_lock(lock):
+        code = 'import tomlkit;' + code
     subprocess.run([str(target / 'python.exe'), '-I', '-B', '-c', code], check=True)
     return removed_scripts
 
@@ -343,7 +345,10 @@ def build_release(repo, ref, cache, output, private_key, key_id, sequence, notes
     for path in version_tree.rglob('*'):
         if path.is_file() and forbidden(path.relative_to(version_tree).as_posix()):
             raise BuildError('Unexpected runtime/private file in staged version: ' + path.name)
-    for name in ('launcher.py', 'Start.cmd', 'Start.ps1', 'README.md'):
+    bootstrap_files = ['launcher.py', 'Start.cmd', 'Start.ps1', 'README.md']
+    if 'portable/客户使用说明.txt' in sources:
+        bootstrap_files.append('客户使用说明.txt')
+    for name in bootstrap_files:
         data = sources['portable/' + name]
         if name.endswith(('.cmd', '.ps1')):
             data = data.replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')

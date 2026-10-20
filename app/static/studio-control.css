@@ -28,3 +28,71 @@
 #controlDiagnostics small{display:block;color:var(--muted)}
 #controlDiagnostics [data-ok=false]{color:#c36445}
 @media(max-width:650px){.control-card{padding:13px}.control-card-head{align-items:flex-start;flex-direction:column}.control-modes{grid-template-columns:1fr}.control-request-head{flex-direction:column}}
+
+/* A short, path-free setup flow; technical details stay inside the disclosure. */
+#controlPanel .control-onboarding{padding:24px}
+.control-connect-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.control-eyebrow{display:block;font-size:10px;letter-spacing:1.5px;color:var(--dw-gold,var(--accent));margin-bottom:8px}
+#controlPanel .control-connect-heading h2{font-size:20px;font-weight:550;letter-spacing:.2px;margin:0}
+.control-local-badge{display:inline-flex;align-items:center;gap:7px;flex:none;border:1px solid var(--dw-gold-line,var(--line));border-radius:20px;padding:5px 10px;color:var(--dw-gold,var(--accent));background:var(--dw-gold-soft,var(--soft));font-size:11px}
+.control-local-badge>span{width:5px;height:5px;border-radius:50%;background:currentColor}
+#controlPanel .control-connect-intro{max-width:75ch;font-size:12px;line-height:1.8;margin:13px 0 22px}
+.control-setup-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;padding:0;margin:0 0 18px}
+.control-setup-step{display:flex;flex-direction:column;gap:10px;min-width:0;padding:17px 15px;border:1px solid var(--dw-line-strong,var(--line));border-radius:11px;background:var(--dw-bg,var(--bg));transition:border-color 180ms ease,background-color 180ms ease}
+.control-setup-step[data-complete=true]{border-color:var(--dw-gold-line,var(--accent))}
+.control-step-heading{display:grid;grid-template-columns:25px minmax(0,1fr);gap:2px 9px;align-items:center}
+.control-step-number{display:grid;place-items:center;grid-row:1/3;align-self:start;width:25px;height:25px;border:1px solid var(--dw-line-strong,var(--line));border-radius:8px;font-size:11px;color:var(--dw-muted,var(--muted));background:var(--dw-panel,var(--panel));transition:color 180ms ease,background-color 180ms ease}
+.control-setup-step[data-complete=true] .control-step-number{color:var(--dw-gold,var(--accent));background:var(--dw-gold-soft,var(--soft));border-color:var(--dw-gold-line,var(--accent))}
+.control-step-heading h3{font-size:13px;font-weight:550;line-height:1.45;margin:2px 0 0}
+.control-step-status{grid-column:2;font-size:10px;color:var(--dw-muted,var(--muted))}
+.control-setup-step[data-complete=true] .control-step-status{color:var(--dw-gold,var(--accent))}
+#controlPanel .control-setup-step p{margin:0;font-size:11px;line-height:1.8;overflow-wrap:anywhere}
+.control-step-actions{display:flex;flex-direction:column;gap:7px;margin-top:auto}
+#controlPanel .control-step-actions button{min-height:38px;padding:8px 10px;white-space:normal;line-height:1.55}
+#controlPanel .control-step-actions .control-quiet-button{min-height:30px;padding:3px 10px;background:transparent;border-color:transparent;color:var(--dw-muted,var(--muted))}
+#controlPanel .control-step-actions .control-quiet-button:hover{background:var(--dw-raised,var(--soft));color:var(--dw-ink,var(--ink));border-color:var(--dw-line,var(--line))}
+#controlPanel .control-setup-step small{font-size:10px;line-height:1.7}
+#controlPanel .control-toggle{margin-top:auto;min-height:40px;width:100%;padding:10px;border:1px solid var(--dw-line-strong,var(--line));border-radius:7px;font-size:12px;background:var(--dw-panel,var(--panel));cursor:pointer;transition:background-color 160ms ease,border-color 160ms ease}
+#controlPanel .control-toggle:hover{background:var(--dw-raised,var(--soft));border-color:var(--dw-gold-line,var(--accent))}
+#controlPanel .control-toggle:has(input:disabled){opacity:.6;cursor:wait}
+#controlPanel .control-connection-info{font-size:11px;margin:14px 0 0}
+#controlPanel .control-setup-result{margin:0 0 14px}
+#controlPanel .control-advanced{margin-top:20px;padding:0;border-top:1px solid var(--dw-line,var(--line))}
+.control-advanced>summary{padding:16px 0 0;font-size:12px;color:var(--dw-ink,var(--ink));border-radius:4px}
+.control-advanced>summary>span{margin-left:12px;color:var(--dw-muted,var(--muted));font-size:10px}
+.control-advanced[open]>summary{margin-bottom:18px}
+.control-install-info{display:grid;justify-items:start;gap:8px;min-width:0}
+#controlPanel .control-install-info p{margin:0;font-size:11px}
+#controlPanel .control-install-info code{display:block;max-width:100%;font:11px/1.7 ui-monospace,Consolas,monospace;color:var(--dw-muted,var(--muted));overflow-wrap:anywhere}
+#controlPanel .control-install-info small{font-size:10px;line-height:1.7}
+#controlPanel .control-install-info button{font-size:11px;margin-top:3px}
+#controlPanel .control-advanced .control-config{background:transparent;margin:20px 0 14px;padding-top:16px;border-color:var(--dw-line,var(--line))}
+#controlPanel .control-advanced .control-client-label{display:flex;flex-direction:row;justify-content:space-between;flex-wrap:wrap;gap:10px}
+#controlPanel .control-advanced .control-client-label select{min-width:0;max-width:100%;width:230px}
+#controlPanel #controlDiagnostics{background:var(--dw-bg,var(--bg));border-color:var(--dw-line-strong,var(--line));font-size:12px}
+#controlPanel #controlDiagnostics [data-ok=false]{color:var(--dw-danger,#b64f47)}
+#controlPanel :is(button,summary,input):focus-visible{outline:2px solid var(--dw-gold,var(--accent));outline-offset:3px}
+@media(max-width:1100px){
+ .control-setup-steps{grid-template-columns:1fr}
+ .control-setup-step{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,.8fr);gap:10px 20px;align-items:start;padding:17px}
+ .control-step-heading,.control-setup-step>p{grid-column:1}
+ .control-step-actions,.control-setup-step>.control-toggle{grid-column:2;grid-row:1/3;align-self:center;margin:0}
+ .control-setup-step>small{grid-column:2;margin-top:-2px}
+}
+@media(max-width:650px){
+ #controlPanel .control-onboarding{padding:16px}
+ .control-connect-heading{align-items:flex-start;gap:10px}
+ #controlPanel .control-connect-heading h2{font-size:17px;line-height:1.5}
+ .control-local-badge{font-size:10px;padding:4px 7px}
+ .control-eyebrow{font-size:9px;letter-spacing:1px}
+ .control-setup-step{display:flex;flex-direction:column;gap:11px;padding:15px}
+ .control-setup-step>.control-toggle,.control-step-actions{width:100%;margin:2px 0 0}
+ .control-step-actions{flex-direction:row;flex-wrap:wrap}
+ .control-step-actions>button{flex:1}
+ .control-advanced>summary>span{display:block;margin:5px 0 0 16px}
+ #controlPanel .control-config .row{align-items:flex-start;flex-direction:column}
+ #controlPanel .control-config pre{max-height:190px}
+}
+@media(prefers-reduced-motion:reduce){
+ .control-setup-step,.control-step-number,#controlPanel .control-toggle{transition:none}
+}
