@@ -58,6 +58,9 @@ def profile(mid,kind):
         if 'image-g2' in m:
             f['resolution']=option('分辨率',['1k'])
             f['ratio']=option('比例',['adaptive','16:9','4:3','1:1','3:4','9:16','21:9'],'1:1')
+            # The 2026-10-20 user-provided G2 response confirms the upstream
+            # 5–2000 character constraint for both t2i/i2i variants.
+            p.update(prompt_min=5, prompt_max=2000)
         elif 'seedream' in m:
             f.clear();f['resolution']=option('分辨率',['1k','2k']);f['output_format']=option('输出格式',['jpeg','png'])
             p.update(prompt_min=5,prompt_max=2000)

@@ -759,6 +759,11 @@ def read_api_env_value(key: str) -> str:
 
 def provider_env_key_value(provider_id: str) -> str:
     provider_id = str(provider_id or "").strip().lower()
+    if provider_id.startswith("deepwhite-account-"):
+        # Login-managed credentials are scoped to the active account session.
+        # Never fall back to another account's or a manually injected env key.
+        from studio_account_provision import provider_key
+        return provider_key(provider_id)
     env_key = provider_key_env(provider_id)
     key = os.getenv(env_key, "") or read_api_env_value(env_key)
     if key:

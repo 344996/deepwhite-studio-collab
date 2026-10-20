@@ -36,6 +36,12 @@
   }
 
   let account = null, skills = [];
+  function providersChanged() {
+    const message = {type: 'providers-changed', updated_at: Date.now()};
+    window.postMessage(message, location.origin);
+    window.dispatchEvent(new Event('studio-providers-changed'));
+    try { const channel = new BroadcastChannel('studio-api'); channel.postMessage(message); channel.close(); } catch {}
+  }
   function wallet() {
     const box = document.querySelector('.home-wallet');
     if (!box) return;
@@ -69,8 +75,10 @@
 
   async function paintBalances(list, message) {
     list.replaceChildren();
+    list.textContent = '正在读取渠道余额…';
     try {
       const result = await api('channel-balances');
+      list.replaceChildren();
       for (const item of result.items || []) {
         const row = document.createElement('div');
         row.className = 'dw-balance-row';
@@ -82,7 +90,7 @@
         row.append(name, amount, state, stamp); list.append(row);
       }
       if (!result.items?.length) list.textContent = '尚未配置 API 渠道。';
-    } catch (error) { message.textContent = error.message; }
+    } catch (error) { list.replaceChildren(); message.textContent = error.message; }
   }
 
   async function openAccount() {
@@ -104,6 +112,18 @@
       const amount = document.createElement('strong'); amount.textContent = account.balance != null ? account.symbol + account.balance.toFixed(2) : '暂不可用';
       const hint = document.createElement('small'); hint.textContent = '与 API 网站共用账户 · 以网站账单为准';
       info.append(label, amount, hint); body.append(info);
+      const generation = document.createElement('section'); generation.className = 'dw-account-wallet'; generation.dataset.generationStatus = account.generation?.status || 'action_required';
+      const heading = document.createElement('strong'); heading.style.fontSize = '18px'; heading.textContent = account.generation?.status === 'ready' ? '官方 API 已连接' : '官方 API 连接';
+      const detail = document.createElement('p'); detail.textContent = account.generation?.message || '账户已登录，点击重新连接可自动配置生成 API 和模型。';
+      const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = account.generation?.status === 'ready' ? '刷新授权和模型' : '重新连接官方 API';
+      retry.onclick = async () => {
+        retry.disabled = true; detail.textContent = '正在连接生成授权并同步模型…';
+        try { const result = await api('account/provision', 'POST'); account.generation = result.generation; generation.dataset.generationStatus = result.generation.status; detail.textContent = result.generation.message; heading.textContent = result.generation.status === 'ready' ? '官方 API 已连接' : '官方 API 需要处理'; providersChanged(); }
+        catch (error) { detail.textContent = error.message; }
+        finally { retry.disabled = false; }
+      };
+      const privacy = document.createElement('small'); privacy.textContent = '生成授权属于当前账户；退出、切换账户或关闭后台后，本机停止使用该授权。网站令牌保留以便下次登录复用，可在 API 网站撤销。自选 API 不受影响。';
+      generation.append(heading, detail, retry, privacy); body.append(generation);
     }
 
     const balanceHeading = document.createElement('strong'); balanceHeading.textContent = '配置渠道余额'; body.append(balanceHeading);
@@ -111,11 +131,12 @@
     const refreshBalances = document.createElement('button'); refreshBalances.textContent = '刷新渠道余额';
     refreshBalances.onclick = async () => { refreshBalances.disabled = true; await paintBalances(balanceList, message); refreshBalances.disabled = false; };
     body.append(refreshBalances);
-    await paintBalances(balanceList, message);
+    // Optional third-party balance probes must never delay account controls.
+    paintBalances(balanceList, message);
 
     if (account) {
       const logout = document.createElement('button'); logout.textContent = '退出登录';
-      logout.onclick = async () => { logout.disabled = true; try { await api('account/logout', 'POST'); await refresh(); d.close(); } catch (error) { message.textContent = error.message; } finally { logout.disabled = false; } };
+      logout.onclick = async () => { logout.disabled = true; try { await api('account/logout', 'POST'); await refresh(); providersChanged(); d.close(); } catch (error) { message.textContent = error.message; } finally { logout.disabled = false; } };
       body.append(logout);
       return;
     }
@@ -124,7 +145,7 @@
   function showLogin(body, message, dialogElement, initialMessage = '') {
     body.replaceChildren();
     const form = document.createElement('form');
-    form.innerHTML = '<input name="username" autocomplete="username" placeholder="API 网站用户名或邮箱" required maxlength="128"><input name="password" type="password" autocomplete="current-password" placeholder="密码" required maxlength="256"><input name="code" placeholder="两步验证码" autocomplete="one-time-code" hidden disabled><button type="submit">登录</button><p>本地画布可直接使用，无需登录。登录使用 API 网站的同一账号。密码不保存；本次会话最多保留 12 小时，关闭后台后需重新登录。模型调用继续使用「设置 / API」中的密钥。</p>';
+    form.innerHTML = '<input name="username" autocomplete="username" placeholder="API 网站用户名或邮箱" required maxlength="128"><input name="password" type="password" autocomplete="current-password" placeholder="密码" required maxlength="256"><input name="code" placeholder="两步验证码" autocomplete="one-time-code" hidden disabled><button type="submit">登录并连接 API</button><p>本地画布可直接使用，无需登录。登录后会为当前账户创建或复用此画布的专用生成令牌，并自动同步模型；调用按 API 网站账户余额计费。密码不保存，生成授权只保留在本次会话内，最多 12 小时。也可在设置中使用自己的其他 API。</p>';
     form.setAttribute('aria-label', 'API 网站登录');
     for (const [name, label] of [['username','用户名'],['password','密码'],['code','两步验证码']]) form.elements[name].setAttribute('aria-label', label);
     const signup = document.createElement('button'); signup.type = 'button'; signup.className = 'dw-link-button'; signup.textContent = '创建 API 账户';
@@ -141,7 +162,7 @@
         if (data.two_factor) {
           two = true; form.elements.username.disabled = true; form.elements.password.disabled = true; form.elements.password.hidden = true;
           form.elements.code.hidden = false; form.elements.code.disabled = false; form.elements.code.required = true; message.textContent = '请输入两步验证码。';
-        } else { await refresh(); if (!account) throw Error('登录请求已接受，但账户信息读取失败，请刷新重试。'); dialogElement.close(); }
+        } else { await refresh(); providersChanged(); if (!account) throw Error('登录请求已接受，但账户信息读取失败，请刷新重试。'); dialogElement.close(); await openAccount(); }
       } catch (error) { message.textContent = error.message; } finally { button.disabled = false; }
     };
   }
@@ -208,5 +229,13 @@
 
   const host = document.querySelector('#quickToolbar .toolbar-fixed') || document.querySelector('.ws-topbar-right') || document.querySelector('.sv2-header-tools');
   if (!host) return;
-  const accountButton = document.createElement('button'); accountButton.id = 'studioAccountButton'; accountButton.type = 'button'; accountButton.className = 'studio-settings-button'; accountButton.textContent = '登录 / 注册'; accountButton.onclick = openAccount; host.append(accountButton); refresh();
+  const accountButton = document.createElement('button'); accountButton.id = 'studioAccountButton'; accountButton.type = 'button'; accountButton.className = 'studio-settings-button'; accountButton.textContent = '登录 / 注册'; accountButton.onclick = openAccount; host.append(accountButton);
+  refresh().then(() => {
+    const url = new URL(location.href);
+    if (url.searchParams.has('studio-account')) {
+      url.searchParams.delete('studio-account'); history.replaceState(history.state, '', url);
+      openAccount();
+    }
+  });
+  window.StudioAccount = {open: openAccount, refresh};
 })();

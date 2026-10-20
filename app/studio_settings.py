@@ -109,6 +109,58 @@ class CatalogPreferences(BaseModel):
     models: List[ModelPreference]
 
 
+def assert_editable(provider_id, managed_ok=False):
+    if provider_id.strip().lower().startswith('deepwhite-account-') and not managed_ok:
+        raise HTTPException(409, '登录账户的官方 API 由账户连接管理，请在账户中重新连接；自选 API 请新增平台。')
+
+
+async def save_provider_config(payload, *, managed_ok=False):
+    assert_editable(payload.id, managed_ok)
+    models_url(payload.base_url)
+    if payload.protocol != 'openai':
+        raise HTTPException(400, '此页用于 OpenAI 兼容平台；其他协议请使用原版高级设置。')
+    payload.api_key = validate_key(payload.api_key or '') or None
+    async with save_lock:
+        providers = core.load_api_providers()
+        saved = next((p for p in providers if p['id'] == payload.id), None)
+        merged = {**(saved or {}), **payload.model_dump(exclude_unset=True, exclude={'api_key'})}
+        provider = core.normalize_provider(merged)
+        if provider['protocol'] != 'openai':
+            raise HTTPException(400, '此页用于 OpenAI 兼容平台；其他协议请使用原版高级设置。')
+        core.validate_provider_credential_update(provider, payload, providers)
+        providers = [p for p in providers if p['id'] != provider['id']]
+        if provider.get('primary'):
+            providers = [{**p, 'primary': False} for p in providers]
+        providers.insert(0, provider)
+        if payload.clear_key or payload.api_key:
+            core.update_env_values({core.provider_key_env(provider['id']): '' if payload.clear_key else payload.api_key})
+            core.reload_env_globals()
+        core.save_api_providers(providers)
+        return {'provider': core.public_provider(provider)}
+
+
+async def synchronize_provider(payload, *, transport=None, managed_ok=False):
+    assert_editable(payload.id, managed_ok)
+    # Probe before saving: an unavailable upstream must not erase a catalogue.
+    probe = core.TestConnectionPayload(base_url=payload.base_url, api_key=payload.api_key or '', provider_id=payload.id)
+    result = await read_models(probe, transport=transport) if transport is not None else await read_models(probe)
+    if not result['model_records']:
+        raise HTTPException(400, '接口返回空模型列表，已保留原有模型，请稍后重试。')
+    meta, vendors = await catalog.metadata(payload.base_url)
+    await save_provider_config(payload, managed_ok=managed_ok)
+    async with save_lock:
+        store = catalog.load_store()
+        prior = store.get(payload.id, {})
+        previous = prior.get('models', []) if prior.get('base_url', '').rstrip('/') == payload.base_url.rstrip('/') else []
+        entries = catalog.build_catalog(result['model_records'], meta, vendors, previous)
+        store[payload.id] = {'base_url': payload.base_url, 'models': entries}
+        provider = catalog.apply_to_provider(payload.id, entries)
+        catalog.save_store(store)
+    return {'provider': provider, 'models': entries, 'raw_count': result['model_count'],
+            'sync': {'status': 'ready'},
+            'message': f'已同步 {len(entries)} 个模型，自动分类并启用新模型；已有停用和移除设置已保留。'}
+
+
 def install(app):
     catalog.install_generation_routes(app)
     import studio_provider_capabilities
@@ -117,7 +169,8 @@ def install(app):
     @app.get('/api/studio/model-catalog')
     async def get_catalog():
         import studio_comfy
-        return {'providers':{**catalog.load_store(),studio_comfy.PROVIDER:studio_comfy.catalog()}}
+        return {'providers':{**catalog.load_store(),studio_comfy.PROVIDER:studio_comfy.catalog()},
+                'preview': catalog.preview_catalog()}
 
     @app.patch('/api/studio/model-catalog/{provider_id}')
     async def preferences(provider_id: str, payload: CatalogPreferences):
@@ -139,22 +192,7 @@ def install(app):
 
     @app.post('/api/studio/settings/sync-models')
     async def sync_models(payload: core.ApiProviderPayload):
-        # Read before saving: an unavailable upstream must not erase a working catalogue.
-        result = await read_models(core.TestConnectionPayload(base_url=payload.base_url,api_key=payload.api_key or '',provider_id=payload.id))
-        if not result['model_records']:
-            raise HTTPException(400, '接口返回空模型列表，已保留原有模型，请稍后重试。')
-        meta, vendors = await catalog.metadata(payload.base_url)
-        await save_provider(payload)
-        async with save_lock:
-            store = catalog.load_store()
-            prior = store.get(payload.id, {})
-            previous = prior.get('models', []) if prior.get('base_url','').rstrip('/')==payload.base_url.rstrip('/') else []
-            entries = catalog.build_catalog(result['model_records'],meta,vendors,previous)
-            store[payload.id] = {'base_url':payload.base_url,'models':entries}
-            provider = catalog.apply_to_provider(payload.id,entries)
-            catalog.save_store(store)
-        return {'provider':provider,'models':entries,'raw_count':result['model_count'],
-                'message':f'已同步 {len(entries)} 个模型，自动分类并启用新模型；已有停用和移除设置已保留。'}
+        return await synchronize_provider(payload)
 
     @app.post('/api/studio/settings/test')
     async def test_connection(payload: core.TestConnectionPayload):
@@ -168,25 +206,11 @@ def install(app):
 
     @app.put('/api/studio/settings/provider')
     async def save_provider(payload: core.ApiProviderPayload):
-        models_url(payload.base_url)
-        if payload.protocol != 'openai':
-            raise HTTPException(400, '此页用于 OpenAI 兼容平台；其他协议请使用原版高级设置。')
-        payload.api_key = validate_key(payload.api_key or '') or None
-        async with save_lock:
-            providers = core.load_api_providers()
-            saved = next((p for p in providers if p['id'] == payload.id), None)
-            # Reuse normalization, storage and live reload without rewriting other providers.
-            merged = {**(saved or {}), **payload.model_dump(exclude_unset=True, exclude={'api_key'})}
-            provider = core.normalize_provider(merged)
-            if provider['protocol'] != 'openai':
-                raise HTTPException(400, '此页用于 OpenAI 兼容平台；其他协议请使用原版高级设置。')
-            core.validate_provider_credential_update(provider, payload, providers)
-            providers = [p for p in providers if p['id'] != provider['id']]
-            if provider.get('primary'):
-                providers = [{**p, 'primary': False} for p in providers]
-            providers.insert(0, provider)
-            if payload.clear_key or payload.api_key:
-                core.update_env_values({core.provider_key_env(provider['id']): '' if payload.clear_key else payload.api_key})
-                core.reload_env_globals()
-            core.save_api_providers(providers)
-            return {'provider': core.public_provider(provider)}
+        saved = await save_provider_config(payload)
+        if payload.clear_key or not saved['provider']['has_key']:
+            return {**saved, 'sync': {'status': 'not_connected', 'message': '连接设置已保存，尚未提供生成密钥。'}}
+        try:
+            return await synchronize_provider(payload)
+        except HTTPException as exc:
+            return {**saved, 'sync': {'status': 'retryable', 'message': str(exc.detail)},
+                    'message': '连接设置已保存，模型同步未完成；原有模型已保留，可以重试。'}

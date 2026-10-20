@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 runtime = tempfile.TemporaryDirectory(prefix='deepwhite-settings-test-')
@@ -61,6 +62,11 @@ class SettingsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(caught.exception.status_code,504)
 
     async def test_save_preserve_refresh_clear_and_host_guard(self):
+        # The save endpoint now attempts model discovery automatically. Keep
+        # this legacy storage-focused check fully offline on a failed discovery.
+        probe = patch.object(settings, 'read_models', AsyncMock(side_effect=HTTPException(504, 'offline fixture')))
+        probe.start()
+        self.addCleanup(probe.stop)
         original = core.load_api_providers()
         payload={'id':'studio-fixture','name':'Fixture','base_url':'https://example.test/v1','api_key':KEY,'primary':True,'chat_models':['fixture-chat'],'image_models':['fixture-image'],'video_models':['fixture-video']}
         response = await self.client.put('/api/studio/settings/provider',json=payload)

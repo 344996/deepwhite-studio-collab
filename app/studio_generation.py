@@ -63,6 +63,8 @@ def save(job):
 
 
 def connection(provider_id,expected=None):
+    if provider_id.startswith('deepwhite-account-') and not core.provider_env_key_value(provider_id):
+        raise HTTPException(401,'此账户的生成授权已退出或失效，请重新登录 DeepWhite API 账户后重试。')
     provider=core.get_api_provider_exact(provider_id)
     if not provider or provider.get('enabled') is False:raise HTTPException(400,'请先启用 API 平台。')
     base=provider.get('base_url','').rstrip('/')

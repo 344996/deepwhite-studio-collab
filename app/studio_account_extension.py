@@ -51,6 +51,8 @@ def _error_for(status, data=None):
         return HTTPException(429, '操作过于频繁，请稍后重试。')
     if status in (401, 403):
         return HTTPException(status, '账号验证失败或网站限制了此操作，请检查账号状态后重试。')
+    if status in (404, 405):
+        return HTTPException(status, 'API 网站暂未提供此授权接口。可使用自选 API，或联系网站管理员开启兼容接口。')
     if any(v in message for v in ('disabled', 'not allowed', '关闭注册', '禁止注册')):
         return HTTPException(403, 'API 网站当前未开放此注册方式。')
     if any(v in message for v in ('already exists', 'duplicate', '已存在', '已注册', '重复')):
@@ -89,7 +91,7 @@ async def _safe_call(session, method, path, body=None, params=None):
                 raise _error_for(400, data)
             session['cookies'] = client.cookies
             value = data.get('data')
-            return value if isinstance(value, dict) else {}
+            return value if isinstance(value, (dict, list)) else {}
     except HTTPException:
         raise
     except httpx.HTTPError:

@@ -1,4 +1,5 @@
 import sys
+import os
 import json
 import tempfile
 import unittest
@@ -18,6 +19,17 @@ import studio_account_extension as account_extension
 class StudioAccountTests(unittest.TestCase):
     def setUp(self):
         self.runtime = tempfile.TemporaryDirectory(prefix='studio-account-test-')
+        with patch.dict(os.environ, {'DEEPWHITE_STUDIO_RUNTIME_DIR': self.runtime.name}):
+            import main as core
+            import studio_account_provision as provision
+        self.provision = provision
+        provision.ACTIVE = None
+        self.storage = [
+            patch.object(core, 'DATA_DIR', self.runtime.name),
+            patch.object(core, 'API_PROVIDERS_FILE', str(Path(self.runtime.name) / 'providers.json')),
+            patch.object(core, 'API_ENV_FILE', str(Path(self.runtime.name) / '.env')),
+        ]
+        for item in self.storage: item.start()
         self.app = FastAPI()
         self.original_transport = account.TRANSPORT
         self.original_sessions = dict(account.SESSIONS)
@@ -64,6 +76,8 @@ class StudioAccountTests(unittest.TestCase):
         self.original_cooldowns = dict(account_extension.VERIFICATION_REQUESTS)
         account.SESSIONS.clear()
         account_extension.VERIFICATION_REQUESTS.clear()
+        self.provision.ACTIVE = None
+        for item in reversed(self.storage): item.stop()
         self.runtime.cleanup()
 
     def test_public_flags_verification_cooldown_register_payload_and_disabled_mode(self):

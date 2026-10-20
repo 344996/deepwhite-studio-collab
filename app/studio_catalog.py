@@ -175,6 +175,22 @@ def active(entry):
     return entry.get('enabled', True) and not entry.get('removed') and entry.get('available', True)
 
 
+def preview_catalog():
+    """Public examples are separate from authorized/usable provider catalogues."""
+    try:
+        raw = json.loads(SNAPSHOT.read_text(encoding='utf-8'))
+        meta = {m['model_name']: m for m in raw.get('data', []) if isinstance(m, dict) and m.get('model_name')}
+        vendors = {str(v['id']): v.get('name', '') for v in raw.get('vendors', []) if isinstance(v, dict) and 'id' in v}
+        entries = build_catalog(list(meta), meta, vendors)
+    except (OSError, ValueError, TypeError):
+        entries = []
+    chosen = []
+    for kind in ('image', 'video', 'chat', 'audio'):
+        chosen += [entry for entry in entries if entry['kind'] == kind and entry.get('role') == 'generate'][:3]
+    return {'provider_name': 'DeepWhite API', 'connected': False,
+            'message': '模型示例 · 登录或连接 API 后自动同步实际可用模型；未连接时不能生成。',
+            'models': [{**entry, 'available': False, 'enabled': False, 'preview': True} for entry in chosen]}
+
 def apply_to_provider(provider_id, entries):
     providers = core.load_api_providers()
     provider = next((p for p in providers if p['id']==provider_id), None)
@@ -239,11 +255,13 @@ def install_generation_routes(app):
     @app.post('/api/online-image')
     async def image(payload: core.OnlineImageRequest):
         payload.model = resolve_model(payload.provider_id,payload.model,'image',images=core.image_references([r.model_dump() for r in payload.reference_images if r.url]))
+        check_g2_prompt(payload.model, payload.prompt)
         return await core.online_image(payload)
 
     @app.post('/api/canvas-image-tasks')
     async def image_task(payload: core.OnlineImageRequest):
         payload.model = resolve_model(payload.provider_id,payload.model,'image',images=core.image_references([r.model_dump() for r in payload.reference_images if r.url]))
+        check_g2_prompt(payload.model, payload.prompt)
         return await core.create_canvas_image_task(payload)
 
     @app.post('/api/canvas-video')
@@ -257,3 +275,11 @@ def install_generation_routes(app):
     async def chat(payload: core.CanvasLLMRequest):
         payload.model = resolve_model(payload.provider,payload.model,'chat')
         return await core.canvas_llm(payload)
+
+
+def check_g2_prompt(model, prompt):
+    if 'image-g2' in model.lower():
+        from studio_capabilities import profile
+        spec = profile(model, 'image')
+        if not spec['prompt_min'] <= len(prompt.strip()) <= spec['prompt_max']:
+            raise HTTPException(400, f'此模型提示词需要 {spec["prompt_min"]}–{spec["prompt_max"]} 个字符。')
