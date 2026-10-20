@@ -52,4 +52,3 @@ def available_models(core_module=None):
                 targets.append({'provider_id':studio_dreamina.PROVIDER,'model':entry['id'],
                                 'label':entry['name']+' · 即梦账号','kind':entry['kind']})
     return chats, targets
-

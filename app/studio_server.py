@@ -11,6 +11,10 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 app = core.app
 app.title = '深白片场 · DeepWhite Studio'
+# The inherited autonomous chat Agent is retired along with Studio's assistant.
+# Keep ordinary conversation and explicit canvas LLM/generation endpoints intact.
+app.router.routes[:] = [route for route in app.router.routes
+                       if getattr(route, 'path', None) != '/api/chat/agent']
 import studio_asset_integration
 studio_asset_integration.install(core)
 import studio_storage
@@ -40,18 +44,14 @@ from studio_generation import install as install_generation
 install_generation(app)
 import studio_native_tasks
 studio_native_tasks.install(app)
-import studio_agent
-import studio_agent_builtins
-studio_agent_builtins.install()
-studio_agent.install(core)
-import studio_agent_plans
-studio_agent_plans.install(app)
 import studio_canvas_concurrency
 studio_canvas_concurrency.install(core)
 import studio_control
 studio_control.install(app)
 import studio_gallery
 studio_gallery.install(app)
+import studio_feedback
+studio_feedback.install(app)
 import studio_gallery_import
 studio_gallery_import.install(app)
 import studio_updates

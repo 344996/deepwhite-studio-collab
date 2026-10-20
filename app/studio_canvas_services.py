@@ -149,5 +149,3 @@ def validate_plan(raw, ctx, targets):
             'params':{k:v['default'] for k,v in spec['fields'].items()}})
     return {'id':uuid.uuid4().hex,'canvas_id':ctx['canvas_id'],'project_id':ctx['project_id'],
         'base_updated_at':ctx['base_updated_at'],'base_revision':ctx['base_revision'],'nodes':normalized}
-
-

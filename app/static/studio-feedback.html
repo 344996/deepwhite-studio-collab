@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>意见反馈 · 深白片场</title>
+<link rel="stylesheet" href="/static/studio-feedback.css?v=0.10.2-studio.16.1792478018"><script defer src="/static/studio-feedback.js?v=0.10.2-studio.16.1792478518"></script></head>
+<body><main>
+  <header><span class="eyebrow">一起完善深白片场</span><h1>意见反馈</h1><p>告诉我们遇到的问题，或下一次希望实现的功能。</p></header>
+  <p id="feedbackNotice" role="status" aria-live="polite" hidden></p>
+  <details class="destination"><summary>反馈接收地址</summary><form id="feedbackDestination"><label>画廊网站地址<input id="feedbackURL" type="url" placeholder="https://你的画廊域名" maxlength="512"></label><button>保存地址</button></form><p>使用公共画廊的反馈后台。尚未配置网站时，可以先保存到本机。</p></details>
+  <form id="feedbackForm" class="compose">
+    <div class="row"><label>类型<select name="category"><option value="bug">运行问题</option><option value="interaction">操作体验</option><option value="model">模型与连接</option><option value="suggestion">功能建议</option><option value="other">其他</option></select></label><label class="grow">标题<input name="title" required minlength="2" maxlength="100" placeholder="用一句话描述"></label></div>
+    <label>问题或建议<textarea name="description" required minlength="5" maxlength="5000" rows="5" placeholder="你进行了什么操作？期待发生什么？实际出现了什么？"></textarea></label>
+    <div class="row"><label class="grow">联系方式 <span>选填</span><input name="contact" maxlength="160" placeholder="便于进一步了解问题"></label><label class="grow">截图 <span>选填</span><input id="feedbackScreenshot" type="file" accept="image/png,image/jpeg,image/webp"></label></div>
+    <div id="feedbackPreview" hidden><img alt="将发送的截图预览"><button type="button" id="removeScreenshot">移除截图</button></div>
+    <p class="helper">只发送填写的内容和你选择的截图。请检查截图中的个人信息。</p>
+    <label class="check"><input name="include_diagnostics" type="checkbox">附带软件版本与操作系统名称，帮助定位问题</label>
+    <div class="actions"><button type="submit" value="draft">仅保存到本机</button><button type="submit" value="send" class="primary">发送给开发者</button></div>
+  </form>
+  <section class="records"><div class="section-title"><h2>我的反馈</h2><button id="reloadFeedback" type="button">刷新列表</button></div><p id="feedbackEmpty">还没有反馈记录。</p><div id="feedbackRecords"></div></section>
+</main></body></html>
