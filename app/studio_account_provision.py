@@ -24,7 +24,58 @@ KEY_TRANSPORT = None  # offline model-list contract tests only
 
 
 def managed(provider_id):
-    return str(provider_id).startswith(PREFIX)
+    return str(provider_id or '').strip().lower().startswith(PREFIX)
+
+
+def safe_transport(provider):
+    """Managed credentials only travel through the fixed official transport."""
+    return (
+        str(provider.get('base_url') or '').rstrip('/') == BASE_URL
+        and provider.get('protocol') == 'openai'
+        and provider.get('image_request_mode', 'openai') == 'openai'
+        and not provider.get('image_generation_endpoint')
+        and not provider.get('image_edit_endpoint')
+        and not provider.get('model_protocols')
+    )
+
+
+def assert_transport(provider):
+    if not safe_transport(provider):
+        raise HTTPException(409, '登录账户的官方 API 地址和接口不能修改，请在账户中重新连接；自选 API 请新增平台。')
+
+
+def require_provider(provider):
+    """Check both a caller's snapshot and current session/store before dispatch."""
+    assert_transport(provider)
+    if provider.get('enabled') is False or not provider_key(provider.get('id')):
+        raise HTTPException(401, '此账户的生成授权已退出或失效，请重新登录对应 DeepWhite API 账户后重试。')
+
+
+def validate_update(provider, payload, providers, *, managed_ok=False):
+    """Legacy bulk settings may select a default, never alter managed access."""
+    for field in ('api_key', 'wallet_api_key', 'volcengine_access_key_id',
+                  'volcengine_secret_access_key', 'clear_key', 'clear_wallet_key',
+                  'clear_volcengine_access_key_id', 'clear_volcengine_secret_access_key'):
+        if getattr(payload, field, None):
+            raise HTTPException(409, '登录账户的生成授权由账户管理，不能替换或清除密钥；请使用退出或重新连接。')
+    if managed_ok:
+        assert_transport(provider)
+        return
+    saved = next((p for p in providers if p['id'] == provider['id']), None)
+    if saved is None:
+        raise HTTPException(409, '此平台 ID 保留给登录账户，请登录后自动连接；自选 API 请使用其他 ID。')
+    # Omitted fields in a legacy form must not replace protected values with
+    # Pydantic defaults. Only an explicit primary selection is editable.
+    fields = payload.model_fields_set
+    if any(provider.get(field) != saved.get(field)
+           for field in fields & saved.keys() if field not in ('id', 'primary')):
+        raise HTTPException(409, '登录账户的官方 API 由账户连接管理，不能在高级设置修改；模型启用请使用模型管理。')
+    preserved = {**saved}
+    if 'primary' in fields:
+        preserved['primary'] = payload.primary
+    assert_transport(preserved)
+    provider.clear()
+    provider.update(preserved)
 
 
 def provider_id(user_id):
@@ -54,14 +105,13 @@ def save_state(data):
 
 def provider_key(pid):
     """All old and new generation routes call the same fail-closed resolver."""
+    pid = str(pid or '').strip().lower()
     s = ACTIVE
     if (not s or s.get('revoked') or s.get('expires', 0) <= time.time()
             or not s.get('user_id') or provider_id(s['user_id']) != pid):
         return ''
     provider = next((p for p in core.load_api_providers() if p['id'] == pid), None)
-    if (not provider or provider.get('enabled') is False
-            or provider.get('base_url', '').rstrip('/') != BASE_URL
-            or provider.get('protocol') != 'openai'):
+    if not provider or provider.get('enabled') is False or not safe_transport(provider):
         return ''
     return s.get('generation_key', '')
 
@@ -179,8 +229,13 @@ async def provision(session, call):
         ACTIVE = session
         providers = core.load_api_providers()
         saved = next((p for p in providers if p['id'] == pid), {})
+        # Restore only presentation/model preferences, never old transport
+        # overrides from a legacy edit, imported store or previous version.
         provider = core.normalize_provider({
-            **saved, 'id': pid, 'name': 'DeepWhite API · 登录账户',
+            **{field: saved[field] for field in (
+                'image_models', 'chat_models', 'video_models', 'audio_models', 'model_names',
+            ) if field in saved},
+            'id': pid, 'name': 'DeepWhite API · 登录账户',
             'base_url': BASE_URL, 'protocol': 'openai',
             'image_request_mode': 'openai', 'enabled': True,
             'primary': bool(saved.get('primary')) if reconnecting else True,

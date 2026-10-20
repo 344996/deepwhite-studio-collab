@@ -204,6 +204,10 @@ def apply_to_provider(provider_id, entries):
 
 
 def resolve_model(provider_id, requested, kind, images=None, videos=None, audios=None, multimodal=None):
+    # Imported/old projects may have no catalogue. An explicit account binding
+    # still must be active before a legacy route can enqueue a generation.
+    if str(provider_id or '').strip().lower().startswith('deepwhite-account-'):
+        core.get_api_provider_exact(provider_id)
     catalog = load_store().get(provider_id)
     if not catalog:
         return requested

@@ -36,6 +36,8 @@ def validate_key(key):
 
 
 def resolve_key(payload):
+    if payload.provider_id.strip().lower().startswith('deepwhite-account-'):
+        return core.api_key_from_payload(payload)
     explicit = validate_key(payload.api_key or '')
     if explicit:
         return explicit
@@ -127,7 +129,7 @@ async def save_provider_config(payload, *, managed_ok=False):
         provider = core.normalize_provider(merged)
         if provider['protocol'] != 'openai':
             raise HTTPException(400, '此页用于 OpenAI 兼容平台；其他协议请使用原版高级设置。')
-        core.validate_provider_credential_update(provider, payload, providers)
+        core.validate_provider_credential_update(provider, payload, providers, managed_ok=managed_ok)
         providers = [p for p in providers if p['id'] != provider['id']]
         if provider.get('primary'):
             providers = [{**p, 'primary': False} for p in providers]

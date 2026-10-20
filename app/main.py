@@ -1252,7 +1252,14 @@ def apply_locked_recommended_model_rules(base_url="", grouped=None):
     grouped["video"] = list(rule.get("video_models") or [])
     return grouped
 
+def assert_account_provider(provider):
+    if str((provider or {}).get("id") or "").strip().lower().startswith("deepwhite-account-"):
+        from studio_account_provision import require_provider
+        require_provider(provider)
+
+
 def provider_endpoint_url(provider, key, default_path):
+    assert_account_provider(provider)
     base_url = str((provider or {}).get("base_url") or AI_BASE_URL).strip().rstrip("/")
     override = str((provider or {}).get(key) or "").strip()
     if override:
@@ -1298,7 +1305,9 @@ def normalize_provider(item):
         protocol = "openai"
     if protocol not in SUPPORTED_PROVIDER_PROTOCOLS:
         protocol = "openai"
-    image_request_mode = detect_image_request_mode(base_url, item.get("image_models") or []) or normalize_image_request_mode(item.get("image_request_mode"))
+    image_request_mode = normalize_image_request_mode(item.get("image_request_mode"))
+    if not provider_id.startswith("deepwhite-account-"):
+        image_request_mode = detect_image_request_mode(base_url, item.get("image_models") or []) or image_request_mode
     image_generation_endpoint = normalize_endpoint_override(item.get("image_generation_endpoint"), "文生图端口")
     image_edit_endpoint = normalize_endpoint_override(item.get("image_edit_endpoint"), "图生图/编辑端口")
     volc_project = re.sub(r"\s+", " ", str(item.get("volcengine_project_name") or "").strip())[:80]
@@ -1498,6 +1507,8 @@ def get_primary_provider_id(providers=None):
 def get_api_provider(provider_id="comfly"):
     providers = load_api_providers()
     target = (provider_id or "").strip().lower()
+    if target.startswith("deepwhite-account-") and not any(p["id"] == target for p in providers):
+        raise HTTPException(status_code=401, detail="此任务的账户 API 已不存在，请登录对应账户后重试；不会改用其他账户。")
     # 兼容旧的 "comfly" 硬编码：若 comfly 不存在或未指定，回退到首选 provider
     if not target or not any(p["id"] == target for p in providers):
         target = get_primary_provider_id(providers)
@@ -1506,6 +1517,7 @@ def get_api_provider(provider_id="comfly"):
         raise HTTPException(status_code=400, detail=f"未找到 API 平台：{target}")
     if not provider.get("enabled", True):
         raise HTTPException(status_code=400, detail=f"API 平台已禁用：{provider.get('name') or target}")
+    assert_account_provider(provider)
     return provider
 
 def get_api_provider_exact(provider_id: str):
@@ -1516,6 +1528,7 @@ def get_api_provider_exact(provider_id: str):
         raise HTTPException(status_code=400, detail=f"未找到 API 平台：{target or '(empty)'}。新增平台未保存时请使用当前表单拉取模型。")
     if not provider.get("enabled", True):
         raise HTTPException(status_code=400, detail=f"API 平台已禁用：{provider.get('name') or target}")
+    assert_account_provider(provider)
     return provider
 
 def modelscope_provider_config():
@@ -4089,6 +4102,7 @@ def log_net_error(context, exc, url=""):
 
 def api_headers(json_body=True, provider=None, model=""):
     if provider:
+        assert_account_provider(provider)
         if is_codex_provider(provider) or is_gemini_cli_provider(provider):
             raise HTTPException(status_code=400, detail="CLI 协议使用本机登录态，不需要 API Key。当前入口应走对应 CLI 专用通道。")
         api_key = provider_env_key_value(provider["id"])
@@ -11654,12 +11668,19 @@ def pick_chat_image_provider(provider_id="", fallback_id=""):
     for target in (provider_id, fallback_id):
         clean = str(target or "").strip().lower()
         if clean:
+            if clean.startswith("deepwhite-account-"):
+                managed_provider = get_api_provider_exact(clean)
+                if not managed_provider.get("image_models"):
+                    raise HTTPException(status_code=400, detail="此账户没有已启用的图片模型，请同步或启用模型后重试；不会改用其他账户。")
+                return managed_provider
             matched = next((p for p in providers if p.get("id") == clean), None)
             if matched:
                 return matched
     if providers:
         primary = next((p for p in providers if p.get("primary")), None)
-        return primary or providers[0]
+        selected = primary or providers[0]
+        assert_account_provider(selected)
+        return selected
     return get_api_provider(provider_id or fallback_id or "comfly")
 
 def heuristic_agent_decision(message, refs, has_previous_image):
@@ -13424,9 +13445,14 @@ def provider_credential_origins(provider):
     return origins
 
 
-def validate_provider_credential_update(provider, payload, providers=None):
+def validate_provider_credential_update(provider, payload, providers=None, *, managed_ok=False):
     """A replacement for one key must not silently move the other stored keys."""
     provider_id = provider["id"]
+    if provider_id.startswith("deepwhite-account-"):
+        from studio_account_provision import validate_update
+        validate_update(provider, payload, providers if providers is not None else load_api_providers(),
+                        managed_ok=managed_ok)
+        return
     credentials = [(provider_env_key_value(provider_id), "api_key", "clear_key")]
     if provider_id == "runninghub":
         credentials.append((runninghub_wallet_key_value(), "wallet_api_key", "clear_wallet_key"))
@@ -13448,6 +13474,9 @@ async def save_providers(payload: List[ApiProviderPayload]):
     providers = []
     env_updates = {}
     saved_providers = load_api_providers()
+    submitted_ids = {item.id.strip().lower() for item in payload}
+    if any(p["id"].startswith("deepwhite-account-") and p["id"] not in submitted_ids for p in saved_providers):
+        raise HTTPException(status_code=409, detail="高级设置不能删除登录账户的官方 API，请刷新设置后重试；断开授权请使用退出登录。")
     # 收集每个 item 的 primary 字段
     raw_primary_flags = [bool(getattr(item, "primary", False)) for item in payload]
     for item in payload:
@@ -13555,6 +13584,12 @@ def api_key_from_payload(payload, protocol: str = ""):
     explicit = str(getattr(payload, "api_key", "") or "").strip()
     provider_id = str(getattr(payload, "provider_id", "") or "").strip().lower()
     protocol = str(protocol or protocol_from_payload(payload) or "").strip().lower()
+    if provider_id.startswith("deepwhite-account-"):
+        from studio_account_provision import BASE_URL
+        if explicit or str(getattr(payload, "base_url", "") or "").strip().rstrip("/") != BASE_URL or protocol != "openai":
+            raise HTTPException(status_code=409, detail="登录账户只能使用官方 API 地址和当前账户授权；自选 API 请新增平台。")
+        provider = get_api_provider_exact(provider_id)
+        return provider_env_key_value(provider["id"])
     if explicit:
         return explicit
     if provider_id:

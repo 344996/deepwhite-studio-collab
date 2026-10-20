@@ -36,6 +36,8 @@ class AccountProvisionTests(unittest.TestCase):
             patch.object(core, 'API_PROVIDERS_FILE', str(Path(self.dir.name) / 'api_providers.json')),
             patch.object(core, 'API_ENV_FILE', str(Path(self.dir.name) / '.env')),
             patch.object(catalog, 'metadata', AsyncMock(return_value=({}, {}))),
+            patch.object(core, 'prune_runninghub_workflow_store_for_provider'),
+            patch.object(core, 'sync_runninghub_provider_workflows_to_static_template'),
         ]
         for item in self.patches: item.start()
         account.SESSIONS.clear()
@@ -57,6 +59,7 @@ class AccountProvisionTests(unittest.TestCase):
         app = FastAPI()
         account.install(app)
         settings.install(app)
+        app.put('/api/providers')(core.save_providers)
         self.client = TestClient(app)
 
     def tearDown(self):
@@ -329,14 +332,192 @@ class AccountProvisionTests(unittest.TestCase):
         self.assertEqual(denied.status_code, 409)
         denied = self.client.put('/api/studio/settings/provider', json={'id': pid.upper(), 'base_url': 'https://other.example/v1', 'api_key': 'manual-secret'})
         self.assertEqual(denied.status_code, 409)
-        # Legacy settings can write a provider record, but cannot make the
-        # session resolver release a managed key to a different destination.
+        # A tampered or imported provider record cannot redirect session keys.
         providers = core.load_api_providers()
         for row in providers:
             if row['id'] == pid: row['base_url'] = 'https://other.example/v1'
         core.save_api_providers(providers)
         core.update_env_values({core.provider_key_env(pid): 'injected-fallback-secret'})
         self.assertFalse(core.provider_env_key_value(pid))
+
+    def test_missing_old_account_cannot_fall_back_to_new_account_in_legacy_selectors(self):
+        first = self.login()['generation']['provider_id']
+        stale = core.get_api_provider_exact(first)
+        self.uid = 20
+        second = self.login()['generation']['provider_id']
+        # Simulate a pre-fix bulk deletion or an imported project with no row.
+        core.save_api_providers([p for p in core.load_api_providers() if p['id'] != first])
+        self.assertEqual(core.get_api_provider(second)['id'], second)
+        for operation in (
+            lambda: core.get_api_provider(first),
+            lambda: core.get_api_provider_exact(first),
+            lambda: core.pick_chat_image_provider(first, second),
+            lambda: core.pick_chat_image_provider('', first),
+            lambda: core.api_headers(provider=stale),
+            lambda: generation.connection(first),
+        ):
+            with self.subTest(operation=operation), self.assertRaises(HTTPException):
+                operation()
+
+    def test_inactive_account_is_rejected_by_both_generation_stacks_and_chat_selector(self):
+        for state in ('logout', 'expired', 'switched'):
+            with self.subTest(state=state):
+                self.uid = 10
+                pid = self.login()['generation']['provider_id']
+                provider = core.get_api_provider_exact(pid)
+                if state == 'logout':
+                    self.client.post('/api/studio/account/logout')
+                elif state == 'expired':
+                    provision.ACTIVE['expires'] = time.time() - 1
+                else:
+                    self.uid = 20
+                    self.login()
+                for operation in (
+                    lambda: core.get_api_provider(pid),
+                    lambda: core.get_api_provider_exact(pid),
+                    lambda: core.pick_chat_image_provider(pid),
+                    lambda: core.api_headers(provider=provider),
+                    lambda: generation.connection(pid),
+                ):
+                    with self.assertRaises(HTTPException):
+                        operation()
+
+    def test_legacy_bulk_edit_cannot_drop_or_create_account_managed_channels(self):
+        pid = self.login()['generation']['provider_id']
+        before = core.load_api_providers()
+        manual = core.normalize_provider({'id': 'manual', 'base_url': 'https://fixture.invalid/v1'})
+        dropped = self.client.put('/api/providers', json=[manual])
+        self.assertEqual(dropped.status_code, 409, dropped.text)
+        self.assertEqual(core.load_api_providers(), before)
+        injected = {**before[0], 'id': provision.provider_id(999)}
+        response = self.client.put('/api/providers', json=[*before, injected])
+        self.assertEqual(response.status_code, 409, response.text)
+        self.assertEqual(core.provider_env_key_value(pid), SECRET + '10')
+        self.assertEqual(core.load_api_providers(), before)
+
+    def test_legacy_bulk_edits_block_managed_endpoints_even_with_replacement_key(self):
+        pid = self.login()['generation']['provider_id']
+        before = core.load_api_providers()
+        for changes in (
+            {'image_generation_endpoint': 'https://endpoint-fixture.invalid/images', 'api_key': 'manual-replacement-fixture'},
+            {'image_edit_endpoint': 'https://endpoint-fixture.invalid/edits', 'clear_key': True},
+            {'image_generation_endpoint': '/v1/unapproved'},
+            {'base_url': 'https://endpoint-fixture.invalid/v1', 'api_key': 'manual-replacement-fixture'},
+            {'protocol': 'gemini', 'api_key': 'manual-replacement-fixture'},
+            {'model_protocols': {'deepwhiteai-image-g2': 'gemini'}},
+            {'image_request_mode': 'openai-json'},
+            {'enabled': False},
+            {'api_key': 'manual-replacement-fixture'},
+            {'clear_key': True},
+        ):
+            with self.subTest(fields=list(changes)):
+                payload = [{**p, **changes} if p['id'] == pid else p for p in before]
+                response = self.client.put('/api/providers', json=payload)
+                self.assertEqual(response.status_code, 409, response.text)
+                self.assertEqual(core.load_api_providers(), before)
+                self.assertEqual(core.provider_env_key_value(pid), SECRET + '10')
+        env_file = Path(core.API_ENV_FILE)
+        self.assertFalse(env_file.exists() and 'manual-replacement-fixture' in env_file.read_text())
+
+    def test_legacy_bulk_edit_keeps_managed_fields_and_allows_manual_default(self):
+        pid = self.login()['generation']['provider_id']
+        managed = core.get_api_provider_exact(pid)
+        manual = core.normalize_provider({'id': 'manual', 'name': 'My API',
+                                          'base_url': 'https://custom.example/v1', 'primary': True})
+        other = [p for p in core.load_api_providers() if p['id'] != pid]
+        response = self.client.put('/api/providers', json=[
+            *other, {'id': pid, 'primary': False}, {**manual, 'api_key': 'manual-fixture'},
+        ])
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(core.get_api_provider_exact(pid), {**managed, 'primary': False})
+        self.assertEqual(core.get_primary_provider_id(), 'manual')
+        self.assertEqual(core.provider_env_key_value('manual'), 'manual-fixture')
+
+    def test_managed_key_checks_saved_and_runtime_endpoint_overrides(self):
+        pid = self.login()['generation']['provider_id']
+        before = core.load_api_providers()
+        provider = core.get_api_provider_exact(pid)
+        for change in (
+            {'image_generation_endpoint': 'https://endpoint-fixture.invalid/images'},
+            {'image_edit_endpoint': 'https://endpoint-fixture.invalid/edits'},
+            {'image_generation_endpoint': '/v1/unapproved'},
+            {'model_protocols': {'deepwhiteai-image-g2': 'gemini'}},
+        ):
+            with self.subTest(change=change):
+                altered = {**provider, **change}
+                # A caller-supplied or stale in-memory dict is checked too.
+                with self.assertRaises(HTTPException):
+                    core.api_headers(provider=altered)
+                with self.assertRaises(HTTPException):
+                    core.provider_endpoint_url(altered, 'image_generation_endpoint', '/v1/images/generations')
+                core.save_api_providers([altered if p['id'] == pid else p for p in before])
+                self.assertFalse(core.provider_env_key_value(pid))
+                with self.assertRaises(HTTPException):
+                    core.api_headers(provider=provider)
+                with self.assertRaises(HTTPException):
+                    generation.connection(pid)
+                core.save_api_providers(before)
+        self.assertEqual(core.api_headers(provider=provider)['Authorization'], 'Bearer ' + SECRET + '10')
+
+    def test_reconnect_clears_inherited_transport_overrides_and_keeps_model_preferences(self):
+        pid = self.login()['generation']['provider_id']
+        self.client.patch('/api/studio/model-catalog/' + pid,
+                          json={'models': [{'id': 'deepwhiteai-image-g2', 'enabled': False}]})
+        providers = core.load_api_providers()
+        altered = next(p for p in providers if p['id'] == pid)
+        altered.update(image_generation_endpoint='https://endpoint-fixture.invalid/images',
+                       image_edit_endpoint='https://endpoint-fixture.invalid/edits',
+                       model_protocols={'deepseek-chat': 'gemini'})
+        core.save_api_providers(providers)
+        response = self.client.post('/api/studio/account/provision')
+        self.assertEqual(response.json()['generation']['status'], 'ready', response.text)
+        current = core.get_api_provider_exact(pid)
+        self.assertEqual(current['image_generation_endpoint'], '')
+        self.assertEqual(current['image_edit_endpoint'], '')
+        self.assertEqual(current['model_protocols'], {})
+        self.assertEqual(current['image_models'], [])
+        self.assertEqual(self.creates, 1)
+
+    def test_managed_probe_never_uses_replacement_or_protocol_fallback_credentials(self):
+        pid = self.login()['generation']['provider_id']
+        for values in (
+            {'base_url': 'https://endpoint-fixture.invalid/v1'},
+            {'base_url': provision.BASE_URL, 'api_key': 'manual-replacement-fixture'},
+            {'base_url': provision.BASE_URL, 'protocol': 'runninghub'},
+        ):
+            payload = core.TestConnectionPayload(provider_id=pid, **values)
+            with self.subTest(values=values), self.assertRaises(HTTPException):
+                core.api_key_from_payload(payload)
+            with self.assertRaises(HTTPException):
+                settings.resolve_key(payload)
+        self.client.post('/api/studio/account/logout')
+        payload = core.TestConnectionPayload(provider_id=pid, base_url=core.RUNNINGHUB_DEFAULT_BASE_URL,
+                                            protocol='runninghub')
+        with patch.object(core, 'runninghub_wallet_key_value', return_value='unrelated-fixture-key'):
+            with self.assertRaises(HTTPException):
+                core.api_key_from_payload(payload)
+
+    def test_old_project_generation_routes_reject_removed_account_before_dispatch(self):
+        pid = self.login()['generation']['provider_id']
+        self.uid = 20
+        self.login()
+        core.save_api_providers([p for p in core.load_api_providers() if p['id'] != pid])
+        routes = (
+            ('/api/online-image', 'online_image', {'provider_id': pid, 'model': 'deepwhiteai-image-g2', 'prompt': 'a synthetic landscape'}),
+            ('/api/canvas-image-tasks', 'create_canvas_image_task', {'provider_id': pid, 'model': 'deepwhiteai-image-g2', 'prompt': 'a synthetic landscape'}),
+            ('/api/canvas-llm', 'canvas_llm', {'provider': pid, 'model': 'deepseek-chat', 'message': 'synthetic text'}),
+            ('/api/canvas-video', 'canvas_video', {'provider_id': pid, 'model': 'sora-2', 'prompt': 'synthetic video'}),
+        )
+        for has_catalog in (True, False):
+            if not has_catalog:
+                store = catalog.load_store()
+                store.pop(pid)
+                catalog.save_store(store)
+            for path, target, body in routes:
+                with self.subTest(path=path, has_catalog=has_catalog), patch.object(core, target, AsyncMock()) as paid:
+                    response = self.client.post(path, json=body)
+                    self.assertIn(response.status_code, (400, 401, 409), response.text)
+                    paid.assert_not_called()
 
     def test_older_new_api_full_key_get_fallback(self):
         self.legacy = True
