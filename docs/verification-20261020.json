@@ -98,13 +98,78 @@
       "checks": null,
       "kind": "browser suite",
       "passed": true
+    },
+    {
+      "suite": "actual portable ZIP",
+      "checks": 8,
+      "kind": "bundled Windows runtime",
+      "passed": true
+    },
+    {
+      "suite": "currently running local demo",
+      "checks": 6,
+      "kind": "browser",
+      "passed": true
     }
   ],
   "real_provider_login_verified": false,
   "paid_generation_used": false,
   "other_physical_computer_verified": false,
   "public_release_published": false,
-  "packaged_build_verification": "Recorded after building from this commit",
+  "packaged_build_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "Every artifact matches its recorded size and SHA-256",
+        "passed": true
+      },
+      {
+        "name": "Actual ZIP contains offline docs, Skill, runtime and no private data",
+        "passed": true
+      },
+      {
+        "name": "Start.cmd boots the bundled runtime in a special-character path",
+        "passed": true,
+        "running_version": "0.11.0-studio.1"
+      },
+      {
+        "name": "Packaged canvas creates, saves and rereads a Unicode text node",
+        "passed": true
+      },
+      {
+        "name": "Product pages load and retired assistant routes are absent",
+        "passed": true
+      },
+      {
+        "name": "Generated fixed MCP entry passes preflight on the actual extracted package",
+        "passed": true
+      },
+      {
+        "name": "Packaged stdio initializes, lists 13 tools and reads projects",
+        "passed": true
+      },
+      {
+        "name": "Restart retains the saved canvas and independent user data",
+        "passed": true
+      }
+    ],
+    "files": {
+      "deepwhite-0.11.0-studio.1-windows-x64-portable.zip": {
+        "sha256": "f59e552bdd083ae647039e38b8bc20340e8b6d635f627cfae7945136695711d3",
+        "size": 116921401
+      },
+      "deepwhite-0.11.0-studio.1-windows-x64-version.zip": {
+        "sha256": "f768268f5f04153c9ff848b8bac16fa22fd9c1727d63b85dfbfe860dfe9a872f",
+        "size": 116765215
+      },
+      "update-stable.json": {
+        "sha256": "379ac22209b7e3352ac2955eb34a913741e4e82fb46519d7fde5a9c7faf0c2e6",
+        "size": 4913
+      }
+    },
+    "python": "3.13.16",
+    "wheel_count": 27
+  },
   "codex": {
     "status": "passed",
     "codex_version": "codex-cli 0.163.0-alpha.10.2",
@@ -112,5 +177,38 @@
     "inference_used": false,
     "provider_generation_used": false,
     "tool_count": 13
+  },
+  "application_build_commit": "4a5f5c4a6dbe2cfb432578ab5bdd886e9705d273",
+  "local_preview": {
+    "canvas_url": "http://127.0.0.1:3849/",
+    "gallery_url": "http://127.0.0.1:3857/",
+    "checks": [
+      {
+        "name": "Demo administrator signs in and sees the review queue",
+        "passed": true
+      },
+      {
+        "name": "Submitted prompt remains private before approval",
+        "passed": true
+      },
+      {
+        "name": "Administrator approves a work and it becomes publicly accessible",
+        "passed": true
+      },
+      {
+        "name": "Public prompt opens preview, saves a canvas and survives reload",
+        "passed": true
+      },
+      {
+        "name": "Ordinary demo author has no review permission",
+        "passed": true
+      },
+      {
+        "name": "No script errors, external browser requests or generation writes",
+        "passed": true
+      }
+    ],
+    "test_data": "explicitly labelled local demo",
+    "browser_auto_open": "tool command rejected by automatic policy; URLs accessible"
   }
 }

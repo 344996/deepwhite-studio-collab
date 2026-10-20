@@ -5,7 +5,7 @@
 当前版本为 **0.11.0-studio.1**。本版落实 1020 反馈：MCP 连接诊断和固定入口、登录自动 API 配置、节点内编辑与左侧设置、生成记录和意见反馈，并移除内置助手运行入口。原源码、许可证及历史继续保留。独立画廊 [344996/deepwhite-gallery](https://github.com/344996/deepwhite-gallery) 为 **0.4.0 / schema 4**，新增管理员反馈收件箱；尚未部署公网。
 
 - **[统一文档入口](docs/README.md)**：本次变更、AI 开发、架构接口和维护说明。
-- [Windows 下载](https://github.com/344996/deepwhite-studio-collab/releases) · [发行与更新维护](docs/Windows发行与更新.md)
+- [已公开版本下载](https://github.com/344996/deepwhite-studio-collab/releases) · [本版 Windows 本地构建与验证](docs/发行产物-20261020.md) · [发行与更新维护](docs/Windows发行与更新.md)
 - [本次交付和测试](docs/交付与验证-20261020.md)
 
 - [画廊提示词创作与本轮测试](docs/画廊提示词创作与测试.md)
