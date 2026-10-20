@@ -16,13 +16,13 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=0.10.2-studio.10.1785996049"></script>
-    <script src="/static/vendor/js/lucide.js?v=0.10.2-studio.10.1785996049"></script>
-    <script src="/static/js/theme.js?v=0.10.2-studio.10.1785996040"></script>
-    <script src="/static/js/i18n.js?v=0.10.2-studio.10.1785996039"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=0.10.2-studio.10.1785996037">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=0.11.0-studio.1"></script>
+    <script src="/static/vendor/js/lucide.js?v=0.11.0-studio.1"></script>
+    <script src="/static/js/theme.js?v=0.11.0-studio.1"></script>
+    <script src="/static/js/i18n.js?v=0.11.0-studio.1"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=0.11.0-studio.1">
     <style>
-        @import url('/static/vendor/css/fonts.css?v=0.10.2-studio.10.1785996046');
+        @import url('/static/vendor/css/fonts.css?v=0.11.0-studio.1');
         :root {
             --ease:cubic-bezier(.4,0,.2,1);
             --chat-bg:#eef2f6;
@@ -156,7 +156,7 @@
         .assistant .thumb { border-color:var(--chat-line); }
         .composer-wrap { min-height:0; padding:10px 30px 18px; background:linear-gradient(to top,var(--chat-bg) 82%,rgba(238,242,246,0)); border-top:0; z-index:6; }
         .composer { width:min(var(--chat-width),calc(100% - 60px)); margin:0 auto; min-height:0; max-height:min(34vh,310px); background:rgba(248,250,252,.94); border:1px solid var(--chat-line); border-radius:18px; box-shadow:0 14px 36px var(--chat-shadow); padding:8px; display:flex; flex-direction:column; gap:8px; backdrop-filter:blur(14px); overflow:hidden; }
-        .mode-switch { display:none; }
+        .mode-switch { display:flex; align-items:center; gap:2px; padding:2px; border:1px solid var(--chat-line-2); border-radius:12px; background:var(--chat-soft); flex-shrink:0; }
         .mode-switch button { height:30px; min-width:72px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:5px; color:var(--chat-muted); background:transparent; font-size:11px; font-weight:800; transition:background .16s var(--ease), color .16s var(--ease), box-shadow .16s var(--ease); }
         .mode-switch button.active { background:var(--chat-panel); color:var(--chat-text); box-shadow:0 1px 3px rgba(15,23,42,.08); }
         .model-picker { position:relative; z-index:24; width:200px; min-width:190px; max-width:220px; flex:0 0 200px; }
@@ -459,7 +459,7 @@
             background:transparent !important;
         }
     </style>
-<link rel="stylesheet" href="/static/studio-brand.css?v=0.10.2-studio.10.1789612346">
+<link rel="stylesheet" href="/static/studio-brand.css?v=0.11.0-studio.1">
 </head>
 <body>
     <div class="chat-shell">
@@ -513,6 +513,10 @@
                                     <button type="button" class="upload-btn" onclick="document.getElementById('attachmentInput')?.click()" title="上传附件" aria-label="上传附件">
                                         <i data-lucide="paperclip"></i>
                                     </button>
+                                    <div class="mode-switch" role="group" aria-label="对话方式">
+                                        <button id="chatModeBtn" type="button" class="active" aria-pressed="true" onclick="setMode('chat')">对话</button>
+                                        <button id="imageModeBtn" type="button" aria-pressed="false" onclick="setMode('image')">图片</button>
+                                    </div>
                                     <div id="modelPicker" class="model-picker">
                                         <button id="modelPickerBtn" class="model-picker-button" onclick="event.stopPropagation();toggleModelPicker()" title="选择平台和模型">
                                             <i data-lucide="boxes"></i>
@@ -526,7 +530,6 @@
                                         <div id="modelPickerPopover" class="model-picker-popover" onclick="event.stopPropagation()">
                                             <div class="model-picker-head">
                                                 <div id="modelPickerTitle" class="model-picker-title">模型选择</div>
-                                                <div id="modelPickerScope" class="model-picker-scope"></div>
                                             </div>
                                             <div class="model-picker-body">
                                                 <div id="modelProviderList" class="model-picker-list"></div>
@@ -660,7 +663,9 @@
         const savedChatSettings = readChatSettings();
         let conversations = [];
         let currentConversation = null;
-        let mode = 'agent';
+        // Legacy automatic-tool modes are opened as ordinary chat; saved media stays readable.
+        function normalizeChatMode(value){ return value === 'image' ? 'image' : 'chat'; }
+        let mode = normalizeChatMode(savedChatSettings.mode);
         let provider = savedChatSettings.provider || 'comfly';
         let msModel = savedChatSettings.msModel || '';
         let activeChatModel = savedChatSettings.activeChatModel || '';
@@ -673,7 +678,6 @@
         let chatResolution = savedChatSettings.chatSizeModeVersion === CHAT_SIZE_MODE_VERSION && ['auto','1k','2k','4k','custom'].includes(savedChatSettings.chatResolution) ? savedChatSettings.chatResolution : 'auto';
         let chatPresetResolution = ['1k','2k','4k'].includes(savedChatSettings.chatPresetResolution) ? savedChatSettings.chatPresetResolution : (chatResolution === 'custom' ? '1k' : chatResolution);
         let chatCustomSize = normalizeChatCustomSize(savedChatSettings.chatCustomSize || '') || '1024x1024';
-        let modelPickerScope = savedChatSettings.modelPickerScope === 'image' ? 'image' : 'chat';
         let modelPickerHome = null;
         let resolutionPickerHome = null;
         let refs = [];
@@ -727,7 +731,6 @@
                     chatResolution,
                     chatPresetResolution,
                     chatCustomSize,
-                    modelPickerScope,
                     chatSizeModeVersion: CHAT_SIZE_MODE_VERSION
                 }));
             } catch(e) {}
@@ -789,7 +792,7 @@
             return list.find(p => p.id === id) || list[0];
         }
         function activePickerKind(){
-            return mode === 'image' ? 'image' : (mode === 'agent' ? modelPickerScope : 'chat');
+            return mode === 'image' ? 'image' : 'chat';
         }
         function currentProviderId(kind=activePickerKind()){
             return kind === 'image' ? activeImageProvider : provider;
@@ -840,9 +843,7 @@
             activeImageProvider = imageProviderList.some(p => p.id === activeImageProvider) ? activeImageProvider : (imageProviderList[0]?.id || 'comfly');
             const imageModels = uniqueModels(providerById(activeImageProvider, 'image')?.image_models || []);
             activeImageModel = imageModels.includes(activeImageModel) ? activeImageModel : (imageModels[0] || config.image_model);
-            if(mode !== 'agent' && mode !== 'chat' && mode !== 'image') mode = 'chat';
-            if(mode === 'chat') modelPickerScope = 'chat';
-            if(mode === 'image') modelPickerScope = 'image';
+            mode = normalizeChatMode(mode);
         }
 
         async function loadConfig(){
@@ -906,8 +907,6 @@
                     modelPickerHome = picker;
                     document.body.appendChild(pop);
                 }
-                if(mode === 'image') modelPickerScope = 'image';
-                if(mode === 'chat') modelPickerScope = 'chat';
                 renderModelPicker();
                 positionModelPicker();
                 lucide.createIcons();
@@ -1003,36 +1002,20 @@
             });
         }
 
-        function setModelPickerScope(kind){
-            modelPickerScope = kind === 'image' ? 'image' : 'chat';
-            renderProviderControls();
-            updateModelLabel();
-            saveChatSettings();
-        }
-
         function renderModelPicker(){
             const kind = activePickerKind();
             const picker = document.getElementById('modelPicker');
-            const scope = document.getElementById('modelPickerScope');
             const providerList = document.getElementById('modelProviderList');
             const modelList = document.getElementById('modelList');
             const providerLabel = document.getElementById('modelPickerProvider');
             const modelLabel = document.getElementById('modelPickerModel');
             const title = document.getElementById('modelPickerTitle');
-            if(!picker || !scope || !providerList || !modelList) return;
+            if(!picker || !providerList || !modelList) return;
             const currentPid = currentProviderId(kind);
             const currentMdl = currentModel(kind);
             providerLabel.textContent = providerNameById(currentPid, kind);
-            if(mode === 'agent') {
-                modelLabel.textContent = `${shortModelName(activeChatModel)} + ${shortModelName(activeImageModel)}`;
-            } else {
-                modelLabel.textContent = shortModelName(currentMdl);
-            }
-            title.textContent = mode === 'agent' ? 'Agent 模型' : (kind === 'image' ? '生图模型' : '对话模型');
-            scope.innerHTML = mode === 'agent'
-                ? `<button class="${kind === 'chat' ? 'active' : ''}" onclick="setModelPickerScope('chat')">对话</button><button class="${kind === 'image' ? 'active' : ''}" onclick="setModelPickerScope('image')">图像</button>`
-                : '';
-            scope.style.display = mode === 'agent' ? 'flex' : 'none';
+            modelLabel.textContent = shortModelName(currentMdl);
+            title.textContent = kind === 'image' ? '生图模型' : '对话模型';
             const providers = kind === 'image' ? imageProviders() : chatProviders();
             providerList.innerHTML = providers.length
                 ? providers.map(p => `<button class="model-picker-option ${p.id === currentPid ? 'active' : ''}" onclick="setProvider('${escapeHtml(p.id)}','${kind}')"><span>${escapeHtml(p.name || p.id)}</span>${p.id === currentPid ? '<i data-lucide="check"></i>' : ''}</button>`).join('')
@@ -1133,14 +1116,14 @@
         });
 
         function setMode(next, persist = true){
-            mode = next;
-            if(next === 'chat') modelPickerScope = 'chat';
-            if(next === 'image') modelPickerScope = 'image';
+            mode = normalizeChatMode(next);
+            next = mode;
             toggleModelPicker(false);
             toggleResolutionPicker(false);
             document.getElementById('chatModeBtn')?.classList.toggle('active', next === 'chat');
-            document.getElementById('agentModeBtn')?.classList.toggle('active', next === 'agent');
             document.getElementById('imageModeBtn')?.classList.toggle('active', next === 'image');
+            document.getElementById('chatModeBtn')?.setAttribute('aria-pressed', String(next === 'chat'));
+            document.getElementById('imageModeBtn')?.setAttribute('aria-pressed', String(next === 'image'));
             document.getElementById('imageControls')?.classList.toggle('hidden', next === 'chat');
             renderProviderControls();
             updateModelLabel();
@@ -1151,12 +1134,6 @@
             let label = '';
             if (mode === 'image') {
                 label = activeImageModel || config.image_model || 'Image';
-            } else if (mode === 'agent') {
-                const chatLabel = provider === 'modelscope'
-                    ? (msModel || (config.ms_chat_models?.[0]) || 'ModelScope').split('/').pop().split(':')[0]
-                    : (activeChatModel || config.chat_model || 'Chat');
-                const imageLabel = (activeImageModel || config.image_model || 'Image').split('/').pop().split(':')[0];
-                label = `Agent · ${chatLabel} + ${imageLabel}`;
             } else if (provider === 'modelscope') {
                 label = msModel || (config.ms_chat_models?.[0]) || 'ModelScope';
                 // Shorten the display label
@@ -1526,64 +1503,17 @@
                 document.getElementById('messages').innerHTML = '';
             }
             addMessageBubble({role:'user', content:message, attachments:pendingRefs});
+            mode = normalizeChatMode(mode);
             const useStreaming = mode === 'chat';
-            const pendingText = mode === 'image' ? tr('chat.generatingImage') : (useStreaming ? '' : (mode === 'agent' ? tr('chat.agentWorking') : ''));
+            const pendingText = mode === 'image' ? tr('chat.generatingImage') : '';
             const assistantBubble = addMessageBubble({role:'assistant', content: pendingText});
-            if(useStreaming || mode === 'agent') assistantBubble.bubble.classList.add('streaming');
+            if(useStreaming) assistantBubble.bubble.classList.add('streaming');
             scrollBottom();
             try {
                 const requestResolution = chatResolutionForRequest(message, requestedSize);
                 const requestAspectRatio = currentChatAspectRatio();
                 if(useStreaming) {
                     await streamChatMessage(message, pendingRefs, assistantBubble);
-                } else if(mode === 'chat') {
-                    const data = await fetch('/api/chat', {
-                        method:'POST',
-                        headers:headers(),
-                        body:JSON.stringify({
-                            conversation_id: currentConversation.id || '',
-                            message,
-                            system_prompt: currentSystemPrompt(),
-                            mode:'chat',
-                            size: requestedSize,
-                            aspect_ratio: requestAspectRatio,
-                            resolution: requestResolution,
-                            model: provider === 'modelscope' ? (msModel || activeChatModel) : (activeChatModel || config.chat_model),
-                            ms_model: provider === 'modelscope' ? (msModel || activeChatModel) : '',
-                            reference_images: pendingRefs,
-                            provider,
-                        })
-                    }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || tr('chat.requestFailed')); return r.json(); });
-                    currentConversation = data.conversation;
-                    rememberConversation(currentConversation.id);
-                    setChatTitle(currentConversation.title);
-                    renderMessages(currentConversation.messages || []);
-                    await loadConversations();
-                } else if(mode === 'agent') {
-                    const data = await fetch('/api/chat/agent', {
-                        method:'POST',
-                        headers:headers(),
-                        body:JSON.stringify({
-                            conversation_id: currentConversation.id || '',
-                            message,
-                            system_prompt: currentSystemPrompt(),
-                            mode:'agent',
-                            size: requestedSize,
-                            aspect_ratio: requestAspectRatio,
-                            resolution: requestResolution,
-                            model: provider === 'modelscope' ? (msModel || activeChatModel) : (activeChatModel || config.chat_model),
-                            ms_model: provider === 'modelscope' ? (msModel || activeChatModel) : '',
-                            image_model: activeImageModel || config.image_model,
-                            reference_images: pendingRefs,
-                            provider,
-                            image_provider: activeImageProvider,
-                        })
-                    }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || tr('chat.requestFailed')); return r.json(); });
-                    currentConversation = data.conversation;
-                    rememberConversation(currentConversation.id);
-                    setChatTitle(currentConversation.title);
-                    renderMessages(currentConversation.messages || []);
-                    await loadConversations();
                 } else {
                     const data = await fetch('/api/chat', {
                         method:'POST',
@@ -1687,6 +1617,6 @@
             updateComposerOverflow();
         };
     </script>
-<script src="/static/studio-brand.js?v=0.10.2-studio.10.1790328741"></script>
+<script src="/static/studio-brand.js?v=0.11.0-studio.1"></script>
 </body>
 </html>

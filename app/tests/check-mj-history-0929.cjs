@@ -55,6 +55,7 @@ async function run() {
     if (url.pathname === '/') return route.fulfill({ contentType: 'text/html', body: host });
     if (url.pathname === '/static/studio-stage-one.js') return route.fulfill({ contentType: 'application/javascript', body: source });
     if (url.pathname === '/static/studio-stage-one.css') return route.fulfill({ contentType: 'text/css', body: css });
+    if (url.pathname === '/static/studio-generation-history.css') return route.fulfill({ contentType: 'text/css', body: fs.readFileSync(path.join(root, 'static/studio-generation-history.css'), 'utf8') });
     if (url.pathname === '/api/studio/capabilities') return route.fulfill({ json: { providers: {} } });
     if (url.pathname === '/api/studio/generations' && request.method() === 'GET') {
       if (historyFailure) { historyFailure = false; return route.fulfill({ status: 503, json: { detail: '记录刷新暂时失败' } }); }
@@ -81,6 +82,10 @@ async function run() {
     await page.locator('.studio-history-button').click();
     await card('mj_archive').waitFor();
     assert.equal(await page.locator('.studio-history article').count(), records.size);
+    assert.ok(await page.locator('.studio-history-body').evaluate(body => {
+      const cards = [...body.querySelectorAll('article')].map(card => card.getBoundingClientRect());
+      return cards.every((card, index) => index < 3 || card.top >= cards[index - 3].bottom);
+    }), 'multi-row history cards keep their full height without covering previous-row controls');
     assert.match(await card('mj_archive').locator('small').first().textContent(), /远端已完成 · 保存失败/);
     assert.match(await card('mj_archive').locator('.studio-history-error').textContent(), /<img src=x/);
     assert.equal(await card('mj_archive').locator('img, .studio-history-output, a[download]').count(), 0, 'unarchived result never appears downloadable');

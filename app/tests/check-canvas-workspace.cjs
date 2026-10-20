@@ -20,11 +20,11 @@ async function fixture(kind) {
   ];
   await api('/api/canvases/' + data.id, 'PUT', {...data,base_updated_at:data.updated_at,nodes:list,connections:[],viewport:{x:0,y:0,scale:1}});
   await page.goto(base + '/static/' + (kind === 'smart' ? 'smart-' : '') + 'canvas.html?id=' + data.id);
-  await page.waitForFunction(id => canvas?.id === id && window.StudioCanvasInspector?.ready && nodes.length === 2, data.id);
+  await page.waitForFunction(id => canvas?.id === id && window.StudioNodeComposer?.ready && nodes.length === 2, data.id);
   await page.locator('[data-id="text"]').first().waitFor(); await pause(150); return data.id;
 }
-async function selectText() { const smart = await page.locator('html').evaluate(item => item.classList.contains('studio-v2-smart')); const box = await page.locator(smart ? '.image-node[data-id="text"]' : '[data-id="text"] .node-head').boundingBox(); await page.mouse.click(box.x + 80, box.y + (smart ? 7 : box.height / 2)); await page.locator('#workspaceInspector').waitFor({state:'visible'}); }
-async function blur() { await page.locator('#workspaceInspector h2').click(); await pause(70); }
+async function selectText() { const smart = await page.locator('html').evaluate(item => item.classList.contains('studio-v2-smart')); const box = await page.locator(smart ? '.image-node[data-id="text"]' : '[data-id="text"] .node-head').boundingBox(); await page.mouse.click(box.x + 80, box.y + (smart ? 7 : box.height / 2)); await page.locator('[data-id="text"] textarea').first().waitFor({state:'visible'}); }
+async function blur() { await page.evaluate(()=>document.activeElement?.blur()); await pause(70); }
 async function undo(redo = false) { await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press(redo ? 'Control+Shift+z' : 'Control+z'); await pause(100); }
 (async () => {
   const port = await new Promise(resolve => { const socket = net.createServer().listen(0,'127.0.0.1',() => { const value = socket.address().port; socket.close(() => resolve(value)); }); }); base = 'http://127.0.0.1:' + port;
@@ -45,12 +45,12 @@ async function undo(redo = false) { await page.evaluate(() => document.activeEle
     await check(kind + ': common rail and unique native workflow entry', async () => {
       assert.deepEqual(await page.locator('#workspaceCanvasRail>button>span').allTextContents(), ['添加','选择','移动','素材','工作流']);
       for(const item of await page.locator('#workspaceCanvasRail>button').all()){const box=await item.boundingBox();assert(box.width>=44&&box.height>=44,'labeled tools retain a usable pointer target');}
-      assert.equal(await page.locator('[data-workflow-workbench]').count(), 1); assert(await page.locator('#workspaceInspector').isHidden());
+      assert.equal(await page.locator('[data-workflow-workbench]').count(), 1); assert.equal(await page.locator('#workspaceInspector').count(),0);
       await selectText();await page.evaluate(kind=>{if(kind==='smart'){selectedId='removed-node';selectedIds=[];}else{selected.clear();selected.add('removed-node');}render();},kind);
-      await page.waitForFunction(()=>document.getElementById('workspaceInspector').hidden&&document.getElementById('workspaceInspectorToggle').hidden);
+      assert.equal(await page.locator('#workspaceInspectorToggle').count(),0);
     });
-    await check(kind + ': inspector prompt edit is one undo session and persists exactly', async () => {
-      await selectText(); const input = page.locator('#workspaceInspector [data-property=text]');
+    await check(kind + ': node prompt edit is one undo session and persists exactly', async () => {
+      await selectText(); const input = page.locator('[data-id="text"] textarea');
       await input.fill('第一段'); await page.keyboard.insertText('，第二段'); await blur();
       assert.equal(await page.evaluate(() => nodes.find(node => node.id === 'text').text), '第一段，第二段');
       await undo(); assert.equal(await page.evaluate(() => nodes.find(node => node.id === 'text').text), '原始提示词');
@@ -58,29 +58,19 @@ async function undo(redo = false) { await page.evaluate(() => document.activeEle
       await page.waitForFunction(() => document.querySelector('.workspace-save-state').textContent === '已保存');
       assert.equal((await api('/api/canvases/' + id)).canvas.nodes.find(node => node.id === 'text').text, '第一段，第二段');
     });
-    await check(kind + ': no-op focus preserves redo; invalid coordinates do not mutate data', async () => {
-      await undo(); await selectText(); await page.locator('#workspaceInspector [data-property=text]').focus(); await blur(); await undo(true); await selectText();
-      assert.equal(await page.evaluate(() => nodes.find(node => node.id === 'text').text), '第一段，第二段');
-      const x = await page.evaluate(() => nodes.find(node => node.id === 'text').x);
-      await page.locator('#workspaceInspector [data-property=x]').fill('1000001'); assert.equal(await page.evaluate(() => nodes.find(node => node.id === 'text').x), x);
-      await page.locator('#workspaceInspector [data-property=x]').fill(String(x + 24)); await blur(); await undo(); assert.equal(await page.evaluate(() => nodes.find(node => node.id === 'text').x), x);
+    await check(kind + ': no-op native editor focus preserves redo and coordinates', async () => {
+      await undo(); await selectText();const before=await page.evaluate(()=>({x:nodes[0].x,y:nodes[0].y}));await page.locator('[data-id="text"] textarea').focus();await blur();await undo(true);await selectText();
+      assert.equal(await page.evaluate(()=>nodes.find(node=>node.id==='text').text),'第一段，第二段');assert.deepEqual(await page.evaluate(()=>({x:nodes[0].x,y:nodes[0].y})),before);
     });
-    await check(kind + ': focused inspector text and wheel never manipulate canvas', async () => {
+    await check(kind + ': focused node text and wheel never manipulate canvas', async () => {
       await selectText();
-      const input = page.locator('#workspaceInspector [data-property=text]'); await input.fill('长文字\n'.repeat(100)); const before = await page.evaluate(() => ({...viewport}));
+      const input = page.locator('[data-id="text"] textarea'); await input.fill('长文字\n'.repeat(100)); const before = await page.evaluate(() => ({...viewport}));
       await input.hover(); await page.mouse.wheel(0,120); await page.keyboard.press('Space'); await page.keyboard.press('Delete');
       assert.deepEqual(await page.evaluate(() => ({...viewport})), before); assert.equal(await page.evaluate(() => nodes.length), 2); assert(await input.evaluate(item => item.scrollTop) > 0); await blur();
     });
-    await check(kind + ': mobile inspector is a closable keyboard drawer', async () => {
-      await page.setViewportSize({width:390,height:900}); await pause(100); assert(await page.locator('#workspaceInspector').isHidden());
-      await page.locator('#workspaceInspectorToggle').click(); assert.equal(await page.locator('#workspaceInspector').getAttribute('aria-modal'),'true');
-      const rect = await page.locator('#workspaceInspector').boundingBox(); assert(rect.x >= 0 && rect.x + rect.width <= 390);
-      assert.equal(await page.evaluate(()=>document.elementFromPoint(15,15)?.id),'workspaceInspectorScrim','modal backdrop owns the full page');
-      await page.keyboard.press('Shift+Tab'); assert(await page.evaluate(() => document.getElementById('workspaceInspector').contains(document.activeElement)));
-      await page.screenshot({path:path.join(output,kind + '-mobile-drawer.png')});
-      await page.keyboard.press('Escape'); assert(await page.locator('#workspaceInspector').isHidden());
-      await page.screenshot({path:path.join(output,kind + '-mobile.png')}); await page.setViewportSize({width:1500,height:1000});
-      await page.locator('#workspaceInspectorToggle').click(); await page.screenshot({path:path.join(output,kind + '-inspector.png')});
+    await check(kind + ': narrow viewport has native editing and no fixed property drawer', async () => {
+      await page.setViewportSize({width:390,height:900});await pause(100);assert.equal(await page.locator('#workspaceInspector,#workspaceInspectorToggle,#workspaceInspectorScrim').count(),0);
+      assert(await page.locator('#workspaceCanvasRail').isVisible());await page.screenshot({path:path.join(output,kind+'-mobile.png')});await page.setViewportSize({width:1500,height:1000});
     });
     await check(kind + ': save vocabulary reports pending, failure and version conflict', async () => {
       for (const [event, detail, label] of [['studio-save-pending',{},'有改动'],['studio-save-started',{},'保存中'],['studio-save-state',{ok:false,code:'failed'},'保存失败'],['studio-save-state',{ok:false,code:'conflict'},'版本冲突'],['studio-save-state',{ok:true,code:'saved'},'已保存']]) {
@@ -89,23 +79,22 @@ async function undo(redo = false) { await page.evaluate(() => document.activeEle
       }
     });
     await fixture(kind);
-    await check(kind + ': model inspector uses native parameters with undo', async () => {
-      await page.locator('[data-id="generate"] .node-head').click({position:{x:80,y:20}});
-      const model=page.locator('#workspaceInspector select[aria-label="生成模型"]'); await model.waitFor();
-      const prior=await model.inputValue(), values=await model.locator('option').evaluateAll(options=>options.filter(option=>!option.disabled).map(option=>option.value));
-      const next=values.find(value=>value!==prior);assert(next,'fixture exposes more than one actual provider model');
-      await model.selectOption(next);await pause(100);
-      assert.equal(await page.evaluate(kind=>{const node=nodes.find(n=>n.id==='generate');return kind==='smart'?node.runSettings.model:node.model;},kind),next);
-      await undo();assert.equal(await page.evaluate(kind=>{const node=nodes.find(n=>n.id==='generate');return kind==='smart'?node.runSettings.model:node.model;},kind),prior);
+    await check(kind + ': node model picker uses native parameters with undo', async () => {
+      await page.evaluate(kind=>{if(kind==='smart'){selectedId='generate';selectedIds=[];}else{selected.clear();selected.add('generate');}render();},kind);
+      const prior=await page.evaluate(kind=>{const node=nodes.find(n=>n.id==='generate');return kind==='smart'?node.runSettings.model:node.model;},kind);
+      await page.locator(kind==='smart'?'#dynamicParams .studio-smart-model .smart-pill':'[data-id="generate"] .studio-model-trigger').first().click();
+      const models=page.locator('#studioModelPicker .studio-picker-option');const next=await models.evaluateAll((items,prior)=>items.find(item=>item.dataset.model!==prior)?.dataset.model,prior);assert(next,'fixture exposes another model');
+      await page.locator('#studioModelPicker .studio-picker-option').filter({has:page.locator('b')}).evaluateAll((items,next)=>items.find(item=>item.dataset.model===next).click(),next);await pause(100);
+      assert.equal(await page.evaluate(kind=>{const node=nodes.find(n=>n.id==='generate');return kind==='smart'?node.runSettings.model:node.model;},kind),next);await undo();assert.equal(await page.evaluate(kind=>{const node=nodes.find(n=>n.id==='generate');return kind==='smart'?node.runSettings.model:node.model;},kind),prior);
     });
     await fixture(kind);
     await check(kind + ': V/H tools and temporary Space pan preserve node coordinates', async () => {
       const before=await page.evaluate(()=>({view:{...viewport},x:nodes[0].x,y:nodes[0].y}));
-      await page.keyboard.press('h');await page.mouse.move(1060,650);await page.mouse.down();await page.mouse.move(1100,680,{steps:5});await page.mouse.up();
+      await page.keyboard.press('h');await page.mouse.move(1300,650);await page.mouse.down();await page.mouse.move(1340,680,{steps:5});await page.mouse.up();
       assert.equal(await page.evaluate(()=>nodes[0].x),before.x);assert.equal(await page.evaluate(()=>nodes[0].y),before.y);
       assert.equal(await page.evaluate(()=>viewport.x),before.view.x+40);await page.keyboard.press('v');
       const selectedTool=page.locator(kind==='smart'?'#workspaceSelect':'#studioV2Select');assert.equal(await selectedTool.getAttribute('aria-pressed'),'true');
-      await page.keyboard.down('Space');await page.mouse.move(1050,630);await page.mouse.down();await page.mouse.move(1070,645,{steps:4});await page.mouse.up();await page.keyboard.up('Space');
+      await page.keyboard.down('Space');await page.mouse.move(1300,630);await page.mouse.down();await page.mouse.move(1320,645,{steps:4});await page.mouse.up();await page.keyboard.up('Space');
       assert.equal(await page.evaluate(()=>viewport.x),before.view.x+60);assert.equal(await page.evaluate(()=>nodes[0].x),before.x);assert.equal(await selectedTool.getAttribute('aria-pressed'),'true');
     });
     await fixture(kind);
@@ -143,11 +132,10 @@ async function undo(redo = false) { await page.evaluate(() => document.activeEle
       await page.keyboard.press('Escape');
     });
     await fixture(kind);
-    await check(kind + ': inspector copy after typing preserves the original receipt and has its own undo',async()=>{
+    await check(kind + ': native copy after typing preserves the original receipt and has its own undo',async()=>{
       await page.evaluate(()=>{nodes[0].studioSubmission={id:'offline-completed-receipt',status:'completed'};});
-      await selectText();await page.locator('#workspaceInspector [data-property=text]').fill('复制确认');
-      const button=await page.locator('#workspaceInspector').getByRole('button',{name:'复制',exact:true}).boundingBox();
-      await page.mouse.move(button.x+button.width/2,button.y+button.height/2);await page.mouse.down();await pause(100);await page.mouse.up();
+      await selectText();await page.locator('[data-id="text"] textarea').fill('复制确认');
+      await blur();await page.keyboard.press('Control+c');await page.keyboard.press('Control+v');
       await page.waitForFunction(()=>nodes.length===3);
       const data=await page.evaluate(()=>({original:nodes.find(node=>node.id==='text'),copy:nodes.find(node=>!['text','generate'].includes(node.id))}));
       assert.equal(data.original.studioSubmission.id,'offline-completed-receipt');assert.equal(data.copy.studioSubmission,undefined);assert.equal(data.copy.text,'复制确认');

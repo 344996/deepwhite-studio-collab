@@ -1,11 +1,11 @@
 /* Use saved, configured providers for the three MVP node model selectors. */
 (() => {
   const smart = !!document.querySelector('.smart-back');
-  let stored = {};
+  let stored = {}, previewCatalog = null;
   const dreaminaId='dreamina-cli';
   let dreaminaStatus=null;
   const getDreamina = async () => { try { const r=await fetch('/api/studio/dreamina/status'); if(r.ok) dreaminaStatus=await r.json(); } catch {} };
-  const getCatalog = async () => { try { const r=await fetch('/api/studio/model-catalog'); if(r.ok) stored=(await r.json()).providers; } catch {} };
+  const getCatalog = async () => { try { const r=await fetch('/api/studio/model-catalog'); if(r.ok){const data=await r.json();stored=data.providers;previewCatalog=data.preview||null;} } catch {} };
   const originalLoad = loadConfig;
   function syncDreaminaProvider(){
     if(!dreaminaStatus)return;
@@ -221,6 +221,14 @@
     }
     if(!classicPicker)hint.textContent=kind==='chat'?'选择要使用的语言模型':'根据参考素材自动匹配生成方式';
     search.oninput=renderItems;vendor.onchange=renderItems;channel.onchange=renderItems;panel.append(title,hint,channelRow,unavailable,filters,classicPicker?list:columns,manage);renderItems();
+    const examples=(previewCatalog?.models||[]).filter(model=>model.kind===kind);
+    if(examples.length&&previewCatalog.connected===false){
+      const preview=document.createElement('details');preview.className='studio-picker-preview';preview.open=!items.some(item=>item.provider_id!=='deepwhite-local-comfy');
+      const summary=document.createElement('summary');summary.textContent='官方模型预览 · 登录后自动配置';preview.append(summary);
+      const note=document.createElement('p');note.textContent='以下是模型示例，尚未连接，不能生成。登录后会显示你账户实际可用的型号。';preview.append(note);
+      for(const model of examples){const row=document.createElement('div');row.className='studio-picker-preview-row';const name=document.createElement('span');name.textContent=model.name||model.id;const state=document.createElement('small');state.textContent='未连接';row.append(name,state);preview.append(row);}
+      const connect=document.createElement('button');connect.type='button';connect.textContent='登录 / 连接官方 API';connect.onclick=()=>{closePicker();(document.getElementById('studioAccountButton')||document.getElementById('studioSettingsButton'))?.click();};preview.append(connect);panel.append(preview);
+    }
     panel.showPopover();button.setAttribute('aria-expanded','true');
     const r=button.getBoundingClientRect(),w=panel.offsetWidth,h=panel.offsetHeight;
     panel.style.left=`${Math.max(8,Math.min(r.left,innerWidth-w-8))}px`;panel.style.top=`${Math.max(8,r.top>h+10?r.top-h-6:Math.min(r.bottom+6,innerHeight-h-8))}px`;search.focus();
@@ -256,6 +264,9 @@
           const owner=captureOwner(button,select);
           openPicker(button,items,select.value,(id,pid,owner)=>{
             if(!ownsPicker(owner))return false;
+            const previous=liveSource(owner);
+            if(!previous)return false;
+            if(previous.value!==id||pid&&pid!==provider)pushUndo();
             if(pid&&pid!==provider){const root=liveSource(owner)?.closest('[data-id]'),field=root?.querySelector(kind==='chat'?'.llm-provider-select':kind==='video'?'.video-provider':'.provider-select');if(field){field.value=pid;field.dispatchEvent(new Event('change',{bubbles:true}));}}
             const target=liveSource(owner);if(!target)return false;
             target.value=id;target.dispatchEvent(new Event('change',{bubbles:true}));decorate();return true;

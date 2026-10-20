@@ -1,0 +1,47 @@
+/* Fixed left categories on desktop, compact scrollable categories on small screens. */
+html.studio-settings-sidebar{scroll-padding-top:32px}
+.studio-settings-sidebar .settings-top{position:fixed;inset:0 auto 0 0;width:220px;display:flex;flex-direction:column;border-right:1px solid var(--dw-line);border-bottom:0;background:var(--dw-surface);overflow:auto}
+.studio-settings-sidebar .settings-top>header{height:auto;min-height:124px;display:flex;flex-direction:column;align-items:flex-start;padding:28px 20px 20px;margin:0}
+.studio-settings-sidebar .settings-top header>div{align-items:center;gap:10px}
+.studio-settings-sidebar .settings-top header strong{font-size:15px;letter-spacing:0}
+.studio-settings-sidebar .settings-top header strong span{display:block;border:0;padding:0;margin:3px 0 0;font-size:11px}
+.studio-settings-sidebar .settings-top #closeSettings{margin-top:16px;width:100%;font-size:12px}
+.studio-settings-sidebar .settings-top nav{display:flex;flex-direction:column;flex-wrap:nowrap;gap:5px;padding:8px 12px 20px;margin:0;width:100%;border:0}
+.studio-settings-sidebar .settings-top nav button{text-align:left;min-height:43px;padding:12px 14px;border-radius:8px;font-size:13px;white-space:normal}
+.studio-settings-sidebar .settings-top nav button[aria-selected=true]{background:var(--dw-raised);border-color:var(--dw-line-strong);color:var(--dw-ink)}
+.studio-settings-sidebar .settings-top nav button[data-tab=feedback]{margin-top:20px;border-top:1px solid var(--dw-line)}
+.studio-settings-sidebar main{margin-left:220px;max-width:1120px;padding:36px 40px 64px}
+.studio-settings-sidebar main>.intro{margin-bottom:24px}
+.studio-settings-sidebar .settings-unsaved-note{font-size:11px;line-height:1.7;margin:12px 20px;padding:12px 0;border-top:1px solid var(--dw-line);color:var(--dw-gold)}
+.studio-settings-sidebar .settings-model-view-hidden{display:none!important}
+.studio-settings-sidebar .settings-model-connection{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 0;color:var(--dw-muted);font-size:12px}
+.studio-settings-sidebar #modelManager{margin-top:16px}
+.studio-settings-sidebar #modelManager #modelRows{max-height:55vh}
+.studio-settings-sidebar .settings-feature-card{padding:24px;border:1px solid var(--dw-line-strong);background:var(--dw-surface);border-radius:12px;margin:20px 0}
+.studio-settings-sidebar .settings-feature-card h2{margin:0 0 8px}
+.studio-settings-sidebar .settings-feature-card p{max-width:70ch}
+.studio-settings-sidebar .settings-inline-frame{width:100%;height:calc(100dvh - 170px);min-height:480px;border:0;background:transparent;border-radius:12px}
+.studio-settings-sidebar #generalPanel>label{max-width:360px}
+.studio-settings-sidebar :is(button,input,select,summary):focus-visible{outline:2px solid var(--dw-gold);outline-offset:3px}
+@media(max-width:800px){
+ .studio-settings-sidebar .settings-top{width:168px}
+ .studio-settings-sidebar .settings-top>header{padding:24px 16px 16px}
+ .studio-settings-sidebar main{margin-left:168px;padding:28px 22px 48px}
+ .studio-settings-sidebar .settings-top nav{padding:4px 8px 12px}
+ .studio-settings-sidebar .settings-top nav button{font-size:12px;padding:10px}
+ .studio-settings-sidebar .grid{grid-template-columns:1fr}
+ .studio-settings-sidebar .studio-connection-cards{grid-template-columns:1fr}
+}
+@media(max-width:540px){
+ .studio-settings-sidebar .settings-top{position:sticky;inset:auto;width:100%;border-right:0;border-bottom:1px solid var(--dw-line)}
+ .studio-settings-sidebar .settings-top>header{flex-direction:row;align-items:center;min-height:72px;padding:16px;gap:8px}
+ .studio-settings-sidebar .settings-top #closeSettings{margin:0;width:auto}
+ .studio-settings-sidebar .settings-top header strong span{display:none}
+ .studio-settings-sidebar .settings-top nav{flex-direction:row;overflow-x:auto;padding:0 12px 12px;gap:4px;scrollbar-width:thin}
+ .studio-settings-sidebar .settings-top nav button{flex:none;min-height:38px;white-space:nowrap}
+ .studio-settings-sidebar .settings-top nav button[data-tab=feedback]{margin:0;border-top:1px solid transparent}
+ .studio-settings-sidebar main{margin-left:0;padding:24px 16px 40px}
+ .studio-settings-sidebar .settings-unsaved-note{margin:0 16px 8px;padding:0;border:0}
+ .studio-settings-sidebar .settings-inline-frame{min-height:560px;height:calc(100dvh - 220px)}
+ .studio-settings-sidebar .key-meta{flex-direction:column}
+}
