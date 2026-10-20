@@ -1,6 +1,6 @@
 """Serialize UI saves with external-agent edits; never accept a stale snapshot."""
 from fastapi import HTTPException
-import studio_agent_plans as plans
+import studio_canvas_services as plans
 
 
 def install(core):

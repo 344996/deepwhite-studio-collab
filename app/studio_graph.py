@@ -8,7 +8,7 @@ import uuid
 
 from fastapi import HTTPException
 import main as core
-import studio_agent_plans as plans
+import studio_canvas_services as plans
 from studio_mcp import BridgeError, _validate, load_tools
 
 TOOLS = {tool["name"]: tool for tool in json.loads(

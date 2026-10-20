@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import ipaddress
 import json
 import math
@@ -9,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import socket
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
@@ -24,7 +26,15 @@ SENSITIVE_KEY_PARTS = ("token", "api_key", "apikey", "platform_key", "platformke
 
 
 class BridgeError(Exception):
-    pass
+    """Safe user-facing failure; never embeds raw OS paths or credential values."""
+
+    def __init__(self, message, code="bridge_error", hint=""):
+        super().__init__(message)
+        self.code = code
+        self.hint = hint
+
+    def diagnostic(self):
+        return {"code": self.code, "message": str(self), "hint": self.hint}
 
 
 def _is_loopback(host: str | None) -> bool:
@@ -41,15 +51,16 @@ def validate_url(url: str) -> str:
         parsed = urlsplit(url)
         port = parsed.port
     except ValueError as exc:
-        raise BridgeError("服务地址无效。") from exc
+        raise BridgeError("服务地址无效。", "invalid_url", "请从当前画布的设置重新复制客户端配置。") from exc
     if (parsed.scheme != "http" or not _is_loopback(parsed.hostname) or parsed.username or
             parsed.password or parsed.query or parsed.fragment or
             parsed.path not in ("", "/")):
-        raise BridgeError("只允许连接本机 HTTP 地址（loopback）。")
+        raise BridgeError("只允许连接本机 HTTP 地址（loopback）。", "nonlocal_url",
+                          "MCP 桥接程序和画布必须运行在同一台电脑；不要填写 API 网站地址。")
     if port is None:
         port = 80
     if not (1 <= port <= 65535):
-        raise BridgeError("服务端口无效。")
+        raise BridgeError("服务端口无效。", "invalid_port")
     return f"http://{parsed.netloc}"
 
 
@@ -73,11 +84,12 @@ def _request_json(url: str, method: str = "GET", payload=None, headers=None, *, 
         with _HTTP.open(req, timeout=timeout) as response:
             raw = response.read(4 * 1024 * 1024 + 1)
         if len(raw) > 4 * 1024 * 1024:
-            raise BridgeError("DeepWhite Studio 响应过大。")
+            raise BridgeError("DeepWhite Studio 响应过大。", "response_too_large")
         return json.loads(raw.decode("utf-8"))
     except HTTPError as exc:
         if 300 <= exc.code < 400:
-            raise BridgeError(f"DeepWhite Studio 请求失败（HTTP {exc.code}，已拒绝重定向）。") from None
+            raise BridgeError(f"DeepWhite Studio 请求失败（HTTP {exc.code}，已拒绝重定向）。",
+                              "redirect_rejected", "请确认端口连接的是当前本机画布。") from None
         detail = ""
         try:
             raw_error = exc.read(128 * 1024)
@@ -98,23 +110,57 @@ def _request_json(url: str, method: str = "GET", payload=None, headers=None, *, 
                 detail = detail.replace(secret, "[redacted]")
         detail = detail[:1200]
         suffix = f"：{detail}" if detail else "。"
-        raise BridgeError(f"DeepWhite Studio 请求失败（HTTP {exc.code}）{suffix}") from None
-    except (URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError):
-        raise BridgeError("无法读取 DeepWhite Studio 本机服务响应。") from None
+        if exc.code == 401:
+            raise BridgeError("本机 MCP 控制凭证不匹配或已失效。", "control_unauthorized",
+                "请从当前画布重新复制配置，并检查运行数据目录；不要把 API Key 填作 MCP 凭证。") from None
+        if exc.code == 403:
+            raise BridgeError("本机画布拒绝 MCP 访问。", "control_forbidden",
+                "请在该电脑画布的“外接智能体”设置启用 MCP，并确认仍使用同一个安装。") from None
+        raise BridgeError(f"DeepWhite Studio 请求失败（HTTP {exc.code}）{suffix}", "http_error",
+                          "请在当前画布检查控制状态，重新读取最新数据后再继续。") from None
+    except (URLError, TimeoutError, OSError) as exc:
+        reason = exc.reason if isinstance(exc, URLError) else exc
+        number = getattr(reason, "winerror", None) or getattr(reason, "errno", None)
+        if isinstance(reason, PermissionError) or number in (errno.EACCES, errno.EPERM, 10013):
+            raise BridgeError("当前进程无权访问本机画布端口。", "connection_permission_denied",
+                "在运行 Codex 的同一 Windows 环境执行连接检查。检查客户端权限或组织网络策略；无需关闭系统防护。") from None
+        if isinstance(reason, (TimeoutError, socket.timeout)) or number in (errno.ETIMEDOUT, 10060):
+            raise BridgeError("连接本机画布超时。", "connection_timeout",
+                "确认画布仍在运行且端口一致；等待更新或启动结束后重试。") from None
+        if isinstance(reason, ConnectionRefusedError) or number in (errno.ECONNREFUSED, 10061):
+            raise BridgeError("本机画布未监听此端口，连接被拒绝。", "connection_refused",
+                "先在运行 Codex 的电脑启动画布，再从该画布设置复制配置。127.0.0.1 不会连接到别人的电脑。") from None
+        if isinstance(reason, socket.gaierror):
+            raise BridgeError("无法解析本机服务地址。", "name_resolution_failed",
+                              "请使用画布生成的 127.0.0.1 配置，确认客户端运行环境。") from None
+        raise BridgeError("本机画布连接中断或不可达。", "connection_failed",
+                          "确认客户端和画布位于同一台电脑及同一操作系统环境，再运行连接检查。") from None
+    except (UnicodeError, json.JSONDecodeError):
+        raise BridgeError("此端口返回的不是有效的画布服务数据。", "invalid_response",
+                          "请检查端口是否被其他应用占用，并从当前画布重新复制配置。") from None
 
 
 def _same_installation(actual: str) -> bool:
+    if not isinstance(actual, str) or not actual.strip():
+        return False
     try:
         return os.path.normcase(os.path.realpath(actual)) == os.path.normcase(os.path.realpath(ROOT))
     except (OSError, TypeError):
         return False
 
 
-def verify_service(base_url: str) -> None:
+def verify_service(base_url: str):
     health = _request_json(base_url + "/api/studio/health")
     app_name = " ".join(str(health.get("app", "")).split()).casefold() if isinstance(health, dict) else ""
-    if app_name != "deepwhite studio" or not _same_installation(health.get("installation", "")):
-        raise BridgeError("本机服务不是此项目的 DeepWhite Studio 安装。")
+    if app_name != "deepwhite studio":
+        raise BridgeError("本机服务不是此项目的 DeepWhite Studio 安装。", "wrong_service",
+                          "端口可能被其他应用占用，请在当前画布设置中重新复制配置。")
+    if not _same_installation(health.get("installation", "")):
+        raise BridgeError("本机服务不是此项目的 DeepWhite Studio 安装。", "wrong_installation",
+                          "配置指向了其他副本或旧版本。请关闭旧连接，从当前画布重新复制配置。")
+    if health.get("ready") is False:
+        raise BridgeError("本机画布尚未完成启动。", "service_not_ready", "等待画布启动完成后重试。")
+    return health
 
 
 def _runtime_dir() -> Path:
@@ -127,14 +173,18 @@ def _read_control_config() -> tuple[str, str]:
     try:
         config = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        raise BridgeError("MCP 控制未启用：找不到 studio_control.json。") from None
+        raise BridgeError("MCP 控制配置不存在。", "control_config_missing",
+                          "先在这台电脑打开画布的外接智能体设置；若已开启，请检查配置中的运行数据目录。") from None
     except (OSError, UnicodeError, json.JSONDecodeError):
-        raise BridgeError("MCP 控制配置不可读或格式无效。") from None
+        raise BridgeError("MCP 控制配置不可读或格式无效。", "control_config_invalid",
+                          "检查当前用户能否读取画布数据目录，保留原文件并从设置重新配置。") from None
     if not isinstance(config, dict) or config.get("enabled") is not True:
-        raise BridgeError("MCP 控制未启用；请在 DeepWhite Studio 设置中启用。")
+        raise BridgeError("MCP 控制未启用；请在 DeepWhite Studio 设置中启用。", "control_disabled",
+                          "在运行 Codex 的这台电脑启用“外接智能体 → 允许 MCP 访问”。")
     token = config.get("token")
     if not isinstance(token, str) or not token.strip():
-        raise BridgeError("MCP 控制已启用，但本机控制 token 尚未配置。")
+        raise BridgeError("MCP 控制已启用，但本机控制 token 尚未配置。", "control_token_missing",
+                          "请重新保存本机控制设置，不要粘贴 API Key。")
     return token, str(path)
 
 
@@ -212,6 +262,38 @@ def load_tools():
     return tools
 
 
+def preflight(base_url: str):
+    """Read-only checks run in the bridge environment, with no generated work."""
+    checks = []
+    report = {"ok": False, "transport": "stdio", "version": SERVER_INFO["version"], "checks": checks,
+              "scope": "本检查仅验证执行它的进程；Codex 的实际连接还需在 Codex 中发现并调用工具。"}
+    def step(name, action):
+        try:
+            result = action()
+        except BridgeError as exc:
+            checks.append({"step": name, "ok": False, **exc.diagnostic()})
+            raise
+        checks.append({"step": name, "ok": True, "code": "ok"})
+        return result
+    try:
+        url = step("本机地址", lambda: validate_url(base_url))
+        report["url"] = url
+        step("画布服务与安装", lambda: verify_service(url))
+        token, _ = step("本机控制配置", _read_control_config)
+        response = step("控制授权", lambda: _request_json(url + "/api/studio/control/call", method="POST",
+            payload={"name": "list_canvases", "arguments": {}}, headers={"Authorization": "Bearer " + token},
+            sensitive_values=(token,)))
+        result = response.get("result") if isinstance(response, dict) else None
+        if not isinstance(result, dict) or not isinstance(result.get("items"), list):
+            raise BridgeError("控制服务返回了无效的画布列表。", "invalid_control_response")
+        tools = step("工具定义", load_tools)
+        report.update(ok=True, tool_count=len(tools))
+    except BridgeError as exc:
+        if not checks or checks[-1].get("ok"):
+            checks.append({"step": "控制响应", "ok": False, **exc.diagnostic()})
+    return report
+
+
 class Bridge:
     def __init__(self, base_url: str):
         self.base_url = validate_url(base_url)
@@ -245,7 +327,10 @@ class Bridge:
             return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, separators=(",", ":"))}],
                     "structuredContent": result, "isError": False}
         except BridgeError as exc:
-            return {"content": [{"type": "text", "text": str(exc)}], "isError": True}
+            message = str(exc)
+            if exc.hint and exc.code != "http_error":
+                message += " " + exc.hint
+            return {"content": [{"type": "text", "text": message}], "isError": True}
 
     def handle(self, message):
         if not isinstance(message, dict) or message.get("jsonrpc") != "2.0" or not isinstance(message.get("method"), str):
@@ -315,7 +400,7 @@ def serve(base_url: str) -> int:
     try:
         bridge = Bridge(base_url)
     except BridgeError as exc:
-        print(str(exc), file=sys.stderr)
+        print(f"[{exc.code}] {exc}" + (" " + exc.hint if exc.hint else ""), file=sys.stderr)
         return 2
     source = sys.stdin.buffer
     destination = sys.stdout
@@ -351,7 +436,21 @@ def serve(base_url: str) -> int:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="DeepWhite Studio MCP stdio bridge")
     parser.add_argument("--url", default="http://127.0.0.1:3848")
+    parser.add_argument("--check", action="store_true", help="read-only connection diagnostics; does not start MCP stdio")
+    parser.add_argument("--json", action="store_true", help="print diagnostics as JSON (use with --check)")
     args = parser.parse_args(argv)
+    if args.check:
+        report = preflight(args.url)
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="strict")
+        if args.json:
+            print(json.dumps(report, ensure_ascii=False))
+        else:
+            for check in report["checks"]:
+                print(("OK" if check["ok"] else "FAIL") + " " + check["step"] + ": " +
+                      (check.get("message") or check["code"]) + (" " + check["hint"] if check.get("hint") else ""))
+            print(report["scope"])
+        return 0 if report["ok"] else 2
     return serve(args.url)
 
 

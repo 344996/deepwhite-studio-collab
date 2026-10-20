@@ -3,7 +3,27 @@
   if (!panel) return;
   const $ = id => document.getElementById(id);
   const endpoint = '/api/studio/control/settings';
-  let state = null, busy = false, pollTimer = 0, opened = false;
+  let state = null, busy = false, pollTimer = 0, opened = false, diagnosticReport = null;
+  const configHost = $('controlClientConfig').parentElement;
+  const clientLabel = document.createElement('label'); clientLabel.className = 'control-client-label';
+  clientLabel.textContent = '外接客户端';
+  const clientSelect = document.createElement('select'); clientSelect.id = 'controlClientType';
+  for (const [value, text] of [['codex_toml','Codex · TOML'], ['claude_json','Claude / 通用 · JSON']]) {
+    const option = document.createElement('option'); option.value = value; option.textContent = text; clientSelect.append(option);
+  }
+  clientLabel.append(clientSelect); configHost.insertBefore(clientLabel, $('controlClientConfig'));
+  const clientHelp = document.createElement('p'); clientHelp.className = 'muted'; clientHelp.id = 'controlClientHelp';
+  configHost.insertBefore(clientHelp, $('controlClientConfig'));
+  const connectionInfo = document.createElement('p'); connectionInfo.className = 'control-connection-info';
+  connectionInfo.textContent = 'MCP 连接这台电脑的画布。请先启动画布，再在同一电脑的外接客户端添加配置；API 网站地址用于生成服务。';
+  configHost.append(connectionInfo);
+  const diagnosticActions = document.createElement('div'); diagnosticActions.className = 'control-diagnostic-actions';
+  const checkButton = document.createElement('button'); checkButton.id = 'controlCheck'; checkButton.type = 'button'; checkButton.textContent = '检查本机连接';
+  const exportButton = document.createElement('button'); exportButton.id = 'controlExportDiagnostics'; exportButton.type = 'button'; exportButton.textContent = '导出检查结果'; exportButton.hidden = true;
+  const commandButton = document.createElement('button'); commandButton.id = 'controlCopyCheck'; commandButton.type = 'button'; commandButton.textContent = '复制客户端检查命令';
+  const skillLink = document.createElement('a'); skillLink.href = '/api/studio/control/skill'; skillLink.download = 'SKILL.md'; skillLink.textContent = '下载画布 Skill 示例'; skillLink.className = 'control-skill-link';
+  diagnosticActions.append(checkButton, commandButton, exportButton, skillLink); configHost.append(diagnosticActions);
+  const diagnosticBox = document.createElement('div'); diagnosticBox.id = 'controlDiagnostics'; diagnosticBox.setAttribute('aria-live', 'polite'); diagnosticBox.hidden = true; configHost.append(diagnosticBox);
 
   async function api(url, method = 'GET', body) {
     const response = await fetch(url, {method, headers:{'Content-Type':'application/json'}, ...(body === undefined ? {} : {body:JSON.stringify(body)})});
@@ -21,12 +41,22 @@
   }
   function setBusy(value) {
     busy = value;
-    panel.querySelectorAll('button,input').forEach(el => { el.disabled = value; });
+    panel.querySelectorAll('button,input,select').forEach(el => { el.disabled = value; });
     $('controlAutoRefresh').disabled = value;
+    if (!value) panel.querySelectorAll('.control-request button.accent').forEach(el => { el.disabled = !state?.enabled; });
   }
   function configText(config) {
     if (typeof config === 'string') return config;
     return config && typeof config === 'object' ? JSON.stringify(config, null, 2) : '客户端配置暂不可用，请刷新重试。';
+  }
+  function renderConfig() {
+    const selected = clientSelect.value;
+    $('controlClientConfig').textContent = configText(state?.client_configs?.[selected] || state?.client_config);
+    clientHelp.textContent = selected === 'codex_toml'
+      ? 'Codex：将此段合并到用户目录 .codex/config.toml；已有同名配置时替换该段，然后重启 MCP 连接。不要把 JSON 粘贴进 TOML。'
+      : 'Claude：合并到客户端的 MCP JSON 配置，然后重新启动该连接。不同客户端的入口名称可能不同。';
+    if (state?.launcher_warning) clientHelp.textContent += ' ' + state.launcher_warning;
+    else if (state?.stable_launcher) clientHelp.textContent += ' 当前使用固定启动入口，更新版本后会自动选择新程序。';
   }
   function sessionLabel(value) {
     if (!value) return '';
@@ -85,7 +115,7 @@
         : '本次授权已结束或次数已用尽；下一次生成需逐次确认。'
       : '当前为逐次确认模式。';
     $('controlEndSession').hidden = !activeSession;
-    $('controlClientConfig').textContent = configText(state.client_config);
+    renderConfig();
     renderPending(state.pending);
     $('controlLoadError').hidden = true;
   }
@@ -114,16 +144,36 @@
     } catch (error) { say(error.message, true); }
     finally { setBusy(false); }
   }
-  async function copyConfig() {
-    const text = $('controlClientConfig').textContent;
-    if (!state?.client_config) { say('客户端配置尚未就绪，请刷新状态后再复制。', true); return; }
-    try {
-      await navigator.clipboard.writeText(text);
-      say('客户端配置已复制。');
-    } catch {
+  async function copyText(text, message) {
+    try { await navigator.clipboard.writeText(text); say(message); }
+    catch {
       const area = document.createElement('textarea'); area.value = text; area.style.position = 'fixed'; area.style.opacity = '0'; document.body.append(area); area.select();
-      const copied = document.execCommand('copy'); area.remove(); say(copied ? '客户端配置已复制。' : '复制失败，请检查浏览器剪贴板权限。', !copied);
+      const copied = document.execCommand('copy'); area.remove(); say(copied ? message : '复制失败，请检查浏览器剪贴板权限。', !copied);
     }
+  }
+  async function copyConfig() {
+    if (!state?.client_config) { say('客户端配置尚未就绪，请刷新状态后再复制。', true); return; }
+    await copyText($('controlClientConfig').textContent, '客户端配置已复制。');
+  }
+  async function checkConnection() {
+    if (busy) return;
+    setBusy(true); diagnosticBox.hidden = false; diagnosticBox.textContent = '正在检查启动入口、本机画布和控制授权…';
+    try {
+      diagnosticReport = await api('/api/studio/control/diagnostics', 'POST');
+      diagnosticBox.replaceChildren();
+      for (const item of diagnosticReport.checks || []) {
+        const row = document.createElement('p'); row.dataset.ok = String(Boolean(item.ok));
+        row.textContent = `${item.ok ? '通过' : '未通过'} · ${item.step}${item.message ? '：' + item.message : ''}`;
+        if (item.hint) { const hint = document.createElement('small'); hint.textContent = item.hint; row.append(hint); }
+        diagnosticBox.append(row);
+      }
+      const scope = document.createElement('p'); scope.className = 'muted';
+      scope.textContent = diagnosticReport.scope || '这是画布进程的检查结果；请在 Codex 中确认能够发现并调用工具。';
+      diagnosticBox.append(scope); exportButton.hidden = false;
+    } catch (error) {
+      diagnosticBox.textContent = error.message; diagnosticReport = null; exportButton.hidden = true;
+    }
+    finally { setBusy(false); }
   }
   function tabChanged(tab) {
     panel.hidden = tab !== 'control';
@@ -135,8 +185,11 @@
     if ($('controlAutoRefresh').checked && !panel.hidden) pollTimer = setInterval(() => refresh(false), 8000);
   }
 
+  // The settings sidebar owns navigation; this module only manages its own panel.
+  window.addEventListener('studio:settings-tab', event => tabChanged(event.detail?.tab));
   document.querySelectorAll('[data-tab]').forEach(button => {
     button.onclick = () => {
+      if (window.StudioSettingsNavigation) return;
       document.querySelectorAll('[data-tab]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button)));
       $('apiPanel').hidden = button.dataset.tab !== 'api';
       $('generalPanel').hidden = button.dataset.tab !== 'general';
@@ -153,4 +206,16 @@
   $('controlCopyConfig').onclick = copyConfig;
   $('controlRefresh').onclick = () => refresh();
   $('controlAutoRefresh').onchange = syncPolling;
+  clientSelect.onchange = renderConfig;
+  checkButton.onclick = checkConnection;
+  commandButton.onclick = () => state?.check_command
+    ? copyText(state.check_command, '检查命令已复制，请在运行外接客户端的电脑上用 PowerShell 执行。')
+    : say('请先刷新连接配置。', true);
+  exportButton.onclick = () => {
+    if (!diagnosticReport) return;
+    const file = new Blob([JSON.stringify(diagnosticReport, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(file), link = document.createElement('a');
+    link.href = url; link.download = 'deepwhite-mcp-diagnostics.json'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 })();

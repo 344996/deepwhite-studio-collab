@@ -14,14 +14,15 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 
 import main as core
-import studio_agent as agent
-import studio_agent_plans as plans
+import studio_models as model_inventory
+import studio_canvas_services as plans
 import studio_assets as assets
 import studio_catalog as catalog
 import studio_generation as generation
 import studio_graph as graph
 from studio_capabilities import parameters
 from studio_mcp import BridgeError, _sanitize, _validate, load_tools
+from studio_mcp_config import client_configuration
 
 LOCK = threading.RLock()
 MAX_SESSION_SECONDS = 30 * 60
@@ -83,9 +84,8 @@ def _settings(value, base_url='http://127.0.0.1:3848'):
     remaining = value.get('remaining_runs', 0) if value.get('enabled') and expires and expires > time.time() else 0
     return {'enabled': value.get('enabled', False), 'generation_mode': value.get('generation_mode', 'confirm'),
             'session_expires_at': expires, 'remaining_runs': remaining,
-            'pending': pending, 'client_config': {'mcpServers': {'deepwhite-studio': {
-                'command':sys.executable, 'args':[str(Path(__file__).with_name('studio_mcp.py').resolve()), '--url', base_url],
-                'env':{'DEEPWHITE_STUDIO_RUNTIME_DIR':str(Path(core.DATA_DIR).parent)}}}}}
+            'pending': pending, **client_configuration(sys.executable, Path(__file__).parent,
+                Path(core.DATA_DIR).parent, base_url, os.environ.get('DEEPWHITE_INSTALL_ROOT'))}
 
 
 def _public_canvas(canvas):
@@ -114,7 +114,7 @@ def _touch(canvas):
 def _models():
     rows = []
     from studio_capabilities import profile
-    for item in agent.available_models()[1]:
+    for item in model_inventory.available_models()[1]:
         spec = profile(item['model'], item['kind'])
         rows.append({**item, 'supported':bool(spec['supported']), 'fields':spec['fields'],
                      'prompt_min':spec['prompt_min'], 'prompt_max':spec['prompt_max'],
@@ -432,6 +432,17 @@ def install(app):
     @app.get('/api/studio/control/settings')
     async def get_settings(request: Request): return _settings(_load(), str(request.base_url).rstrip('/'))
 
+    @app.get('/api/studio/control/skill')
+    async def skill_template():
+        from fastapi.responses import PlainTextResponse
+        relative = Path('integrations') / 'skills' / 'deepwhite-canvas' / 'SKILL.md'
+        root = Path(__file__).resolve().parent.parent
+        for candidate in (root / relative, root / 'references' / relative):
+            if candidate.is_file():
+                return PlainTextResponse(candidate.read_text(encoding='utf-8'),
+                    headers={'Content-Disposition': 'attachment; filename="SKILL.md"'})
+        raise HTTPException(404, '当前安装缺少 Skill 示例，请检查完整发行包。')
+
     @app.put('/api/studio/control/settings')
     async def put_settings(payload: dict, request: Request):
         allowed = {'enabled', 'generation_mode', 'session_minutes', 'session_runs'}
@@ -450,6 +461,51 @@ def install(app):
         else:
             state['session_expires_at'] = None; state['remaining_runs'] = 0
         _save(state); return _settings(state, str(request.base_url).rstrip('/'))
+
+    @app.post('/api/studio/control/diagnostics')
+    async def diagnostics(request: Request):
+        """A subprocess check verifies the same bridge entry with no canvas edits."""
+        from studio_mcp import validate_url
+        try:
+            url = validate_url(str(request.base_url).rstrip('/'))
+        except BridgeError as exc:
+            raise HTTPException(400, exc.diagnostic()) from None
+        environment = dict(os.environ, DEEPWHITE_STUDIO_RUNTIME_DIR=str(Path(core.DATA_DIR).parent),
+                           PYTHONUTF8='1', PYTHONDONTWRITEBYTECODE='1')
+        process = None
+        try:
+            import subprocess
+            configuration = client_configuration(sys.executable, Path(__file__).parent,
+                Path(core.DATA_DIR).parent, url, os.environ.get('DEEPWHITE_INSTALL_ROOT'))
+            entry = configuration['client_config']['mcpServers']['deepwhite-studio']
+            arguments = entry['args'] + (['-Check'] if configuration['stable_launcher'] else ['--check', '--json'])
+            environment.update(entry.get('env', {}))
+            process = await asyncio.create_subprocess_exec(entry['command'], *arguments,
+                stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE, env=environment,
+                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=15)
+            if len(stdout) > 64 * 1024:
+                raise ValueError('oversized diagnostics')
+            if not stdout.strip() and any(marker in stderr.lower() for marker in
+                    (b'pssecurityexception', b'unauthorizedaccess', b'executionpolicies')):
+                return {'ok': False, 'checks': [{'step': '客户端启动入口', 'ok': False, 'code': 'script_policy_blocked',
+                    'message': 'PowerShell 或组织策略阻止执行此本地启动脚本。',
+                    'hint': '入口只设置当前启动进程的执行策略；组织强制策略仍有效。请由管理员检查此文件的执行权限，不要关闭系统防护。'}]}
+            result = json.loads(stdout.decode('utf-8'))
+            if not isinstance(result, dict) or not isinstance(result.get('checks'), list):
+                raise ValueError('invalid diagnostics')
+            return result
+        except asyncio.TimeoutError:
+            return {'ok': False, 'checks': [{'step': '桥接进程', 'ok': False, 'code': 'diagnostic_timeout',
+                'message': '连接检查超过 15 秒。', 'hint': '确认画布没有正在退出或更新，再重试。'}]}
+        except (OSError, ValueError, UnicodeError):
+            return {'ok': False, 'checks': [{'step': '桥接进程', 'ok': False, 'code': 'bridge_start_failed',
+                'message': '桥接检查程序无法启动或返回数据无效。', 'hint': '请检查安装文件完整性与当前用户的执行权限。'}]}
+        finally:
+            if process and process.returncode is None:
+                process.kill()
+                await process.wait()
 
     @app.post('/api/studio/control/approvals/{approval_id}')
     async def approval(approval_id: str, payload: dict): return await _approve(approval_id, payload)

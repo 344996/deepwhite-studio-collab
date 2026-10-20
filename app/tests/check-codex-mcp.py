@@ -16,7 +16,7 @@ import sys
 import tempfile
 import threading
 import time
-from urllib.request import ProxyHandler, build_opener
+from urllib.request import ProxyHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -138,6 +138,20 @@ def main():
                         time.sleep(0.1)
                 else:
                     raise RuntimeError('Temporary backend did not start')
+                def http_json(path, method='GET', payload=None):
+                    data = None if payload is None else json.dumps(payload).encode('utf-8')
+                    with opener.open(Request(base_url + path, data=data, method=method,
+                            headers={'Content-Type': 'application/json'}), timeout=20) as response:
+                        return json.load(response)
+                report['preflight'] = http_json('/api/studio/control/diagnostics', 'POST')
+                assert report['preflight']['ok'], report['preflight']
+                settings = http_json('/api/studio/control/settings')
+                assert '[mcp_servers.deepwhite-studio]' in settings['client_configs']['codex_toml']
+                assert 'fixture-token' not in json.dumps(settings)
+                # Synthetic offline provider: validate node/tool editing, never generate.
+                http_json('/api/providers', 'PUT', [{'id':'codex-fixture','name':'Offline test',
+                    'base_url':'https://fixture.invalid/v1','enabled':True,
+                    'image_models':['deepwhiteai-image-g-v2.5-lowprice']}])
                 client = Client([args.codex, 'app-server', '--stdio'], codex_environment, work, codex_log)
                 report['initialize'] = client.call('initialize', {'clientInfo': {
                     'name': 'deepwhite_mcp_validation', 'version': '1'},
@@ -183,7 +197,27 @@ def main():
                 final = tool('get_canvas', {'canvas_id': canvas_id})
                 assert final['canvas']['nodes'] == []
                 assert len(tool('list_canvases', {'project_id': 'default'})['items']) == 1
-                report.update(status='passed', calls=calls, final_node_count=0,
+                available = tool('list_models', {})['items']
+                model = next(item for item in available if item['provider_id'] == 'codex-fixture')
+                generated = tool('apply_nodes', {'canvas_id':canvas_id, 'expected_revision':final['revision'],
+                    'operation_id':'codex-generator-fixture', 'nodes':[{'key':'image', 'kind':'image',
+                    'title':'外接 Skill 节点验证','prompt':'雨夜旧车站，柔和电影光线，人物中景',
+                    'provider_id':model['provider_id'],'model':model['model'],'params':{},'references':[]}]})
+                generator_id = generated['node_ids']['image']
+                linked = tool('edit_canvas', {'canvas_id':canvas_id, 'expected_revision':generated['revision'],
+                    'operation_id':'codex-link-fixture', 'operations':[
+                        {'op':'add_prompt','key':'brief','text':'角色与镜头要求','x':10,'y':20},
+                        {'op':'connect','from':'$brief','to':generator_id}]})
+                modified = tool('edit_canvas', {'canvas_id':canvas_id, 'expected_revision':linked['revision'],
+                    'operation_id':'codex-modify-fixture', 'operations':[
+                        {'op':'update_prompt','node_id':linked['node_ids']['brief'],'text':'角色与镜头要求已修改'},
+                        {'op':'move_node','node_id':generator_id,'x':500,'y':200}]})
+                saved = tool('get_canvas', {'canvas_id':canvas_id})
+                assert len(saved['canvas']['connections']) == 1
+                assert len(saved['canvas']['nodes']) == 2
+                assert saved['revision'] == modified['revision']
+                assert any(node.get('text') == '角色与镜头要求已修改' for node in saved['canvas']['nodes'])
+                report.update(status='passed', calls=calls, final_node_count=2,
                     discovered_tools=sorted(schema['input_schemas']))
             except Exception as exc:
                 report.update(status='failed', error=f'{type(exc).__name__}: {exc}')
