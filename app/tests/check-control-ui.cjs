@@ -19,7 +19,7 @@ ${['studio-settings.css','studio-control.css','studio-v2-theme.css','studio-sett
 <nav aria-label="设置分类"><button data-tab="api" aria-selected="true">账户与 API</button><button data-tab="control" aria-selected="false">外接智能体 / MCP</button><button data-tab="general" aria-selected="false">基础设置</button></nav></div>
 <main><section id="apiPanel"></section><section id="generalPanel" hidden></section>${section}</main>
 <script src="/static/studio-control.js"></script><script src="/static/studio-interactions.js"></script></body></html>`;
-const testPrompt = '请用 deepwhite-studio 列出我的画布，不修改或生成内容。';
+const testPrompt = '请用 deepwhite-studio 先调用 studio_status，再列出我的画布，不修改或生成内容。';
 let state = {
   enabled:false,generation_mode:'confirm',session_expires_at:null,remaining_runs:0,
   client_config:{mcpServers:{'deepwhite-studio':{command:'Z:\\客户 软件 & 测试\\DeepWhite\\python.exe',args:['bridge.py']}}},
@@ -106,15 +106,19 @@ const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
       const id=url.pathname.split('/').pop();state={...state,pending:state.pending.filter(item=>item.id!==id)};
       return route.fulfill({json:{status:body.action}});
     }
+    // The multi-client panel (studio-clients.js) is covered by test_external_agents.py.
+    if(url.pathname==='/api/studio/clients'&&req.method()==='GET')return route.fulfill({json:{items:[],skills:[]}});
     return route.fulfill({status:404,json:{detail:'unexpected mock API request'}});
   });
 
+  const openAdvanced=async()=>{if(await page.locator('#controlAdvanced').getAttribute('open')===null)await page.locator('#controlAdvanced>summary').click();};
   await page.goto(`${base}/settings`);
   assert.equal(await page.locator('#controlPanel').isHidden(),true);
   assert.equal(calls.length,0,'opening unrelated settings must not read or write client configuration');
   await page.locator('[data-tab="control"]').click();
   await page.getByText('费用未知',{exact:true}).waitFor();
-  await page.getByText('尚未配置深白连接。点击按钮即可自动配置。',{exact:true}).waitFor();
+  // Codex detail controls now live under 高级 (the client cards are the primary flow).
+  await page.getByText('尚未配置深白连接。点击按钮即可自动配置。',{exact:true}).waitFor({state:'attached'});
   assert.equal(count('GET','/api/studio/control/settings'),1);
   assert.equal(count('GET','/api/studio/control/codex'),1);
   assert.equal(setupPosts(),0,'opening setup only checks status');
@@ -130,8 +134,9 @@ const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
   await page.getByText('已启用',{exact:true}).waitFor();
   assert.equal(setupPosts(),0,'enabling access does not silently install a client configuration');
   await page.screenshot({path:path.join(output,'desktop-codex-first-run.png'),fullPage:true});
+  await page.locator('#controlAdvanced>summary').click();
   failAction={status:500,message:'无法写入配置，请检查目录权限后重试。'}; actionDelay=250;
-  await page.locator('#controlInstallCodex').click();
+  await openAdvanced();await page.locator('#controlInstallCodex').click();
   assert.equal(await page.locator('#controlInstallCodex').isDisabled(),true);
   await page.keyboard.press('Enter');
   await page.getByText('无法写入配置，请检查目录权限后重试。',{exact:true}).waitFor();
@@ -139,7 +144,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
   assert.equal(setupPosts(),1,'busy setup must not issue duplicate writes');
   assert.equal(await page.locator('#controlSetupResult').getAttribute('role'),'alert');
   actionDelay=0;
-  await page.locator('#controlInstallCodex').focus(); await page.keyboard.press('Enter');
+  await openAdvanced();await page.locator('#controlInstallCodex').focus(); await page.keyboard.press('Enter');
   await page.getByText('已配置',{exact:true}).waitFor();
   assert.equal(setupPosts(),2);
   assert.equal(calls.filter(call=>call.path==='/api/studio/control/codex'&&call.method==='POST').at(-1).body.replace_existing,false);
@@ -154,7 +159,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
   await page.getByText(/先在运行客户端的电脑启动画布/).waitFor();
   assert.equal(await page.locator('#controlSetupResult').getAttribute('data-error'),'true');
   const summary=page.locator('#controlAdvanced>summary');
-  await summary.focus(); await page.keyboard.press('Enter');
+  if(await page.locator('#controlAdvanced').getAttribute('open')===null){await summary.focus(); await page.keyboard.press('Enter');}
   assert.equal(await page.locator('#controlClientConfig').isVisible(),true);
   assert.match(await page.locator('#controlClientConfig').innerText(),/mcp_servers\.deepwhite-studio/);
   assert.match(await page.locator('#controlInstallType').innerText(),/便携发行版/);
@@ -181,22 +186,22 @@ const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
   checks.push('高级配置可用键盘展开，Codex 与其他客户端配置、复制及检查结果导出保留；本机检查不冒充 Codex 联调');
 
   codex={...codex,state:'different',revision:'external-change',message:'现有深白连接指向另一个安装位置。请确认是否更新。'};
-  await page.locator('#controlRefreshCodex').click();
+  await openAdvanced();await page.locator('#controlRefreshCodex').click();
   await page.getByText('需要更新',{exact:true}).waitFor();
   let before=setupPosts(); acceptDialog=false;
-  await page.locator('#controlInstallCodex').click();
+  await openAdvanced();await page.locator('#controlInstallCodex').click();
   assert.equal(setupPosts(),before,'cancelled replacement must not write');
   assert.match(dialogs.at(-1),/已有另一份深白连接配置/);
   acceptDialog=true;
-  await page.locator('#controlInstallCodex').click();
+  await openAdvanced();await page.locator('#controlInstallCodex').click();
   await page.getByText('已配置',{exact:true}).waitFor();
   assert.equal(setupPosts(),before+1);
   assert.equal(calls.filter(call=>call.method==='POST'&&call.path==='/api/studio/control/codex').at(-1).body.replace_existing,true);
   assert.equal(await page.locator('#controlCheckStatus').innerText(),'尚未检查','configuration changes invalidate earlier diagnostics');
   await summary.click(); before=setupPosts(); acceptDialog=false;
-  await page.locator('#controlUndoCodex').click();
+  await openAdvanced();await page.locator('#controlUndoCodex').click();
   assert.equal(setupPosts(),before,'cancelled undo must not write');
-  acceptDialog=true; await page.locator('#controlUndoCodex').click();
+  acceptDialog=true; await openAdvanced();await page.locator('#controlUndoCodex').click();
   await page.getByText('尚未配置',{exact:true}).waitFor();
   assert.equal(setupPosts(),before+1);
   assert.equal(await page.locator('#controlUndoCodex').isDisabled(),true);
@@ -204,28 +209,28 @@ const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
   checks.push('检测其他安装位置后必须确认替换，取消无写入；撤回单独确认且成功后重置检查状态');
 
   codex={...codex,state:'missing',revision:'stale-before-click',portable:false,can_install:true};
-  await page.locator('#controlRefreshCodex').click();
+  await openAdvanced();await page.locator('#controlRefreshCodex').click();
   await page.waitForFunction(()=>!document.getElementById('controlInstallCodex').disabled);
   failAction={status:409,message:'配置文件已发生变化。请刷新状态后重新确认。'};
   codex={...codex,state:'different',revision:'fresh-after-conflict',message:'检测到另一份深白连接，请确认更新。'};
-  before=setupPosts(); await page.locator('#controlInstallCodex').click();
+  before=setupPosts(); await openAdvanced();await page.locator('#controlInstallCodex').click();
   await page.getByText('配置文件已发生变化。请刷新状态后重新确认。',{exact:true}).waitFor();
   await page.getByText('需要更新',{exact:true}).waitFor();
   assert.equal(setupPosts(),before+1,'conflicts must not trigger a hidden automatic retry');
-  await page.locator('#controlInstallCodex').click();
+  await openAdvanced();await page.locator('#controlInstallCodex').click();
   await page.getByText('已配置',{exact:true}).waitFor();
   assert.equal(calls.filter(call=>call.method==='POST'&&call.path==='/api/studio/control/codex').at(-1).body.expected_revision,'fresh-after-conflict');
   assert.match(await page.locator('#controlInstallType').innerText(),/源码运行模式/);
-  failRead=true; await page.locator('#controlRefreshCodex').click();
+  failRead=true; await openAdvanced();await page.locator('#controlRefreshCodex').click();
   await page.getByText('配置状态暂时不可用，请稍后重试。',{exact:true}).waitFor();
   assert.equal(await page.locator('#controlInstallCodex').isDisabled(),true);
   failRead=false;
   codex={...codex,state:'blocked',can_install:false,can_undo:false,message:'配置文件存在错误，请先修复后刷新。'};
-  await page.locator('#controlRefreshCodex').click();
+  await openAdvanced();await page.locator('#controlRefreshCodex').click();
   await page.getByText('配置文件存在错误，请先修复后刷新。',{exact:true}).waitFor();
   assert.equal(await page.locator('#controlInstallCodex').isDisabled(),true);
   codex={...codex,state:'installed',can_install:true,can_undo:true,portable:true,message:'深白连接已配置。'};
-  await page.locator('#controlRefreshCodex').click();
+  await openAdvanced();await page.locator('#controlRefreshCodex').click();
   await page.getByText('已配置',{exact:true}).waitFor();
   await summary.click();
   checks.push('文件并发修改会刷新状态并重新确认，禁止隐式覆盖；读取失败与损坏配置显示阻塞原因并可刷新恢复');

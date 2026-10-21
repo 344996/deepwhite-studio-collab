@@ -75,7 +75,7 @@ async function main() {
   const config = enabled.client_config.mcpServers['deepwhite-studio'];
   startBridge(config); await handshake();
   const listed = await rpc('tools/list', {});
-  assert.equal(listed.tools.length, 13);
+  assert.equal(listed.tools.length, 17);
   const projects = await call('list_projects');
   assert((await call('get_node_schema')).creatable_types.includes('prompt'));
   const creation = {project_id: 'default', title: 'AI 协作画布 · 本地验收',

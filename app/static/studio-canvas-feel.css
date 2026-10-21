@@ -9,7 +9,7 @@
     width:auto!important;max-height:none!important;height:auto;padding:8px!important;gap:8px!important;border-radius:12px!important;
     box-shadow:0 2px 5px var(--dw-shadow),0 8px 24px var(--dw-shadow)!important}
   html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button{
-    flex-direction:row!important;width:auto!important;min-width:0!important;height:40px!important;min-height:40px!important;
+    flex-direction:row!important;width:auto!important;height:44px!important;min-height:44px!important;min-width:44px!important;
     padding:0 12px!important;gap:6px!important;font-size:13px!important}
   html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>button>span{font-size:13px!important;line-height:18px}
   html.studio-v2.studio-canvas-workspace #workspaceCanvasRail>:is(#studioV2Add,#smartV2Add){margin:0 4px 0 0!important}

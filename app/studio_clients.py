@@ -74,7 +74,10 @@ def _hermes_dir():
 
 
 def _doubao_dir():
-    return _localappdata() / "Doubao"
+    # An uninstall leaves "Doubao\User Data" behind; only a program counts.
+    application = _localappdata() / "Doubao" / "Application"
+    found = next(application.glob("*.exe"), None) if application.is_dir() else None
+    return found or application / "Doubao.exe"
 
 
 CLIENTS = {

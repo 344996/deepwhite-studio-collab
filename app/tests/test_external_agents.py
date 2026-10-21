@@ -213,6 +213,13 @@ class ClientTests(Base):
         self.assertEqual(archive.status_code, 200)
         self.assertEqual(archive.headers["content-type"], "application/zip")
 
+    def test_doubao_leftover_user_data_is_not_an_installation(self):
+        (self.root / "Local/Doubao/User Data").mkdir(parents=True)
+        (self.root / "Local/Doubao/Application").mkdir(parents=True)
+        self.assertFalse(self.listing()["doubao"]["detected"])
+        (self.root / "Local/Doubao/Application/Doubao.exe").write_bytes(b"")
+        self.assertTrue(self.listing()["doubao"]["detected"])
+
     def test_writes_require_local_settings_page(self):
         self.act("claude_code", "connect", 403, origin="http://evil.example")
         self.assertFalse((self.root / ".claude.json").exists())

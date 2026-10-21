@@ -29,12 +29,12 @@
 
   function status(client) {
     const state = client.mcp.state;
-    if (state === 'manual') return ['需在客户端里添加', 'warn'];
     if (!client.detected && state !== 'connected') return ['未检测到', 'off'];
+    if (state === 'manual') return ['需在客户端里添加', 'warn'];
     return ({connected: ['已连接', 'ok'], different: ['需要更新', 'warn'], blocked: ['需处理', 'warn']})[state] || ['未连接', 'idle'];
   }
   function skillBadge(client, skill) {
-    if (!client.detected && client.mcp.state !== 'manual') return ['未检测到客户端', 'off'];
+    if (!client.detected) return ['未检测到客户端', 'off'];
     if (skill.state === 'manual') return ['需手动上传', 'idle'];
     if (skill.state === 'latest') return ['最新 v' + skill.installed, 'ok'];
     if (skill.state === 'upgrade') return ['v' + skill.installed + ' → v' + skill.latest, 'warn'];

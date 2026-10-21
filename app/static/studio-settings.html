@@ -88,7 +88,7 @@
         <p class="control-connection-info">API 网站负责图片、视频等生成服务；MCP 负责让智能体操作这台电脑上的画布。</p>
         <details id="controlAdvanced" class="control-advanced">
           <summary>高级 / 其他客户端<span>手动配置、安装信息与检查记录</span></summary>
-          <div class="control-codex-legacy"><h3>Codex 详细状态</h3><p id="controlCodexStatus" aria-live="polite">正在检查这台电脑的 Codex 配置…</p>
+          <div class="control-codex-legacy"><h3>Codex 详细状态 <span id="controlCodexLegacyBadge" class="control-step-status">待检查</span></h3><p id="controlCodexStatus" aria-live="polite">正在检查这台电脑的 Codex 配置…</p>
             <div class="control-step-actions"><button id="controlInstallCodex" class="accent" type="button" disabled>自动配置 Codex</button><button id="controlRefreshCodex" class="control-quiet-button" type="button">刷新状态</button></div>
             <small id="controlInstallHelp">先启用访问，再配置这台电脑上的 Codex。</small>
           </div><div class="control-install-info"><p id="controlInstallType" class="muted"></p><p class="muted">本机 Codex 配置位置</p><code id="controlCodexPath">尚未读取</code><button id="controlUndoCodex" type="button" disabled>撤回上次配置</button><small>仅撤回由此入口完成的最近一次配置变更。配置文件后来被修改时，请先刷新状态。</small></div>

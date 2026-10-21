@@ -48,6 +48,7 @@
     $('controlStepAccess').dataset.complete = String(enabled);
     $('controlAccessStatus').textContent = enabled ? '已启用' : '未启用';
     // Step 2 badge belongs to the multi-client panel (studio-clients.js).
+    $('controlCodexLegacyBadge').textContent = ({missing:'尚未配置', installed:'已配置', different:'需要更新', blocked:'需处理'})[codex?.state] || '待检查';
     $('controlCodexStatus').textContent = codex?.message || '正在检查这台电脑的 Codex 配置…';
     $('controlInstallCodex').textContent = installed ? '已配置 Codex' : codex?.state === 'different' ? '更新 Codex 配置' : '自动配置 Codex';
     $('controlInstallHelp').textContent = !enabled

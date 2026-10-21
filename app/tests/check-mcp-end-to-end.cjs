@@ -15,7 +15,7 @@ const {chromium}=require('playwright'),{spawn}=require('node:child_process'),rea
   function rpc(method,params){const id=++seq;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(Error('MCP timeout: '+method+' '+stderr));},15000);pending.set(id,value=>{clearTimeout(timer);value.error?reject(Error(JSON.stringify(value.error))):resolve(value.result);});child.stdin.write(JSON.stringify({jsonrpc:'2.0',id,method,params})+'\n');});}
   const init=await rpc('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'offline-browser-test',version:'1'}});
   assert.equal(init.protocolVersion,'2025-06-18');child.stdin.write(JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})+'\n');
-  const tools=await rpc('tools/list',{});assert.equal(tools.tools.length,13);
+  const tools=await rpc('tools/list',{});assert.equal(tools.tools.length,17);
   async function call(name,args={}){const r=await rpc('tools/call',{name,arguments:args});assert(!r.isError,JSON.stringify(r));return r.structuredContent;}
   await page.goto(base+'/static/canvas.html?id=controlfixture');await page.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id==='controlfixture');
   const assets=await call('list_assets',{project_id:'default'}),asset=assets.items.find(x=>x.kind==='image');assert(asset);
