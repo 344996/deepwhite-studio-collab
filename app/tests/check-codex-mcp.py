@@ -176,7 +176,16 @@ def main():
                     return value
                 projects = tool('list_projects', {})
                 schema = tool('get_node_schema', {})
-                assert len(schema['input_schemas']) == 13
+                assert len(schema['input_schemas']) == 17
+                status = tool('studio_status', {})
+                assert status['ok'], status
+                packages = tool('list_canvas_packages', {})
+                assert {'film-short', 'avatar-talk'} <= {item['id'] for item in packages['items']}
+                imported = tool('import_canvas_package', {'package_id': 'film-short', 'project_id': 'default',
+                    'expected_revision': projects['revision'], 'operation_id': 'codex-package-fixture',
+                    'variables': {'主题': 'Codex 验证'}})
+                assert len(imported['node_ids']) == packages['items'][[i['id'] for i in packages['items']].index('film-short')]['node_count']
+                projects = tool('list_projects', {})
                 assert 'key' in schema['input_schemas']['apply_nodes']['properties']['nodes']['items']['properties']
                 created = tool('create_canvas', {'project_id': 'default', 'title': 'Codex 客户端隔离验证',
                     'expected_revision': projects['revision'], 'operation_id': 'codex-create-fixture'})
@@ -196,7 +205,7 @@ def main():
                 assert tool('undo_edit', undo) == undone
                 final = tool('get_canvas', {'canvas_id': canvas_id})
                 assert final['canvas']['nodes'] == []
-                assert len(tool('list_canvases', {'project_id': 'default'})['items']) == 1
+                assert len(tool('list_canvases', {'project_id': 'default'})['items']) == 2  # package import + created canvas
                 available = tool('list_models', {})['items']
                 model = next(item for item in available if item['provider_id'] == 'codex-fixture')
                 generated = tool('apply_nodes', {'canvas_id':canvas_id, 'expected_revision':final['revision'],

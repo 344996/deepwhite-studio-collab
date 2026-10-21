@@ -1,0 +1,7 @@
+{
+  "_说明": "复制为 feedback_channels.json（不提交到仓库）。webhooks 可填多个；type 取 feishu / wecom / dingtalk / generic，url 必须是 https。没有可用 webhook 时，反馈改为打开 github_repository 的新建 Issue 页面，由用户自己提交。",
+  "github_repository": "344996/deepwhite-studio-collab",
+  "webhooks": [
+    {"type": "feishu", "url": "https://open.feishu.cn/open-apis/bot/v2/hook/替换为你的机器人地址"}
+  ]
+}

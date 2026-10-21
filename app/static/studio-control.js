@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   const endpoint = '/api/studio/control/settings';
   const codexEndpoint = '/api/studio/control/codex';
-  const testPrompt = '请用 deepwhite-studio 列出我的画布，不修改或生成内容。';
+  const testPrompt = '请用 deepwhite-studio 先调用 studio_status，再列出我的画布，不修改或生成内容。';
   let state = null, codex = null, busy = false, pollTimer = 0, opened = false, diagnosticReport = null;
   let settingsRead = 0, codexRead = 0;
   const clientSelect = $('controlClientType'), clientHelp = $('controlClientHelp');
@@ -47,8 +47,7 @@
     const enabled = Boolean(state?.enabled), installed = codex?.state === 'installed';
     $('controlStepAccess').dataset.complete = String(enabled);
     $('controlAccessStatus').textContent = enabled ? '已启用' : '未启用';
-    $('controlStepCodex').dataset.complete = String(installed);
-    $('controlCodexBadge').textContent = ({missing:'尚未配置', installed:'已配置', different:'需要更新', blocked:'需处理'})[codex?.state] || '待检查';
+    // Step 2 badge belongs to the multi-client panel (studio-clients.js).
     $('controlCodexStatus').textContent = codex?.message || '正在检查这台电脑的 Codex 配置…';
     $('controlInstallCodex').textContent = installed ? '已配置 Codex' : codex?.state === 'different' ? '更新 Codex 配置' : '自动配置 Codex';
     $('controlInstallHelp').textContent = !enabled
@@ -286,8 +285,9 @@
     setupSay(''); setBusy(true);
     try { await refreshCodex(); } finally { setBusy(false); }
   };
-  $('controlCopyPrompt').onclick = () => copyText(testPrompt, '测试提示词已复制。请在 Codex 中发送，确认能读取你的画布。', setupSay);
+  $('controlCopyPrompt').onclick = () => copyText(testPrompt, '测试提示词已复制。请在已连接的客户端中发送，确认能读取你的画布。', setupSay);
   clientSelect.onchange = renderConfig;
+  document.addEventListener('studio-clients-changed', () => refresh(false));
   checkButton.onclick = checkConnection;
   commandButton.onclick = () => state?.check_command
     ? copyText(state.check_command, '检查命令已复制，请在运行外接客户端的电脑上用 PowerShell 执行。')

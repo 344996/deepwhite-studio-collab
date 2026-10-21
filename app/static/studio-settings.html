@@ -7,6 +7,7 @@
   <script src="/static/js/theme.js?v=0.11.0-studio.5"></script>
   <link rel="stylesheet" href="/static/studio-settings.css?v=0.11.0-studio.5">
   <link rel="stylesheet" href="/static/studio-control.css?v=0.11.0-studio.5">
+  <link rel="stylesheet" href="/static/studio-clients.css?v=0.11.0-studio.7">
 </head>
 <body>
   <div class="settings-top"><header><div><img src="/static/studio-mark.svg" alt=""><strong>深白片场 <span>设置</span></strong></div><button id="closeSettings">返回画布</button></header>
@@ -53,11 +54,11 @@
       </details><h2>关于</h2><p id="version" class="muted"></p><p><a href="/updates">版本更新、安装与回退</a></p>
     </section>
     <section id="controlPanel" hidden>
-      <div class="intro"><h1>外接智能体 / MCP</h1><p>用 Codex 读取与编辑画布，让创作工具在自己的电脑上协同工作。</p></div>
+      <div class="intro"><h1>外接智能体 / MCP</h1><p>用 Codex、Claude、WorkBuddy、Hermes、豆包等智能体读取与编辑画布，让创作工具在自己的电脑上协同工作。</p></div>
       <div id="controlLoadError" class="notice" role="alert" hidden></div>
       <section class="control-card control-onboarding" aria-labelledby="controlConnectTitle">
-        <div class="control-connect-heading"><div><span class="control-eyebrow">连接你的创作助手</span><h2 id="controlConnectTitle">在这台电脑连接 Codex</h2></div><span class="control-local-badge"><span aria-hidden="true"></span>本机连接</span></div>
-        <p class="control-connect-intro">画布和 Codex 需要运行在同一台电脑。每台电脑首次使用时，在这里配置一次；程序会自动使用当前安装位置。</p>
+        <div class="control-connect-heading"><div><span class="control-eyebrow">连接你的创作助手</span><h2 id="controlConnectTitle">在这台电脑连接外接智能体</h2></div><span class="control-local-badge"><span aria-hidden="true"></span>本机连接</span></div>
+        <p class="control-connect-intro">画布和智能体客户端需要运行在同一台电脑。每台电脑首次使用时，在这里配置一次；程序会自动使用当前安装位置。</p>
         <ol class="control-setup-steps" aria-label="Codex 连接步骤">
           <li id="controlStepAccess" class="control-setup-step">
             <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">1</span><h3>启用访问</h3><span id="controlAccessStatus" class="control-step-status">未启用</span></div>
@@ -65,10 +66,15 @@
             <label class="check control-toggle"><input id="controlEnabled" type="checkbox">启用 MCP 访问</label>
           </li>
           <li id="controlStepCodex" class="control-setup-step">
-            <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">2</span><h3>自动配置 Codex</h3><span id="controlCodexBadge" class="control-step-status">待检查</span></div>
-            <p id="controlCodexStatus" aria-live="polite">正在检查这台电脑的 Codex 配置…</p>
-            <div class="control-step-actions"><button id="controlInstallCodex" class="accent" type="button" disabled>自动配置 Codex</button><button id="controlRefreshCodex" class="control-quiet-button" type="button">刷新状态</button></div>
-            <small id="controlInstallHelp">先启用访问，再配置这台电脑上的 Codex。</small>
+            <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">2</span><h3>连接客户端并安装 Skills</h3><span id="controlCodexBadge" class="control-step-status">待检查</span></div>
+            <div class="client-panel-head"><p>每个客户端连接一次，所有画布通用；连接后在 Agent 里说「导入画布」即可导入制作包。连接或安装 Skills 后重启该客户端。</p><button id="clientRefresh" type="button" class="control-quiet-button">刷新</button></div>
+            <div id="clientGrid" class="client-grid" aria-live="polite"></div>
+            <p id="clientSummary" class="muted"></p>
+            <div id="clientResult" class="notice" role="status" aria-live="polite" hidden></div>
+            <details class="client-manual"><summary>手动配置（高级）</summary>
+              <div class="row"><label>客户端<select id="clientManualSelect"></select></label><button id="clientManualCopy" type="button">复制配置</button></div>
+              <pre id="clientManualText" aria-label="所选客户端的 MCP 配置"></pre><small id="clientManualPath"></small>
+            </details>
           </li>
           <li id="controlStepCheck" class="control-setup-step">
             <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">3</span><h3>检查并试用</h3><span id="controlCheckStatus" class="control-step-status">尚未检查</span></div>
@@ -82,7 +88,10 @@
         <p class="control-connection-info">API 网站负责图片、视频等生成服务；MCP 负责让智能体操作这台电脑上的画布。</p>
         <details id="controlAdvanced" class="control-advanced">
           <summary>高级 / 其他客户端<span>手动配置、安装信息与检查记录</span></summary>
-          <div class="control-install-info"><p id="controlInstallType" class="muted"></p><p class="muted">本机 Codex 配置位置</p><code id="controlCodexPath">尚未读取</code><button id="controlUndoCodex" type="button" disabled>撤回上次配置</button><small>仅撤回由此入口完成的最近一次配置变更。配置文件后来被修改时，请先刷新状态。</small></div>
+          <div class="control-codex-legacy"><h3>Codex 详细状态</h3><p id="controlCodexStatus" aria-live="polite">正在检查这台电脑的 Codex 配置…</p>
+            <div class="control-step-actions"><button id="controlInstallCodex" class="accent" type="button" disabled>自动配置 Codex</button><button id="controlRefreshCodex" class="control-quiet-button" type="button">刷新状态</button></div>
+            <small id="controlInstallHelp">先启用访问，再配置这台电脑上的 Codex。</small>
+          </div><div class="control-install-info"><p id="controlInstallType" class="muted"></p><p class="muted">本机 Codex 配置位置</p><code id="controlCodexPath">尚未读取</code><button id="controlUndoCodex" type="button" disabled>撤回上次配置</button><small>仅撤回由此入口完成的最近一次配置变更。配置文件后来被修改时，请先刷新状态。</small></div>
           <div class="control-config"><div class="row"><div><h2>手动连接配置</h2><p>需要自行管理配置，或使用其他兼容 MCP 的客户端时使用。</p></div><button type="button" id="controlCopyConfig">复制客户端配置</button></div><label class="control-client-label">外接客户端<select id="controlClientType"><option value="codex_toml">Codex · TOML</option><option value="claude_json">Claude / 通用 · JSON</option></select></label><p id="controlClientHelp" class="muted"></p><pre id="controlClientConfig" aria-label="MCP 客户端配置">正在读取配置…</pre></div>
           <div class="control-diagnostic-actions"><button id="controlCopyCheck" type="button">复制客户端检查命令</button><button id="controlExportDiagnostics" type="button" hidden>导出检查结果</button><a href="/api/studio/control/skill" download="SKILL.md" class="control-skill-link">下载画布 Skill 示例</a></div>
         </details>
@@ -119,6 +128,7 @@
 <script src="/static/studio-storage.js?v=0.11.0-studio.5"></script>
 <script src="/static/studio-dreamina.js?v=0.11.0-studio.5"></script>
 <script src="/static/studio-control.js?v=0.11.0-studio.5"></script>
+<script src="/static/studio-clients.js?v=0.11.0-studio.7"></script>
 <script src="/static/studio-settings-v2.js?v=0.11.0-studio.5"></script>
 <script src="/static/studio-settings-navigation.js?v=0.11.0-studio.5"></script>
 <link rel="stylesheet" href="/static/studio-settings-navigation.css?v=0.11.0-studio.5">

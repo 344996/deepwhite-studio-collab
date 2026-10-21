@@ -135,7 +135,8 @@ class StudioMCPTests(unittest.TestCase):
         self.assertEqual({tool["name"] for tool in listed}, {
             "list_canvases", "get_canvas", "list_models", "list_assets", "apply_nodes",
             "undo_edit", "generate_node", "get_generation", "resume_generation",
-            "list_projects", "get_node_schema", "create_canvas", "edit_canvas"})
+            "list_projects", "get_node_schema", "create_canvas", "edit_canvas",
+            "studio_status", "list_canvas_packages", "import_canvas_package", "submit_feedback"})
         self.assertTrue(next(t for t in listed if t["name"] == "apply_nodes")["annotations"]["idempotentHint"])
 
     def test_tools_call_posts_local_control_and_redacts_secrets(self):
@@ -212,8 +213,10 @@ class StudioMCPTests(unittest.TestCase):
         self.assertIn("loopback", remote.stderr)
         MockHandler.installation = str(ROOT.parent)
         try:
+            # The bridge stays up for the client (it may start before the
+            # canvas) and reports the mismatch in its log and on tool calls.
             wrong = self.run_bridge("")
-            self.assertEqual(wrong.returncode, 2)
+            self.assertEqual(wrong.returncode, 0)
             self.assertEqual(wrong.stdout, "")
             self.assertIn("不是此项目", wrong.stderr)
         finally:
@@ -230,7 +233,7 @@ class StudioMCPTests(unittest.TestCase):
         self.assertEqual(replies[0]['error']['code'], -32601)
         self.assertIn('initialize', replies[0]['error']['message'])
         self.assertEqual(replies[1]['result']['protocolVersion'], '2025-06-18')
-        self.assertEqual(len(replies[2]['result']['tools']), 13)
+        self.assertEqual(len(replies[2]['result']['tools']), 17)
 
     def test_invalid_request_ids_and_nonfinite_json_do_not_poison_session(self):
         bad_id = json.dumps({'jsonrpc': '2.0', 'id': {'private': 'fixture-secret'}, 'method': 'ping'})

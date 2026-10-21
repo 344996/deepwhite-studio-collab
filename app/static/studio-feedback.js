@@ -36,11 +36,13 @@
       if(row.remote?.reply)card.append(el('blockquote',row.remote.reply));
       const action=el('button',row.sent?'查询处理结果':'发送反馈');action.type='button';action.onclick=async()=>{
         action.disabled=true;
-        try{const result=await api('/api/studio/feedback/'+row.id+(row.sent?'/refresh':'/send'),'POST');notice(result.message);await load();}
+        try{const result=await api('/api/studio/feedback/'+row.id+(row.sent?'/refresh':'/send'),'POST');notice(result.message);follow(result);await load();}
         catch(e){notice(e.message,true);}finally{action.disabled=false;}
       };card.append(action);$('feedbackRecords').append(card);
     }
   }
+  function follow(row){if(row?.issue_url&&row.channel==='github'){const link=el('a','打开 GitHub 提交页面');link.href=row.issue_url;link.target='_blank';link.rel='noopener';const box=$('feedbackNotice');box.append(' ',link);window.open(row.issue_url,'_blank','noopener');}}
+  async function channels(){try{const c=await api('/api/studio/feedback/channels');$('feedbackChannel').textContent='当前发送方式：'+(c.gallery?'画廊反馈后台':c.webhooks.length?'开发者群机器人（'+c.webhooks.join('、')+'）':'GitHub Issue（'+c.github_repository+'，需你在浏览器确认提交）');}catch{$('feedbackChannel').textContent='';}}
   async function load(){const data=await api('/api/studio/feedback');if(document.activeElement!==$('feedbackURL'))$('feedbackURL').value=data.url||'';render(data.items);}
   $('reloadFeedback').onclick=()=>load().catch(e=>notice(e.message,true));
   $('feedbackDestination').onsubmit=async event=>{event.preventDefault();try{await api('/api/studio/gallery','PUT',{url:$('feedbackURL').value.trim()});notice('反馈接收地址已保存。');}catch(e){notice(e.message,true);}};
@@ -50,10 +52,11 @@
       const data={id:draftId,category:form.elements.category.value,title:form.elements.title.value,description:form.elements.description.value,contact:form.elements.contact.value,screenshot:image,include_diagnostics:form.elements.include_diagnostics.checked};
       let row=await api('/api/studio/feedback','POST',data);
       if(event.submitter?.value==='send')row=await api('/api/studio/feedback/'+row.id+'/send','POST');
-      notice(row.message);form.reset();removeImage();draftId=crypto.randomUUID();sessionStorage.removeItem('studio-feedback-draft');await load();
+      notice(row.message);follow(row);form.reset();removeImage();draftId=crypto.randomUUID();sessionStorage.removeItem('studio-feedback-draft');await load();
     }catch(e){notice(e.message,true);}finally{lock(false);}
   };
   form.addEventListener('input',()=>{try{sessionStorage.setItem('studio-feedback-draft',JSON.stringify({title:form.elements.title.value,description:form.elements.description.value,contact:form.elements.contact.value,category:form.elements.category.value}));}catch{}});
   try{const draft=JSON.parse(sessionStorage.getItem('studio-feedback-draft')||'{}');for(const key of ['title','description','contact','category'])if(typeof draft[key]==='string')form.elements[key].value=draft[key];}catch{}
+  channels();
   load().catch(e=>notice(e.message,true));
 })();

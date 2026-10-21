@@ -7,6 +7,7 @@
     if (!smart && !root.classList.contains('studio-v2-canvas')) return;
     root.classList.add('studio-canvas-workspace');
     const sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/static/studio-canvas-workspace.css'; document.head.append(sheet);
+    const feel = document.createElement('link'); feel.rel = 'stylesheet'; feel.href = '/static/studio-canvas-feel.css?v=0.11.0-studio.7'; document.head.append(feel);
     const button = (id, label, icon, action) => {
       const item = document.createElement('button'); item.type = 'button'; item.id = id;
       item.innerHTML = `<i data-lucide="${icon}" aria-hidden="true"></i><span>${label}</span>`;
