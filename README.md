@@ -6,6 +6,7 @@
 
 **客户下载：[Windows x64 完整便携包](https://github.com/344996/deepwhite-studio-collab/releases/download/v0.11.0-studio.6/deepwhite-0.11.0-studio.6-windows-x64-portable.zip)**。完整解压后双击 `Start.cmd`，无需安装 Python。[发布页](https://github.com/344996/deepwhite-studio-collab/releases/tag/v0.11.0-studio.6) · [公开下载、在线更新与测试记录](docs/公开发布与在线更新-20261021.md)。
 
+- **[外接智能体、Skill 与画布手感（未发布源码）](docs/外接智能体、Skill与画布手感-20261021.md)**：多客户端 MCP 连接修复、Skill/制作包机制、反馈渠道、MCP 画布控制评估、LibTV 手感参数。
 - **[统一文档入口](docs/README.md)**：本次变更、AI 开发、架构接口和维护说明。
 - **[客户安装和自动连接 Codex](docs/客户安装与Codex连接.md)** · [本次发行与验收](docs/发行产物-20261021.md)
 - **[按钮、图片与动效维护](docs/交互细节与动效维护.md)**（含本轮测试与修改入口）

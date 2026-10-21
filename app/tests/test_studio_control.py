@@ -18,7 +18,7 @@ os.environ['DEEPWHITE_STUDIO_RUNTIME_DIR'] = runtime.name
 import studio_server
 import main as core
 import studio_control as control
-import studio_agent_plans as plans
+import studio_canvas_services as plans
 import studio_assets as assets
 import studio_generation as generation
 import studio_catalog as catalog
@@ -218,7 +218,7 @@ class StudioControl(unittest.TestCase):
         rows = self.call('list_canvases', {'project_id': self.pid}).json()['result']['items']
         self.assertEqual([row['id'] for row in rows], [self.cid])
         schema = self.call('get_node_schema', {}).json()['result']['input_schemas']
-        self.assertEqual(set(schema), control.TOOLS)
+        self.assertEqual(set(schema), control.TOOLS | {'studio_status'})  # status runs inside the bridge
         self.assertEqual(schema['apply_nodes']['properties']['operation_id']['minLength'], 8)
 
     def test_canvas_read_filters_nested_credentials_with_mixed_key_names(self):

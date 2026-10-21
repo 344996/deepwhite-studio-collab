@@ -5,7 +5,8 @@
 <body><main>
   <header><span class="eyebrow">一起完善深白片场</span><h1>意见反馈</h1><p>告诉我们遇到的问题，或下一次希望实现的功能。</p></header>
   <p id="feedbackNotice" role="status" aria-live="polite" hidden></p>
-  <details class="destination"><summary>反馈接收地址</summary><form id="feedbackDestination"><label>画廊网站地址<input id="feedbackURL" type="url" placeholder="https://你的画廊域名" maxlength="512"></label><button>保存地址</button></form><p>使用公共画廊的反馈后台。尚未配置网站时，可以先保存到本机。</p></details>
+  <p id="feedbackChannel" class="helper">正在读取反馈渠道…</p>
+  <details class="destination"><summary>反馈接收地址</summary><form id="feedbackDestination"><label>画廊网站地址<input id="feedbackURL" type="url" placeholder="https://你的画廊域名" maxlength="512"></label><button>保存地址</button></form><p>发送顺序：画廊反馈后台（已设置地址时）→ 开发者配置的群机器人 → 打开 GitHub 新建 Issue 页面由你确认提交。外接智能体也可以在对话中帮你提交反馈。</p></details>
   <form id="feedbackForm" class="compose">
     <div class="row"><label>类型<select name="category"><option value="bug">运行问题</option><option value="interaction">操作体验</option><option value="model">模型与连接</option><option value="suggestion">功能建议</option><option value="other">其他</option></select></label><label class="grow">标题<input name="title" required minlength="2" maxlength="100" placeholder="用一句话描述"></label></div>
     <label>问题或建议<textarea name="description" required minlength="5" maxlength="5000" rows="5" placeholder="你进行了什么操作？期待发生什么？实际出现了什么？"></textarea></label>

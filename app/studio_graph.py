@@ -14,9 +14,45 @@ from studio_mcp import BridgeError, _validate, load_tools
 TOOLS = {tool["name"]: tool for tool in json.loads(
     Path(__file__).with_name("studio_graph_tools.json").read_text(encoding="utf-8"))}
 JOURNAL = "_studio_graph"
-MOVABLE = ("prompt", "image", "generator", "video", "llm", "output")
+MOVABLE = ("prompt", "image", "generator", "video", "llm", "output", "group", "promptGroup", "audio",
+           "midjourney", "msgen", "comfy", "ltxDirector", "rh", "minimax", "loop")
 TARGETS = ("generator", "video", "llm")
+# Mirrors CANVAS_GENERATOR_TYPES and canConnect() in static/js/canvas.js; the
+# canvas drops any saved connection its own rules reject on the next load.
+GENERATORS = ("generator", "midjourney", "msgen", "comfy", "ltxDirector", "video", "audio", "rh", "minimax")
 MAX_RECORDS = 2000
+
+
+def _creates_cycle(connections, source, target):
+    pending, seen = [target], set()
+    while pending:
+        current = pending.pop()
+        if current == source:
+            return True
+        if current in seen:
+            continue
+        seen.add(current)
+        pending.extend(c.get("to") for c in connections if c.get("from") == current)
+    return False
+
+
+def can_connect(connections, source, target):
+    """Return the canvas rule verdict for a source node -> target node link."""
+    if source.get("id") == target.get("id"):
+        return False
+    s, t = source.get("type"), target.get("type")
+    if s in GENERATORS:
+        if t == "output":
+            return True
+        return t in GENERATORS and not _creates_cycle(connections, source["id"], target["id"])
+    if t == "loop":
+        return ((bool(target.get("imageInput")) and s in ("image", "group", "output")) or
+                (bool(target.get("showPrompt")) and s in ("prompt", "promptGroup", "loop", "llm")))
+    if t == "llm":
+        return s in ("prompt", "loop", "promptGroup", "llm", "image", "group", "output")
+    if s == "llm":
+        return t in GENERATORS
+    return t in GENERATORS and s in ("image", "prompt", "loop", "group", "promptGroup", "output", "llm")
 
 
 def _digest(value):
@@ -39,9 +75,15 @@ def _projects():
 
 
 def _schema():
-    return {"creatable_types": ["prompt"], "deletable_types": ["prompt"],
-        "movable_types": list(MOVABLE), "connection_source": "prompt",
-        "connection_targets": list(TARGETS), "max_operations": 40,
+    return {"creatable_types": ["prompt"], "deletable_types": "all (idle canvas only)",
+        "renamable_types": "all", "movable_types": list(MOVABLE),
+        "generation_node_tool": "apply_nodes (image/video generation nodes; target_node_id updates an existing one)",
+        "connection_rules": {
+            "prompt|image|group|promptGroup|output|llm|loop -> generator types": "input text / reference",
+            "generator types -> output|generator types": "pass generated media downstream (no cycles)",
+            "prompt|image|group|promptGroup|output|loop|llm -> llm": "LLM input",
+            "generator_types": list(GENERATORS)},
+        "connection_source": "prompt", "connection_targets": list(TARGETS), "max_operations": 40,
         "max_text_length": 20000, "max_nodes": 1000, "max_connections": 4000,
         "max_recorded_edits": MAX_RECORDS, "undo": "latest edit only, no later graph changes",
         "input_schemas": {tool["name"]: tool["inputSchema"] for tool in load_tools()},
@@ -224,6 +266,8 @@ def _edit(args):
                 nid = "mcp_text_" + uuid.uuid4().hex
                 nodes.append({"id": nid, "type": "prompt", "text": item["text"],
                     "x": item["x"], "y": item["y"], "w": 320, "h": 240})
+                if item.get("title", "").strip():
+                    nodes[-1]["studioTitle"] = item["title"].strip()
                 created[item["key"]] = nid
             elif action == "update_prompt":
                 prompt(item["node_id"])["text"] = item["text"]
@@ -232,18 +276,21 @@ def _edit(args):
                 if found.get("type") not in MOVABLE:
                     raise HTTPException(400, "此节点类型暂不支持 MCP 移动。")
                 found.update(x=item["x"], y=item["y"])
-            elif action == "delete_prompt":
-                found = prompt(item["node_id"])
+            elif action in ("delete_prompt", "delete_node"):
+                found = prompt(item["node_id"]) if action == "delete_prompt" else node(item["node_id"])
                 nid = found["id"]
                 nodes.remove(found)
                 connections[:] = [c for c in connections if nid not in (c.get("from"), c.get("to"))]
                 for group in nodes:
                     if group.get("type") in ("group", "promptGroup"):
                         group["items"] = [i for i in group.get("items", []) if i != nid]
+            elif action == "rename_node":
+                node(item["node_id"])["studioTitle"] = item["title"].strip() or item["title"]
             elif action == "connect":
-                source, target = prompt(item["from"]), node(item["to"])
-                if target.get("type") not in TARGETS:
-                    raise HTTPException(400, "文字连线目标仅支持图片、视频或语言模型节点。")
+                source, target = node(item["from"]), node(item["to"])
+                if not can_connect(connections, source, target):
+                    raise HTTPException(400, f"画布不允许 {source.get('type')} → {target.get('type')} 连线；"
+                                             "请按 get_node_schema 的 connection_rules 选择节点。")
                 if any(c.get("from") == source["id"] and c.get("to") == target["id"] for c in connections):
                     raise HTTPException(409, "此连线已存在。")
                 cid = "mcp_edge_" + uuid.uuid4().hex
@@ -253,9 +300,6 @@ def _edit(args):
                 connection = next((c for c in connections if c.get("id") == item["connection_id"]), None)
                 if connection is None:
                     raise HTTPException(404, "连线不存在。")
-                prompt(connection["from"])
-                if node(connection["to"]).get("type") not in TARGETS:
-                    raise HTTPException(400, "此连线不属于支持的文字输入连线。")
                 connections.remove(connection)
         if len(nodes) > 1000 or len(connections) > 4000:
             raise HTTPException(400, "画布超过 MCP 编辑节点或连线数量上限。")

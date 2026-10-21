@@ -17,7 +17,7 @@ os.environ["DEEPWHITE_STUDIO_RUNTIME_DIR"] = runtime.name
 import studio_server
 import main as core
 import studio_control as control
-import studio_agent_plans as plans
+import studio_canvas_services as plans
 from fastapi.testclient import TestClient
 
 

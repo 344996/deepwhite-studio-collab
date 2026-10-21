@@ -1,4 +1,4 @@
-/* Visual workflow metadata for Agent nodes; workflow links stay out of generation inputs. */
+/* Visual metadata for Skill nodes saved by the retired assistant; links stay out of generation inputs. */
 (() => {
   'use strict';
   const $ = (selector, root=document) => root.querySelector(selector);
@@ -8,34 +8,8 @@
     css.dataset.studioSkillNodes='1';document.head.append(css);
   }
 
-  window.studioAgentCreateTextNode = ({session_id, id, name, text}) => {
-    if (typeof nodes === 'undefined' || typeof pushUndo !== 'function' || typeof render !== 'function')
-      throw new Error('画布节点功能尚未加载，请刷新后重试。');
-    const nodeId = `agent_script_${uid(id)}`;
-    let node = nodes.find(item => item.id === nodeId);
-    if (node) {
-      pushUndo();
-      node.text = String(text || '');
-    } else {
-      pushUndo();
-      node = {id:nodeId,type:'prompt',x:defaultPoint(-320,0).x,y:defaultPoint(-320,0).y,
-        w:380,text:String(text || ''),studioTitle:String(name || '剧本').slice(0,180),
-        studioAgentNodeKind:'script-source',studioAgentSession:String(session_id || ''),
-        studioAgentKey:`script-${uid(id)}`,studioAgentAttachmentId:String(id || ''),studioAgentSkillNodeIds:[]};
-      nodes.push(node);
-    }
-    render();
-    scheduleSave();
-    return nodeId;
-  };
-
-  window.studioSkillNodesForAttachments = (sessionId, attachmentIds) => {
-    if (typeof nodes === 'undefined') return [];
-    const wanted = new Set((attachmentIds || []).map(String));
-    return nodes.filter(node => node.studioAgentNodeKind === 'script-source'
-      && node.studioAgentSession === String(sessionId)
-      && wanted.has(String(node.studioAgentAttachmentId))).map(node => node.id);
-  };
+  // The built-in assistant is retired. Saved Skill nodes stay readable and editable;
+  // new work continues through an external agent over MCP.
 
   function decorate() {
     if (typeof nodes === 'undefined') return;
@@ -59,9 +33,9 @@
           summary.textContent = `技能：${node.studioSkillNode?.name || '已选技能'} · 输入 ${inputIds.length} 项 · 输出 ${outputIds.length} 项`;
           const status=document.createElement('small');status.className='studio-skill-node-status';
           status.textContent=node.studioSkillNode?.statusLabel || '方案已写入';
-          const button=document.createElement('button');button.type='button';button.className='studio-skill-node-continue';button.textContent='继续对话';
-          button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();window.StudioAgent?.openSession?.(node.studioAgentSession);});
-          card.append(summary,status,button);
+          const note=document.createElement('small');note.className='studio-skill-node-legacy';
+          note.textContent='旧版内置助手生成。可直接编辑；如需继续，请在已连接的外接智能体中说明此节点。';
+          card.append(summary,status,note);
           body.prepend(card);
         }
       }

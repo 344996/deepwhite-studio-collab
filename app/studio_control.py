@@ -20,6 +20,7 @@ import studio_assets as assets
 import studio_catalog as catalog
 import studio_generation as generation
 import studio_graph as graph
+import studio_packages as packages
 from studio_capabilities import parameters
 from studio_mcp import BridgeError, _sanitize, _validate, load_tools
 from studio_mcp_config import client_configuration
@@ -32,6 +33,8 @@ TOOLS = {
     'undo_edit', 'generate_node', 'get_generation', 'resume_generation',
 }
 TOOLS.update(graph.TOOLS)
+TOOLS.update(packages.TOOLS)
+TOOLS.add('submit_feedback')
 TOOL_SCHEMAS = {tool['name']: tool['inputSchema'] for tool in load_tools()}
 
 
@@ -457,6 +460,54 @@ def install(app):
         except studio_codex_setup.SetupError as exc:
             raise HTTPException(exc.status_code, str(exc)) from None
 
+    def local_page_only(request):
+        # Client configuration writes are initiated only by this machine's own
+        # settings page; MCP tools and other origins can never reach them.
+        if (request.headers.get('origin') != str(request.base_url).rstrip('/') or
+                request.headers.get('content-type', '').split(';')[0].strip() != 'application/json'):
+            raise HTTPException(403, '请从这台电脑的画布设置页面操作外接客户端。')
+
+    @app.get('/api/studio/clients')
+    async def clients(request: Request):
+        import studio_clients
+        return studio_clients.listing(codex_configuration(request))
+
+    @app.post('/api/studio/clients/{client_id}')
+    async def client_action(client_id: str, payload: dict, request: Request):
+        import studio_clients
+        local_page_only(request)
+        if client_id not in studio_clients.CLIENTS:
+            raise HTTPException(404, '不支持的客户端。')
+        action = payload.get('action')
+        if action not in ('connect', 'disconnect', 'install_skills') or set(payload) - {'action'}:
+            raise HTTPException(400, '操作无效，请刷新页面重试。')
+        if action == 'connect' and not _load().get('enabled'):
+            state = _load(); state['enabled'] = True; _save(state)  # Connecting implies allowing MCP access.
+        configuration = codex_configuration(request)
+        try:
+            if action == 'install_skills':
+                result = {'skills': studio_clients.install_skills(client_id),
+                          'message': '已安装最新 Skills。' + studio_clients.CLIENTS[client_id].get(
+                              'restart_hint', '请重启该客户端。')}
+            else:
+                result = studio_clients.connect(client_id, configuration, remove=action == 'disconnect')
+        except studio_clients.ClientError as exc:
+            raise HTTPException(exc.status_code, str(exc)) from None
+        except OSError:
+            raise HTTPException(409, '未能写入客户端文件，请检查目录权限或文件占用后重试；原文件已保留。') from None
+        return {**result, 'client': studio_clients.describe(client_id, configuration)}
+
+    @app.get('/api/studio/clients/skills/{skill_id}.zip')
+    async def skill_archive(skill_id: str):
+        import studio_clients
+        from fastapi.responses import Response
+        try:
+            data = studio_clients.skill_zip(skill_id)
+        except studio_clients.ClientError as exc:
+            raise HTTPException(exc.status_code, str(exc)) from None
+        return Response(data, media_type='application/zip',
+                        headers={'Content-Disposition': f'attachment; filename="{skill_id}.zip"'})
+
     @app.get('/api/studio/control/skill')
     async def skill_template():
         from fastapi.responses import PlainTextResponse
@@ -548,6 +599,11 @@ def install(app):
             raise HTTPException(400, str(exc)) from None
         if name in graph.TOOLS:
             return {'result': graph.call(name, args)}
+        if name in packages.TOOLS:
+            return {'result': packages.call(name, args)}
+        if name == 'submit_feedback':
+            import studio_feedback
+            return {'result': await studio_feedback.submit(args, source='mcp')}
         if name == 'list_canvases':
             return {'result': {'items': [x for x in core.list_canvases() if not x.get('deleted_at') and
                 core.normalize_canvas_kind(x.get('kind')) != 'smart' and

@@ -259,7 +259,7 @@ def release_metadata(version, commit):
 def write_reference_docs(sources, references):
     """Include offline recovery/project documents from the same Git export."""
     for path, content in sources.items():
-        if path.startswith(('docs/', 'integrations/skills/')):
+        if path.startswith(('docs/', 'integrations/skills/', 'integrations/packages/')):
             target = Path(references) / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(content)

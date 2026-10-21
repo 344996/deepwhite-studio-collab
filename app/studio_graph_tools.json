@@ -76,7 +76,7 @@
   },
   {
     "name": "edit_canvas",
-    "description": "批量编辑普通画布：文字增改删、移动普通节点、文字连接到图片/视频/LLM。先 get_canvas 获取 expected_revision；同批新增节点以 $key 引用。删除文字会移除其连线与分组引用；任何任务进行中拒绝编辑。不触发生成；撤销用 undo_edit，只能撤销最近一次且无后续改动的结构编辑。",
+    "description": "批量编辑普通画布：文字增改删、任意节点移动/重命名/删除、按画布规则连线与断开（文字/图片/语言模型→生成节点，生成节点→下游生成或输出）。先 get_canvas 获取 expected_revision；同批新增节点以 $key 引用。删除节点会移除其连线与分组引用（删除分组不删除成员）；任何任务进行中拒绝编辑。不触发生成；撤销用 undo_edit，只能撤销最近一次且无后续改动的结构编辑。",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -128,6 +128,11 @@
                     "type": "number",
                     "minimum": -100000,
                     "maximum": 100000
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
                   }
                 },
                 "required": [
@@ -256,6 +261,50 @@
                 "required": [
                   "op",
                   "connection_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "const": "delete_node"
+                  },
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 81,
+                    "pattern": "^\\$?[A-Za-z0-9_-]+$"
+                  }
+                },
+                "required": [
+                  "op",
+                  "node_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "const": "rename_node"
+                  },
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 81,
+                    "pattern": "^\\$?[A-Za-z0-9_-]+$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "op",
+                  "node_id",
+                  "title"
                 ],
                 "additionalProperties": false
               }

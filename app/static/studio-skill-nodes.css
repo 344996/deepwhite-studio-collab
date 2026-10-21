@@ -4,8 +4,7 @@
 #nodes .node.studio-agent-skill-run{border-color:color-mix(in srgb,#bb955d 68%,var(--node-border,#888));}
 .studio-skill-node-meta{margin:0 0 8px;padding:8px;border:1px solid color-mix(in srgb,#bb955d 46%,var(--line,#999));border-radius:8px;background:color-mix(in srgb,#d6ad6f 22%,var(--card,#fff));color:var(--text,#343434);font-size:12px;line-height:1.5}
 .studio-skill-node-meta .studio-skill-node-status{display:block;margin-top:4px;color:var(--agent-workflow-stroke,#76551e);font-size:11px;font-weight:650}
-.studio-skill-node-meta .studio-skill-node-continue{display:block;margin-top:7px;padding:5px 9px;border:1px solid var(--agent-workflow-stroke,#76551e);border-radius:6px;background:color-mix(in srgb,#d6ad6f 34%,var(--card,#fff));color:var(--text,#343434);font-size:11px;font-weight:650;cursor:pointer;pointer-events:auto}
-.studio-skill-node-meta .studio-skill-node-continue:hover{filter:brightness(.96)}
 html.studio-theme-dark,body.studio-theme-dark{--agent-workflow-stroke:#e1bd7f}
 html.studio-graphite{--agent-workflow-stroke:#d9b879}
 html.studio-milk{--agent-workflow-stroke:#66502e}
+.studio-skill-node-meta .studio-skill-node-legacy{display:block;margin-top:7px;font-size:11px;line-height:1.5;color:var(--muted,#777)}

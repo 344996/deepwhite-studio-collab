@@ -1,0 +1,37 @@
+.client-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.client-panel-head p{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.7}
+.client-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.client-card{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);transition:border-color .15s ease,opacity .15s ease}
+.client-card:hover{border-color:color-mix(in srgb,var(--line) 40%,var(--ink))}
+.client-card[data-tone=off]{opacity:.55}
+.client-head{display:flex;align-items:center;gap:10px}
+.client-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:var(--panel);font:600 13px/1 ui-sans-serif,system-ui,sans-serif;color:var(--ink)}
+.client-title{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.client-title strong{font-size:15px}
+.client-pill,.client-skill-badge{display:inline-flex;align-items:center;border-radius:6px;padding:1px 7px;font-size:12px;line-height:18px;white-space:nowrap;background:var(--soft);color:var(--muted)}
+.client-card[data-tone=ok] .client-pill,.client-skill-badge[data-tone=ok]{background:color-mix(in srgb,#2fa36b 16%,transparent);color:#2f9a66}
+.client-card[data-tone=warn] .client-pill,.client-skill-badge[data-tone=warn]{background:color-mix(in srgb,#d9902b 18%,transparent);color:#c07a1c}
+.client-skill-badge[data-tone=off]{opacity:.8}
+.client-skills{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.client-skills li{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+.client-skill-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.client-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.client-button{position:relative;padding:5px 10px;font-size:13px;border-radius:8px}
+.client-button.danger{color:#d0473a;border-color:color-mix(in srgb,#d0473a 55%,var(--line))}
+.client-button.accent{border-color:var(--accent);color:var(--accent)}
+.client-button[data-attention=true]::after{content:"";position:absolute;top:-3px;right:-3px;width:7px;height:7px;border-radius:50%;background:#e5483b}
+.client-hint{margin:0;font-size:12px;color:var(--muted);line-height:1.6}
+#clientResult{margin:8px 0}
+.client-manual{margin-top:8px}
+.client-manual summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.client-manual pre{margin:8px 0;max-height:240px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;font:12px/1.5 ui-monospace,Consolas,monospace}
+.client-manual .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.client-manual small{display:block;color:var(--muted);overflow-wrap:anywhere}
+@media(max-width:650px){.client-grid{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.client-card{transition:none}}
+/* The client step needs full width; keep the three steps stacked in order. */
+#controlPanel .control-setup-steps{grid-template-columns:minmax(0,1fr)}
+#controlPanel #controlStepCodex{display:flex;flex-direction:column}
+#controlPanel #controlStepCodex .client-panel-head p{font-size:13px}
+#controlPanel .control-codex-legacy{margin:10px 0;padding:10px 0;border-bottom:1px solid var(--line)}
+#controlPanel .control-codex-legacy h3{font-size:13px;margin:0 0 6px}

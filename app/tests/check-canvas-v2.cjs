@@ -48,9 +48,9 @@ async function main(){
   await page.keyboard.down('Space');await drag(panFrom,{x:panFrom.x+30,y:panFrom.y-20});await page.keyboard.up('Space');assert.equal(await page.locator('#board').evaluate(e=>e.classList.contains('v2-hand')),false);
   checks.push('H/V and space-drag switch tools and pan coordinates without moving nodes');
   const anchor={x:board.x+board.width-180,y:board.y+board.height-160};const beforeWheel=await page.evaluate(p=>screenToWorld(p.x,p.y),anchor);
-  await page.mouse.move(anchor.x,anchor.y);await page.mouse.wheel(0,-180);await delay(100);const afterWheel=await page.evaluate(p=>screenToWorld(p.x,p.y),anchor);assert(Math.abs(afterWheel.x-beforeWheel.x)<.01&&Math.abs(afterWheel.y-beforeWheel.y)<.01,'wheel zoom preserves pointer world position');
-  for(let i=0;i<40;i++)await page.mouse.wheel(0,-180);await delay(100);assert((await snapshot()).viewport.scale<=2.5+.000001);
-  for(let i=0;i<100;i++)await page.mouse.wheel(0,180);await delay(100);assert((await snapshot()).viewport.scale>=.06-.000001);
+  await page.mouse.move(anchor.x,anchor.y);await page.keyboard.down('Control');await page.mouse.wheel(0,-180);await page.keyboard.up('Control');await delay(100);const afterWheel=await page.evaluate(p=>screenToWorld(p.x,p.y),anchor);assert(Math.abs(afterWheel.x-beforeWheel.x)<.01&&Math.abs(afterWheel.y-beforeWheel.y)<.01,'wheel zoom preserves pointer world position');
+  await page.keyboard.down('Control');for(let i=0;i<60;i++)await page.mouse.wheel(0,-180);await page.keyboard.up('Control');await delay(100);assert((await snapshot()).viewport.scale<=8+.000001);
+  await page.keyboard.down('Control');for(let i=0;i<100;i++)await page.mouse.wheel(0,180);await page.keyboard.up('Control');await delay(100);assert((await snapshot()).viewport.scale>=.1-.000001);
   await page.locator('#studioV2Zoom').click();assert(Math.abs((await snapshot()).viewport.scale-1)<.01);
   await page.getByRole('button',{name:'适应全部节点 · Shift+1',exact:true}).click();checks.push('wheel anchor, zoom limits, 100% reset and fit-all use the visible controls');
   const point=await blankPoint();const worldPoint=await page.evaluate(p=>screenToWorld(p.x,p.y),point);

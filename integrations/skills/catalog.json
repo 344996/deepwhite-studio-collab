@@ -1,0 +1,11 @@
+{
+  "_说明": "外接客户端 Skills 目录。每个 id 对应同名文件夹（含 SKILL.md）。修改 Skill 内容后必须提高 version，设置页才会提示用户升级。",
+  "skills": [
+    {"id": "deepwhite-canvas", "name": "画布创作 Skills", "version": "1.1.0",
+     "description": "把需求或提示词整理成画布节点，读写画布、连线和按授权生成。其他两个 Skill 依赖它的连接规则。"},
+    {"id": "deepwhite-film", "name": "全自动影视 Skills", "version": "1.0.0",
+     "description": "从一句话创意到剧本、分镜、关键帧和视频节点的整条短片流程，使用“全自动影视”制作包。"},
+    {"id": "deepwhite-avatar", "name": "全能数字人 Skills", "version": "1.0.0",
+     "description": "口播稿、形象设定、配音与数字人视频节点；按当前可用模型决定能做到哪一步。"}
+  ]
+}

@@ -70,14 +70,6 @@
         "sha256": "41af9e91d5ce87a27483a437eaf9b36f1af03d8f4de03f9e51bc1b897a708969"
       },
       {
-        "file": "studio-agent-apply.js",
-        "sha256": "89dc997da49cafcfe65635f2be99180b3336859ba273b667df6e56f8da9e8613"
-      },
-      {
-        "file": "studio-agent.js",
-        "sha256": "73f7c3e1623b44790816f0852dac835a3bcd37df68588e7f4aa9a7a525adeb6b"
-      },
-      {
         "file": "studio-asset-presets.js",
         "sha256": "ecfdd4e8341df39a07f57efb49fb2a29c396938a237051f1386cf31173d9e21b"
       },

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "studio_status",
+    "title": "检查画布连接",
+    "description": "只读自检：检查本机画布是否运行、MCP 访问是否启用、控制授权是否有效。其他工具报错或用户说连不上时先调用它，并把 summary 告诉用户。不修改画布。",
+    "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+    "annotations": {"readOnlyHint": true, "idempotentHint": true}
+  },
+  {
+    "name": "list_canvas_packages",
+    "title": "列出制作包",
+    "description": "列出可导入的画布制作包（预设好的分镜/流程节点布局）。用户说“导入画布”“导入制作包”或选择某个创作流程时先调用。只读。",
+    "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+    "annotations": {"readOnlyHint": true, "idempotentHint": true}
+  },
+  {
+    "name": "import_canvas_package",
+    "title": "导入画布制作包",
+    "description": "把制作包导入为现有项目中的一张新普通画布，只写入文字/结构节点，不生成内容。expected_revision 来自 list_projects；相同 operation_id 重试返回同一张画布，不会重复创建。导入后按需用 list_models + apply_nodes 添加图片/视频生成节点。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "package_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"},
+        "project_id": {"type": "string", "minLength": 1, "maxLength": 80},
+        "title": {"type": "string", "minLength": 0, "maxLength": 120},
+        "expected_revision": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "operation_id": {"type": "string", "minLength": 8, "maxLength": 70, "pattern": "^[A-Za-z0-9_-]+$"},
+        "variables": {"type": "object", "description": "可选：替换制作包文字中的 {{变量}}，例如 {\"主题\": \"雨夜侦探\"}。"}
+      },
+      "required": ["package_id", "project_id", "expected_revision", "operation_id"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "submit_feedback",
+    "title": "提交用户建议",
+    "description": "把用户明确要反馈给开发者的问题或建议保存为反馈记录，并按本机已配置的渠道发送。仅在用户主动要求反馈时调用；先向用户复述将提交的标题和内容。不包含截图、密钥或画布内容。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "category": {"type": "string", "enum": ["bug", "interaction", "model", "suggestion", "other"]},
+        "title": {"type": "string", "minLength": 2, "maxLength": 100},
+        "description": {"type": "string", "minLength": 5, "maxLength": 5000},
+        "contact": {"type": "string", "maxLength": 160}
+      },
+      "required": ["category", "title", "description"],
+      "additionalProperties": false
+    }
+  }
+]

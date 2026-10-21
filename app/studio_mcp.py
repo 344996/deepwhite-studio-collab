@@ -255,6 +255,7 @@ def load_tools():
     try:
         tools = json.loads((ROOT / "studio_mcp_tools.json").read_text(encoding="utf-8"))
         tools += json.loads((ROOT / "studio_graph_tools.json").read_text(encoding="utf-8"))
+        tools += json.loads((ROOT / "studio_package_tools.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise BridgeError("MCP 工具定义文件不可用。") from exc
     if not isinstance(tools, list):
@@ -294,22 +295,52 @@ def preflight(base_url: str):
     return report
 
 
+LOCAL_TOOLS = ("studio_status",)
+
+
 class Bridge:
     def __init__(self, base_url: str):
+        # Clients usually spawn MCP servers when they start, often before the
+        # canvas is open. Never exit here: the service is verified on each call
+        # so the client keeps a live connection and recovers once Studio runs.
         self.base_url = validate_url(base_url)
-        verify_service(self.base_url)
+        self.verified = False
         self.tools = load_tools()
         self.by_name = {tool["name"]: tool for tool in self.tools}
         self.initializing = False
         self.initialized = False
+
+    def _ensure_service(self):
+        if self.verified:
+            return
+        verify_service(self.base_url)
+        self.verified = True
+
+    def status(self):
+        """Read-only self-diagnosis the agent can call when other tools fail."""
+        report = preflight(self.base_url)
+        report.pop("scope", None)
+        failed = next((check for check in report["checks"] if not check.get("ok")), None)
+        report["summary"] = ("画布已连接，可以读取和编辑。" if report["ok"] else
+                             f"{failed['step']}未通过：{failed.get('message', '')} {failed.get('hint', '')}".strip())
+        return report
 
     def call_tool(self, name, arguments):
         if name not in self.by_name:
             return {"content": [{"type": "text", "text": f"未知工具：{name}"}], "isError": True}
         if not isinstance(arguments, dict):
             return {"content": [{"type": "text", "text": "arguments 必须是 JSON 对象。"}], "isError": True}
+        if name == "studio_status":
+            result = self.status()
+            return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, separators=(",", ":"))}],
+                    "structuredContent": result, "isError": False}
         try:
             _validate(arguments, self.by_name[name]["inputSchema"])
+            try:
+                self._ensure_service()
+            except BridgeError:
+                self.verified = False
+                raise
             token, _ = _read_control_config()
             response = _request_json(self.base_url + "/api/studio/control/call", method="POST", timeout=30,
                                      payload={"name": name, "arguments": arguments},
@@ -327,6 +358,10 @@ class Bridge:
             return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, separators=(",", ":"))}],
                     "structuredContent": result, "isError": False}
         except BridgeError as exc:
+            if exc.code in ("connection_refused", "connection_timeout", "connection_failed", "wrong_service",
+                            "wrong_installation", "service_not_ready", "invalid_response"):
+                # A restarted or updated Studio must be re-verified on the next call.
+                self.verified = False
             message = str(exc)
             if exc.hint and exc.code != "http_error":
                 message += " " + exc.hint
@@ -399,6 +434,11 @@ def serve(base_url: str) -> int:
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     try:
         bridge = Bridge(base_url)
+        try:
+            bridge._ensure_service()
+        except BridgeError as exc:
+            # Logged for the client's MCP log only; the server keeps running.
+            print(f"[{exc.code}] {exc} 工具调用时会自动重试连接。", file=sys.stderr)
     except BridgeError as exc:
         print(f"[{exc.code}] {exc}" + (" " + exc.hint if exc.hint else ""), file=sys.stderr)
         return 2

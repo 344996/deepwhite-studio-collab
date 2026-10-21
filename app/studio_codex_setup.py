@@ -276,7 +276,7 @@ def _render(document, raw, previous):
 def configure(configuration, payload):
     allowed = {"action", "expected_revision", "replace_existing"}
     if (not isinstance(payload, dict) or set(payload) - allowed or
-            payload.get("action") not in ("install", "undo") or
+            payload.get("action") not in ("install", "undo", "remove") or
             not isinstance(payload.get("expected_revision"), str) or
             not isinstance(payload.get("replace_existing", False), bool)):
         raise SetupError("配置请求无效，请刷新页面重试。", 400)
@@ -321,6 +321,13 @@ def configure(configuration, payload):
                     # config replacement, the next start still offers undo.
                     _atomic_write(home / RECEIPT, json.dumps(receipt).encode("utf-8"))
                     message = "已自动配置，并保留原配置备份。请重启 Codex 的 MCP 连接，再检查画布工具。"
+                elif payload["action"] == "remove":
+                    if entry is None:
+                        return dict(status(configuration), changed=False)
+                    document["mcp_servers"].pop(SERVER, None)
+                    encoded = _render(document, raw, previous)
+                    _backup(home, raw)
+                    message = "已断开深白连接，其他 Codex 设置已保留，原配置已备份。请重启 Codex。"
                 else:
                     if not _can_undo(home, document):
                         raise SetupError("此连接在配置后已被修改，或没有可用备份，无法自动撤销。")

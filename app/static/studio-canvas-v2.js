@@ -45,6 +45,12 @@
   const escapeCloses=d=>d.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();d.close();}},true);
   const activeDialog=()=>document.querySelector('dialog[open],.modal.open,#outputLightbox.open,#imageEditModal.open,[popover]:popover-open');
   let mode='select',space=false,knifeHeld=false,animation=0,animationOrigin=null;
+  // Viewport feel measured from LibTV's canvas (React Flow): zoom 10%–800%,
+  // two-finger scroll / wheel pans, Ctrl or ⌘ + wheel and pinch zoom.
+  const ZOOM_MIN=.1,ZOOM_MAX=8,clampZoom=value=>Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,value));
+  const WHEEL_KEY='studio.canvas.wheel';
+  let wheelMode='pan';try{wheelMode=localStorage.getItem(WHEEL_KEY)==='zoom'?'zoom':'pan';}catch{}
+  let wheelButton=null;
   const reduced=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
   const title=node=>node.studioTitle||node.title||node.name||({generator:'图片生成',video:'视频生成',audio:'音频生成',llm:'文本生成',prompt:'文本',image:'素材',output:'生成结果',group:'分组',rh:'RunningHub',comfy:'ComfyUI'}[node.type]||node.type);
   let status,zoomLabel,selectButton,handButton,selectionActions,selectionCount,empty;
@@ -181,14 +187,14 @@
     animationOrigin=origin;
     animation=requestAnimationFrame(frame);
   }
-  function zoom(factor){if(!canvas)return;const r=board.getBoundingClientRect(),point=screenToWorld(r.left+r.width/2,r.top+r.height/2),scale=Math.max(.06,Math.min(2.5,viewport.scale*factor));moveView({scale,x:r.width/2-point.x*scale,y:r.height/2-point.y*scale});}
+  function zoom(factor){if(!canvas)return;const r=board.getBoundingClientRect(),point=screenToWorld(r.left+r.width/2,r.top+r.height/2),scale=clampZoom(viewport.scale*factor);moveView({scale,x:r.width/2-point.x*scale,y:r.height/2-point.y*scale});}
   function focus(ids,fit=true){
     const list=nodes.filter(n=>ids.includes(n.id));if(!list.length)return;
     const box=nodeBounds(list.map(n=>n.id)),r=board.getBoundingClientRect();
     const map=document.getElementById('minimap'),mapTop=map&&!map.hidden?map.getBoundingClientRect().top-r.top:r.height-70;
     const top=105,bottom=Math.max(top+100,Math.min(r.height-85,mapTop-18)),height=bottom-top;
     const inspector=document.getElementById('workspaceInspector'),right=inspector&&!inspector.hidden&&innerWidth>900?Math.min(r.width,inspector.getBoundingClientRect().left-r.left-16):r.width;
-    const scale=fit?Math.max(.06,Math.min(1,(right-160)/(box.w+100),height/(box.h+60))):viewport.scale;
+    const scale=fit?Math.max(ZOOM_MIN,Math.min(1,(right-160)/(box.w+100),height/(box.h+60))):viewport.scale;
     moveView({scale,x:right/2+40-(box.x+box.w/2)*scale,y:top+height/2-(box.y+box.h/2)*scale});
   }
   const nativeNode=renderNode;
@@ -269,6 +275,23 @@
     redoStates.pop();undoStack.push(current);if(undoStack.length>UNDO_MAX)undoStack.shift();selected.clear();render();scheduleSave();redoBaseline=historySignature();
   }
 
+  function setWheelMode(value){
+    wheelMode=value==='zoom'?'zoom':'pan';try{localStorage.setItem(WHEEL_KEY,wheelMode);}catch{}
+    if(wheelButton){wheelButton.setAttribute('aria-pressed',String(wheelMode==='zoom'));wheelButton.title=wheelMode==='pan'?'滚轮：平移画布（Ctrl/⌘ + 滚轮缩放）· 点击改为滚轮缩放':'滚轮：缩放画布 · 点击改为滚轮平移';wheelButton.setAttribute('aria-label',wheelButton.title);}
+  }
+  function connectSelected(){
+    // LibTV Ctrl/⌘ + L: link two selected nodes in whichever direction the canvas allows.
+    const ids=[...selected];if(ids.length!==2)return;
+    const [a,b]=ids,pair=canConnect(a,b)?[a,b]:canConnect(b,a)?[b,a]:null;
+    if(!pair||connections.some(c=>c.from===pair[0]&&c.to===pair[1]))return;
+    pushUndo();connections.push({id:uid('c'),from:pair[0],to:pair[1]});
+    syncLatestGeneratedOutputToConnection(pair[0],pair[1]);syncGeneratorInputs();scheduleSave();render();
+  }
+  function generateSelected(){
+    // Same entry as the node's own generate button; never batches several nodes.
+    if(selected.size!==1)return;const id=[...selected][0],node=nodes.find(n=>n.id===id);
+    if(node&&canvasRunTypes().includes(node.type))runCanvasGenerate(id);
+  }
   function addMenu(anchor){const r=anchor?.getBoundingClientRect();openCreateMenu(r?r.right+10:innerWidth/2,r?r.top:innerHeight/2);menuPoint=defaultPoint(-180,-100);}  function search(){
     if(!canvas)return;const origin=canvas,d=el('dialog','v2-search-dialog'),h=el('header'),heading=el('strong','','查找节点'),close=button('关闭查找','x',()=>d.close()),input=el('input'),list=el('div','v2-search-results');
     input.type='search';input.placeholder='搜索名称、提示词或模型';input.setAttribute('aria-label','搜索画布节点');h.append(heading,close);d.append(h,input,list);d.setAttribute('aria-label','查找画布节点');
@@ -280,7 +303,10 @@
   }
   function help(){
     const d=el('dialog','v2-help-dialog');d.setAttribute('aria-label','画布快捷键');const head=el('header'),title=el('strong','','更顺手地创作');head.append(title,button('关闭快捷键','x',()=>d.close()));d.append(head);
-    const rows=[['空白处拖动','框选节点'],['Shift + 框选','追加选择'],['空格 / 鼠标中键 + 拖动','平移画布'],['纵向滚轮 / Ctrl 或 ⌘ + 滚轮 / 捏合','以指针为中心缩放'],['Shift + 纵向滚轮','水平平移'],['含横向位移的触控板滑动','按滑动方向平移'],['V / H','选择 / 移动工具'],['双击空白处','在当前位置新建节点'],['Ctrl + K','查找节点'],['F / Shift + 1','定位选中 / 适应全部'],['Ctrl + D','复制选中节点'],['Ctrl + G / Ctrl + Shift + G','创作分组 / 解组'],['Ctrl + Z / Ctrl + Shift + Z','撤销 / 重做'],['按住 X 拖动','断开经过的连线']];
+    const rows=[['空白处拖动','框选节点'],['Shift + 框选','追加选择'],['空格 / 鼠标中键 + 拖动','平移画布'],
+      [wheelMode==='pan'?'滚轮 / 双指滑动':'Shift + 滚轮 / 双指横向滑动','平移画布'],[wheelMode==='pan'?'Ctrl 或 ⌘ + 滚轮 / 双指捏合':'滚轮 / Ctrl 或 ⌘ + 滚轮 / 捏合','以指针为中心缩放（10%–800%）'],
+      ['Ctrl + = / Ctrl + - / Ctrl + 0','放大 / 缩小 / 适应全部'],['V / H','选择 / 移动工具'],['双击空白处 / Tab','新建节点'],['Ctrl + L','连接两个选中节点'],
+      ['Ctrl + Enter','生成选中的单个节点'],['Ctrl + K / Ctrl + F','查找节点'],['F / Shift + 1','定位选中 / 适应全部'],['Ctrl + D','复制选中节点'],['Ctrl + G / Ctrl + Shift + G','创作分组 / 解组'],['Ctrl + Z / Ctrl + Shift + Z','撤销 / 重做'],['Delete / Backspace','删除选中节点'],['按住 X 拖动','断开经过的连线']];
     const list=el('dl');for(const [key,label]of rows)list.append(el('dt','',key),el('dd','',label));d.append(list,el('p','v2-help-note','输入文字时保留编辑快捷键。选择节点和连线不会提交生成。'));escapeCloses(d);d.onclose=()=>d.remove();document.body.append(d);d.showModal();
   }
   function initialize(){
@@ -302,7 +328,8 @@
     const zoomOut=button('缩小画布','minus',()=>zoom(1/1.2)),zoomIn=button('放大画布','plus',()=>zoom(1.2));
     zoomLabel=el('button','v2-zoom-label','100%');zoomLabel.id='studioV2Zoom';zoomLabel.type='button';zoomLabel.title='还原到 100%';zoomLabel.onclick=()=>zoom(1/viewport.scale);
     const fit=button('适应全部节点 · Shift+1','maximize',()=>focus(nodes.map(n=>n.id))),map=button('显示或隐藏导航地图','map',()=>{const m=document.getElementById('minimap');m.hidden=!m.hidden;map.setAttribute('aria-pressed',String(!m.hidden));});map.setAttribute('aria-pressed','true');
-    bottom.append(zoomOut,zoomLabel,zoomIn,el('span','v2-separator'),fit,map,button('快捷键帮助','keyboard',help));document.body.append(bottom);
+    wheelButton=button('滚轮模式','mouse',()=>setWheelMode(wheelMode==='pan'?'zoom':'pan'));wheelButton.id='studioV2Wheel';setWheelMode(wheelMode);
+    bottom.append(zoomOut,zoomLabel,zoomIn,el('span','v2-separator'),fit,map,wheelButton,button('快捷键帮助','keyboard',help));document.body.append(bottom);
     selectionActions=stop(el('div','v2-selection-actions'));selectionActions.id='studioV2Selection';selectionActions.hidden=true;selectionCount=el('span','v2-selection-count');
     const ungroupButton=button('解组','ungroup',ungroup);ungroupButton.dataset.ungroup='';selectionActions.append(selectionCount,button('定位选中节点','focus',()=>focus([...selected])),button('复制选中节点','copy-plus',duplicate),button('创作分组','group',group),ungroupButton);document.body.append(selectionActions);
     empty=stop(el('section','v2-board-empty'));empty.innerHTML='<span class="v2-empty-mark">✦</span><h1>让想法，在这里展开</h1><p>放入一段文字、一张图片，或从第一个生成节点开始。</p>';
@@ -365,19 +392,20 @@
   };
   board.onwheel=e=>{
     if(!canvas||activeDialog()||scrollableControl(e.target))return;
-    // WheelEvent does not reliably identify the physical input device. Keep
-    // vertical-wheel zoom compatible and use explicit modifiers/axes for pan.
+    // WheelEvent does not reliably identify the physical input device. The
+    // default follows LibTV (scroll pans, Ctrl/⌘ or pinch zooms); mouse users
+    // can switch back to wheel zoom from the navigation bar.
     const unit=e.deltaMode===1?16:e.deltaMode===2?Math.max(1,board.clientHeight):1;
     const dx=e.deltaX*unit,dy=e.deltaY*unit;
     if(!Number.isFinite(dx)||!Number.isFinite(dy)||(!dx&&!dy))return;
     e.preventDefault();cancelAnimation();
-    if(!e.ctrlKey&&!e.metaKey&&(e.shiftKey||dx)){
-      viewport.x-=dx||(e.shiftKey?dy:0);viewport.y-=e.shiftKey?0:dy;
+    if(!e.ctrlKey&&!e.metaKey&&(e.shiftKey||dx||wheelMode==='pan')){
+      if(e.shiftKey&&!dx){viewport.x-=dy;}else{viewport.x-=dx;viewport.y-=dy;}
     }else{
       if(!dy)return;
       const point=screenToWorld(e.clientX,e.clientY),rect=board.getBoundingClientRect();
       const factor=Math.exp(Math.max(-4,Math.min(4,-dy*.002)));
-      viewport.scale=Math.max(.06,Math.min(2.5,viewport.scale*factor));
+      viewport.scale=clampZoom(viewport.scale*factor);
       viewport.x=e.clientX-rect.left-point.x*viewport.scale;viewport.y=e.clientY-rect.top-point.y*viewport.scale;
     }
     applyViewport();renderSelectionHub();scheduleViewportSave();
@@ -393,8 +421,10 @@
     if(e.key==='Shift'&&!e.altKey){e.stopImmediatePropagation();setKnifeMode(false);return;}
     if(key==='x'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();e.stopImmediatePropagation();knifeHeld=true;setKnifeMode(true);return;}
     let action=null;
-    if(e.ctrlKey||e.metaKey){if(key==='k'||key==='f')action=search;else if(key==='d')action=duplicate;else if(key==='g')action=e.shiftKey?ungroup:group;else if(key==='z'&&e.shiftKey)action=redo;else if(key==='y')action=redo;}
-    else if(!e.altKey){if(key==='v')action=()=>{mode='select';update();};else if(key==='h')action=()=>{mode='hand';update();};else if(key==='f')action=()=>focus([...selected]);else if(e.shiftKey&&e.code==='Digit1')action=()=>focus(nodes.map(n=>n.id));else if(key==='?')action=help;}
+    if(e.ctrlKey||e.metaKey){if(key==='k'||key==='f')action=search;else if(key==='d')action=duplicate;
+      else if(key==='0')action=()=>focus(nodes.map(n=>n.id));else if(key==='='||key==='+')action=()=>zoom(1.2);else if(key==='-')action=()=>zoom(1/1.2);
+      else if(key==='l')action=connectSelected;else if(key==='enter')action=generateSelected;else if(key==='g')action=e.shiftKey?ungroup:group;else if(key==='z'&&e.shiftKey)action=redo;else if(key==='y')action=redo;}
+    else if(!e.altKey){if(key==='v')action=()=>{mode='select';update();};else if(key==='h')action=()=>{mode='hand';update();};else if(key==='f')action=()=>focus([...selected]);else if(e.shiftKey&&e.code==='Digit1')action=()=>focus(nodes.map(n=>n.id));else if(key==='?')action=help;else if(e.key==='Tab'&&!e.shiftKey&&(document.activeElement===document.body||board.contains(document.activeElement)))action=()=>addMenu(null);}
     if(action){e.preventDefault();e.stopImmediatePropagation();if(!e.repeat)action();}
   },true);
   window.addEventListener('keyup',e=>{if(e.code==='Space'){space=false;update();}if(e.key.toLowerCase()==='x'){knifeHeld=false;if(knifeActive)endDrag(e);setKnifeMode(false);}},true);

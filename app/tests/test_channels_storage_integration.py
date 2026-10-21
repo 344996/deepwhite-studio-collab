@@ -16,8 +16,7 @@ import studio_server
 import studio_assets
 import studio_generation
 import studio_dreamina
-import studio_agent
-import studio_agent_plans
+import studio_control
 import main as core
 
 PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX9sAAAAASUVORK5CYII=')
@@ -50,16 +49,11 @@ class Integration(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await api.get(output['url'])).content,PNG)
             self.assertTrue(Path(old).is_file(),'Migration must retain the old media')
 
-    async def test_agent_can_plan_optional_channel_without_cli_call(self):
-        core.save_canvas({'id':'dreaminaplan','project':'default','nodes':[],'connections':[]})
+    async def test_mcp_lists_optional_channel_without_cli_call(self):
+        # External agents plan through MCP list_models; listing must not run the CLI.
         model=studio_dreamina.models()[0]
-        with patch.object(studio_dreamina,'config',return_value={'enabled':True,'cli_path':'','models':{model['id']:True}}), \
-             patch.object(studio_dreamina,'_run_cli',side_effect=AssertionError('Planning cannot invoke CLI')):
-            chats,targets=studio_agent._catalog_data()
-            target=next(t for t in targets if t['provider_id']==studio_dreamina.PROVIDER and t['model']==model['id'])
-            ctx=studio_agent_plans.context('dreaminaplan',[],[])
-            ctx['target_models']={'image':target}
-            plan=studio_agent_plans.validate_plan({'nodes':[{'key':'hero','kind':'image','title':'角色','prompt':'一位年轻角色的灰底设定图','references':[]}]},ctx,targets)
-            self.assertEqual(plan['nodes'][0]['provider_id'],studio_dreamina.PROVIDER)
+        with patch.object(studio_dreamina,'config',return_value={'enabled':True,'cli_path':'','models':{model['id']:True}}),              patch.object(studio_dreamina,'_run_cli',side_effect=AssertionError('Listing cannot invoke CLI')):
+            rows=studio_control._models()
+        self.assertTrue(any(r['provider_id']==studio_dreamina.PROVIDER and r['model']==model['id'] for r in rows))
 
 if __name__=='__main__':unittest.main()
