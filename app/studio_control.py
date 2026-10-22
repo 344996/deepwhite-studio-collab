@@ -99,7 +99,7 @@ def _public_canvas(canvas):
 def _canvas(canvas_id):
     canvas = core.load_canvas(canvas_id)
     if core.normalize_canvas_kind(canvas.get('kind')) == 'smart':
-        raise HTTPException(400, '智能画布暂不支持此控制接口。')
+        raise HTTPException(400, '生成节点与生成任务目前仅支持普通画布；智能画布请用 edit_canvas 编辑结构，在画布页面执行生成。')
     return canvas
 
 
@@ -605,11 +605,14 @@ def install(app):
             import studio_feedback
             return {'result': await studio_feedback.submit(args, source='mcp')}
         if name == 'list_canvases':
-            return {'result': {'items': [x for x in core.list_canvases() if not x.get('deleted_at') and
-                core.normalize_canvas_kind(x.get('kind')) != 'smart' and
+            return {'result': {'items': [{**x, 'kind': core.normalize_canvas_kind(x.get('kind'))}
+                for x in core.list_canvases() if not x.get('deleted_at') and
                 (not args.get('project_id') or (x.get('project') or 'default') == args['project_id'])]}}
         if name == 'get_canvas':
-            canvas = _canvas(args.get('canvas_id', '')); return {'result': {'canvas': _public_canvas(canvas), 'revision': plans.revision(canvas)}}
+            # Read either kind; generation tools below still use _canvas() (ordinary only).
+            canvas = core.load_canvas(args.get('canvas_id', ''))
+            return {'result': {'canvas': _public_canvas(canvas), 'revision': plans.revision(canvas),
+                               'kind': core.normalize_canvas_kind(canvas.get('kind'))}}
         if name == 'list_models': return {'result': {'items': _models()}}
         if name == 'list_assets':
             project = args.get('project_id')

@@ -6,7 +6,6 @@
     if(event.key!=='Escape'||event.isComposing)return;
     const log=document.getElementById('logModal');if(!log?.classList.contains('open'))return;
     if(document.querySelector('dialog[open],#imageEditModal.open,#outputLightbox.open,#promptTemplateModal.open,#errorModal.open,#workflowTransferModal.open,#smartWorkflowTransferModal.open,#smartShortcutModal.open,[popover]:popover-open'))return;
-    const assistant=document.getElementById('studioAgentPanel');if(assistant&&!assistant.hidden)return;
     event.preventDefault();event.stopImmediatePropagation();window.closeCanvasLog?.();
   },true);
   window.StudioToolsV2=Object.freeze({ready:true});

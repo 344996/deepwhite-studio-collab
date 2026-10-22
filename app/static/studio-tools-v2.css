@@ -81,20 +81,6 @@ html.studio-v2 .log-prompt.copied{color:var(--dw-success)}
 
 /* Keep the original assistant sidebar and Skill multi-select, mapping its old
    component variables to the same production palette used by both canvases. */
-html.studio-v2 .studio-agent-panel{--sap-bg:var(--dw-bg)!important;--sap-panel:var(--dw-surface)!important;--sap-soft:var(--dw-panel)!important;--sap-line:var(--dw-line-strong)!important;--sap-text:var(--dw-ink)!important;--sap-muted:var(--dw-muted)!important;--sap-gold:var(--dw-gold)!important;--sap-gold-soft:var(--dw-gold-soft)!important;--sap-error:var(--dw-danger)!important;font-family:'Segoe UI','Microsoft YaHei',sans-serif;box-shadow:-18px 0 54px var(--dw-shadow)}
-html.studio-v2 .studio-agent-panel :is(input,textarea,select,button){font-family:inherit}
-html.studio-v2 .studio-agent-panel :is(select,textarea){font-size:12px;background:var(--dw-surface);color:var(--dw-ink);border-color:var(--dw-line-strong)}
-html.studio-v2 .studio-agent-brand strong{font-size:16px;font-weight:600}.studio-v2 .studio-agent-brand small{font-size:11px;line-height:1.5}
-html.studio-v2 .studio-agent-messages{min-height:70px;flex:1 1 0;overflow:auto}
-html.studio-v2 .studio-agent-plan{flex:0 1 auto;min-height:80px;max-height:30vh}
-html.studio-v2 .studio-agent-options{flex:0 1 auto;min-height:100px;max-height:34vh}
-html.studio-v2 .studio-agent-composer{flex-shrink:0}
-html.studio-v2 .studio-agent-composer textarea{font-size:13px;line-height:1.7;min-height:72px}
-html.studio-v2 .studio-agent-panel :is(.studio-agent-bubble,.studio-agent-plan-node p,.studio-agent-message-error){overflow-wrap:anywhere}
-html.studio-v2 .studio-agent-plan-node p{font-size:12px;line-height:1.7}
-html.studio-v2 .studio-agent-panel .studio-agent-apply,html.studio-v2 .studio-agent-sendrow button{color:var(--dw-on-gold)!important;background:var(--dw-gold);border-color:var(--dw-gold);font-size:12px;font-weight:600;min-height:34px}
-html.studio-v2 .studio-agent-panel .studio-agent-apply:hover,html.studio-v2 .studio-agent-sendrow button:hover{background:var(--dw-gold-hover)}
-html.studio-v2 .studio-agent-attachrow button{font-size:12px;min-height:32px}
 @media(max-width:1350px){html.studio-v2 .image-edit-head{gap:8px}html.studio-v2 .image-edit-mode{gap:3px}html.studio-v2 .image-edit-mode button{padding:0 7px}html.studio-v2 .image-edit-title{font-size:15px}}
 
 /* Existing image/video parameter popovers share one palette and readable surface.

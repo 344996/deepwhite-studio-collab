@@ -126,15 +126,21 @@ class GraphTests(unittest.TestCase):
             with self.subTest(operations=str(operations)[:70]):
                 self.edit(operations, status=400)
 
-    def test_active_jobs_and_smart_canvas_cannot_be_edited(self):
+    def test_active_jobs_block_edits_on_both_canvas_kinds(self):
         canvas = core.load_canvas(self.canvas["id"])
         canvas["nodes"] = [{"id": "g", "type": "generator", "studioJobState": "polling"}]
         core.save_canvas(canvas)
         self.edit([self.add()], status=409)
-        canvas["nodes"] = []
+        # Smart canvases are editable now (smart-prompt nodes), still guarded by running jobs.
+        canvas["nodes"] = [{"id": "s", "type": "smart-image", "running": True}]
         canvas["kind"] = "smart"
         core.save_canvas(canvas)
-        self.edit([self.add()], status=400)
+        self.edit([self.add()], status=409)
+        canvas["nodes"] = []
+        core.save_canvas(canvas)
+        created = self.edit([self.add()])["node_ids"]["text"]
+        saved = next(n for n in core.load_canvas(self.canvas["id"])["nodes"] if n["id"] == created)
+        self.assertEqual(saved["type"], "smart-prompt")
 
     def test_failed_atomic_replace_keeps_canvas_and_retry_creates_once(self):
         import studio_asset_integration

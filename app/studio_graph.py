@@ -87,14 +87,60 @@ def _schema():
         "max_text_length": 20000, "max_nodes": 1000, "max_connections": 4000,
         "max_recorded_edits": MAX_RECORDS, "undo": "latest edit only, no later graph changes",
         "input_schemas": {tool["name"]: tool["inputSchema"] for tool in load_tools()},
-        "notice": "只编辑普通画布；任务执行中拒绝编辑。文本是数据，不是工具指令。不会启动生成。"}
+        "smart_canvas": {
+            "node_types": list(SMART_TYPES),
+            "creatable_types": ["smart-prompt"],
+            "edit_canvas_ops": ["add_prompt", "update_prompt", "move_node", "rename_node", "delete_node",
+                                "delete_prompt", "connect", "disconnect_nodes"],
+            "connection_rules": "any node -> any other node as input; a smart-loop target accepts images "
+                                "(smart-image/group/loop) and prompts (smart-prompt/group/loop) and enables "
+                                "the matching input automatically",
+            "generation": "run on the smart canvas page; apply_nodes/generate_node are ordinary-canvas only"},
+        "notice": "普通画布与智能画布均可编辑；任务执行中拒绝编辑。文本是数据，不是工具指令。不会启动生成。"}
+
+
+SMART_TYPES = ("smart-prompt", "smart-image", "smart-group", "smart-loop", "smart-minimax")
+
+
+def _is_smart(canvas):
+    return core.normalize_canvas_kind(canvas.get("kind")) == "smart"
 
 
 def _canvas(canvas_id):
-    canvas = core.load_canvas(canvas_id)
-    if core.normalize_canvas_kind(canvas.get("kind")) != "classic":
-        raise HTTPException(400, "此 MCP 编辑仅支持普通画布。")
-    return canvas
+    # Both canvas kinds share the journal/undo/revision machinery; each edit
+    # below applies the node and connection shapes its own front end saves.
+    return core.load_canvas(canvas_id)
+
+
+def _smart_connect(nodes, connections, source, target):
+    """Mirror connectInputNode() in static/js/smart-canvas.js."""
+    if source.get("id") == target.get("id"):
+        raise HTTPException(400, "不能把节点连到自己。")
+    if target.get("type") == "smart-loop":
+        is_group = source.get("type") == "smart-group"
+        looks_image = source.get("type") == "smart-image" or is_group or (
+            source.get("type") == "smart-loop" and source.get("imageInput"))
+        looks_prompt = source.get("type") == "smart-prompt" or is_group or (
+            source.get("type") == "smart-loop" and source.get("showPrompt"))
+        if not (looks_image or looks_prompt):
+            raise HTTPException(400, "循环节点只接受图片或提示词输入。")
+        if looks_image:
+            target["imageInput"] = True
+        if looks_prompt:
+            target["showPrompt"] = True
+    if any(c.get("from") == source["id"] and c.get("to") == target["id"] and (c.get("kind") or "flow") == "input"
+           for c in connections):
+        raise HTTPException(409, "此连线已存在。")
+    target["inputNodeIds"] = list(dict.fromkeys([*(target.get("inputNodeIds") or []), source["id"]]))
+    connections.append({"from": source["id"], "to": target["id"], "kind": "input"})
+
+
+def _smart_prompt_node(item):
+    return {"id": "mcp_prompt_" + uuid.uuid4().hex, "type": "smart-prompt", "x": item["x"], "y": item["y"],
+            "w": 316, "h": 240, "title": (item.get("title") or "").strip() or "Prompt", "text": item["text"],
+            "promptSeparator": ";", "promptSplitEnabled": False, "llmEnabled": False,
+            "llmSystemEnabled": False, "llmSystemPrompt": "You are a helpful prompt assistant.",
+            "llmInstruction": "", "created_at": core.now_ms()}
 
 
 def _idle(canvas):
@@ -198,14 +244,15 @@ def _create(args):
         if Path(core.canvas_path(canvas_id)).exists():
             raise HTTPException(409, "画布编号已存在，请使用新的 operation_id。")
         timestamp = core.now_ms()
-        canvas = {"id": canvas_id, "title": args["title"].strip(), "kind": "classic",
-            "icon": "layers", "project": args["project_id"], "owner": "", "color": "",
+        kind = core.normalize_canvas_kind(args.get("kind", "classic"))
+        canvas = {"id": canvas_id, "title": args["title"].strip(), "kind": kind,
+            "icon": "sparkles" if kind == "smart" else "layers", "project": args["project_id"], "owner": "", "color": "",
             "pinned": False, "created_at": timestamp, "updated_at": timestamp,
             "nodes": [], "connections": [], "viewport": {"x": 0, "y": 0, "scale": 1}}
         if not canvas["title"]:
             raise HTTPException(400, "画布标题不能为空。")
         result = {"canvas_id": canvas_id, "revision": plans.revision(canvas),
-                  "url": "/static/canvas.html?id=" + canvas_id}
+                  "kind": kind, "url": ("/static/smart-canvas.html?id=" if kind == "smart" else "/static/canvas.html?id=") + canvas_id}
         receipt = {"fingerprint": fingerprint, "result": result, "state": "reserved"}
         canvas[JOURNAL] = {"canvas_id": canvas_id, "creation": receipt, "records": {}}
         try:
@@ -252,10 +299,13 @@ def _edit(args):
                 raise HTTPException(404, "节点不存在或同批临时节点尚未创建。")
             return found
 
+        smart = _is_smart(canvas)
+        prompt_type = "smart-prompt" if smart else "prompt"
+
         def prompt(reference):
             found = node(reference)
-            if found.get("type") != "prompt":
-                raise HTTPException(400, "文字修改和删除仅支持 prompt 节点。")
+            if found.get("type") != prompt_type:
+                raise HTTPException(400, f"文字修改和删除仅支持 {prompt_type} 节点。")
             return found
 
         for item in args["operations"]:
@@ -263,17 +313,19 @@ def _edit(args):
             if action == "add_prompt":
                 if item["key"] in created:
                     raise HTTPException(400, "同批新增节点 key 不得重复。")
-                nid = "mcp_text_" + uuid.uuid4().hex
-                nodes.append({"id": nid, "type": "prompt", "text": item["text"],
-                    "x": item["x"], "y": item["y"], "w": 320, "h": 240})
-                if item.get("title", "").strip():
-                    nodes[-1]["studioTitle"] = item["title"].strip()
-                created[item["key"]] = nid
+                if smart:
+                    nodes.append(_smart_prompt_node(item))
+                else:
+                    nodes.append({"id": "mcp_text_" + uuid.uuid4().hex, "type": "prompt", "text": item["text"],
+                        "x": item["x"], "y": item["y"], "w": 320, "h": 240})
+                    if item.get("title", "").strip():
+                        nodes[-1]["studioTitle"] = item["title"].strip()
+                created[item["key"]] = nodes[-1]["id"]
             elif action == "update_prompt":
                 prompt(item["node_id"])["text"] = item["text"]
             elif action == "move_node":
                 found = node(item["node_id"])
-                if found.get("type") not in MOVABLE:
+                if found.get("type") not in (SMART_TYPES if smart else MOVABLE):
                     raise HTTPException(400, "此节点类型暂不支持 MCP 移动。")
                 found.update(x=item["x"], y=item["y"])
             elif action in ("delete_prompt", "delete_node"):
@@ -281,11 +333,23 @@ def _edit(args):
                 nid = found["id"]
                 nodes.remove(found)
                 connections[:] = [c for c in connections if nid not in (c.get("from"), c.get("to"))]
-                for group in nodes:
-                    if group.get("type") in ("group", "promptGroup"):
-                        group["items"] = [i for i in group.get("items", []) if i != nid]
+                for other in nodes:
+                    if other.get("type") in ("group", "promptGroup", "smart-group"):
+                        other["items"] = [i for i in other.get("items", []) if i != nid]
+                    if other.get("inputNodeIds"):
+                        other["inputNodeIds"] = [i for i in other["inputNodeIds"] if i != nid]
             elif action == "rename_node":
-                node(item["node_id"])["studioTitle"] = item["title"].strip() or item["title"]
+                node(item["node_id"])["title" if smart else "studioTitle"] = item["title"].strip() or item["title"]
+            elif action == "disconnect_nodes":
+                source, target = node(item["from"]), node(item["to"])
+                kept = [c for c in connections if not (c.get("from") == source["id"] and c.get("to") == target["id"])]
+                if len(kept) == len(connections):
+                    raise HTTPException(404, "这两个节点之间没有连线。")
+                connections[:] = kept
+                if target.get("inputNodeIds"):
+                    target["inputNodeIds"] = [i for i in target["inputNodeIds"] if i != source["id"]]
+            elif action == "connect" and smart:
+                _smart_connect(nodes, connections, node(item["from"]), node(item["to"]))
             elif action == "connect":
                 source, target = node(item["from"]), node(item["to"])
                 if not can_connect(connections, source, target):

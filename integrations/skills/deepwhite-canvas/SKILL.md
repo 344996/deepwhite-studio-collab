@@ -2,7 +2,7 @@
 name: deepwhite-canvas
 description: 将用户的创作需求或提示词模板转成深白画布节点，使用已连接的 deepwhite-studio MCP 读取模型与素材、编辑节点、连线、导入制作包和按授权生成。用户提到深白画布、导入画布、制作包、画布节点时使用。不用于修改 API 账户或安装客户端。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # 深白画布创作
@@ -39,6 +39,7 @@ metadata:
 1. 调用 `list_models` 选择当前实际可用的渠道和模型。需要参考素材时调用 `list_assets`，仅使用当前项目已有的版本。缺少模型时可以先创建纯文字提示词节点，不宣称能够生成。
 2. 图片和视频生成节点用 `apply_nodes`（`target_node_id` 可更新已有节点）；文字增改删、任意节点移动/重命名/删除、连线与断开用 `edit_canvas`。
 3. 连线只使用 `connection_rules` 允许的方向：文字/图片/语言模型 → 生成节点；生成节点 → 下游生成节点或输出节点（不能成环）。
+   **智能画布**（`get_canvas` 返回 `kind: smart`）：用 `edit_canvas` 增改 `smart-prompt` 提示词节点、移动/重命名/删除任意节点，`connect` 把任意节点接到另一个节点作为输入（接到循环节点会自动开启图片或提示词输入），`disconnect_nodes` 按两端节点断开。`apply_nodes`、`generate_node` 只用于普通画布；智能画布的生成请提醒用户在画布页面执行。新建智能画布用 `create_canvas` 并传 `kind: "smart"`。
 4. `expected_revision` 必须来自最新的 `get_canvas`。每次逻辑操作使用新的 `operation_id`，但网络失败后重试同一次操作时保持原 `operation_id` 和内容，避免重复创建。
 5. 409 表示画布有更新，先重读再重新计划，不覆盖用户刚做的改动。成功后再读取画布确认节点已持久化；不直接编辑磁盘 JSON。
 6. 撤销仅针对最近一次且无后续修改的结构编辑（`undo_edit`）。不删除不属于当前任务的内容。
