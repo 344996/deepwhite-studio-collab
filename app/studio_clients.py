@@ -330,10 +330,15 @@ def install_skills(client_id):
             if folder.exists():
                 if folder.is_symlink() or not folder.is_dir():
                     raise ClientError(f"{folder.name} 位置不是普通文件夹，已停止安装。")
-                # Keep the user's copy (edited or foreign) before replacing it.
-                backup = str(folder.with_name(folder.name + ".deepwhite-backup-" + time.strftime("%Y%m%d-%H%M%S")))
+                # Keep the user's copy (edited or foreign) before replacing it. Backups and
+                # staging live NEXT TO the skills folder: clients load every subfolder of it
+                # that has a SKILL.md, so a backup inside would appear as a duplicate Skill.
+                backups = base.parent / "deepwhite-skill-backups"
+                backups.mkdir(parents=True, exist_ok=True)
+                backup = str(backups / f"{skill['id']}-{time.strftime('%Y%m%d-%H%M%S')}")
                 shutil.move(str(folder), backup)
-            staging = Path(tempfile.mkdtemp(prefix=".deepwhite-skill-", dir=base if base.is_dir() else None))
+            base.parent.mkdir(parents=True, exist_ok=True)
+            staging = Path(tempfile.mkdtemp(prefix=".deepwhite-skill-staging-", dir=base.parent))
             try:
                 for relative, content in files.items():
                     target = staging / relative

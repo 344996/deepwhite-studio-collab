@@ -100,6 +100,68 @@ class GraphRuleTests(Base):
         self.assertEqual([(c["from"], c["to"]) for c in canvas["connections"]], [("gen2", "out")])
 
 
+class SmartCanvasTests(Base):
+    def setUp(self):
+        super().setUp()
+        canvas = core.load_canvas(core.new_canvas("smart", kind="smart", project=self.project["id"])["id"])
+        canvas["nodes"] = [{"id": "img", "type": "smart-image", "x": 0, "y": 0, "images": []},
+                           {"id": "loop", "type": "smart-loop", "x": 400, "y": 0, "showPrompt": False, "imageInput": False}]
+        canvas["connections"] = []
+        core.save_canvas(canvas)
+        self.cid = canvas["id"]
+
+    def edit(self, operations, status=200, operation_id=None):
+        return self.call("edit_canvas", {"canvas_id": self.cid, "operation_id": operation_id or uuid.uuid4().hex,
+            "expected_revision": plans.revision(core.load_canvas(self.cid)), "operations": operations}, status)
+
+    def test_list_and_read_smart_canvas(self):
+        items = {item["id"]: item for item in self.call("list_canvases", {"project_id": self.project["id"]})["items"]}
+        self.assertEqual(items[self.cid]["kind"], "smart")
+        read = self.call("get_canvas", {"canvas_id": self.cid})
+        self.assertEqual(read["kind"], "smart")
+        self.assertEqual(len(read["canvas"]["nodes"]), 2)
+
+    def test_prompt_nodes_loop_inputs_disconnect_delete_and_undo(self):
+        result = self.edit([{"op": "add_prompt", "key": "p", "text": "雨夜街道", "x": 0, "y": 300, "title": "分镜一"},
+                            {"op": "connect", "from": "$p", "to": "loop"},
+                            {"op": "connect", "from": "img", "to": "loop"},
+                            {"op": "rename_node", "node_id": "img", "title": "参考图"}])
+        canvas = core.load_canvas(self.cid)
+        prompt = next(n for n in canvas["nodes"] if n["id"] == result["node_ids"]["p"])
+        self.assertEqual((prompt["type"], prompt["title"], prompt["text"]), ("smart-prompt", "分镜一", "雨夜街道"))
+        loop = next(n for n in canvas["nodes"] if n["id"] == "loop")
+        self.assertTrue(loop["showPrompt"] and loop["imageInput"])
+        self.assertEqual(set(loop["inputNodeIds"]), {prompt["id"], "img"})
+        self.assertTrue(all(c["kind"] == "input" for c in canvas["connections"]))
+        self.assertEqual(next(n for n in canvas["nodes"] if n["id"] == "img")["title"], "参考图")
+        self.edit([{"op": "disconnect_nodes", "from": "img", "to": "loop"}, {"op": "delete_node", "node_id": prompt["id"]}])
+        canvas = core.load_canvas(self.cid)
+        loop = next(n for n in canvas["nodes"] if n["id"] == "loop")
+        self.assertEqual(loop["inputNodeIds"], [])
+        self.assertEqual(canvas["connections"], [])
+        operation = uuid.uuid4().hex
+        receipt = self.edit([{"op": "update_prompt", "node_id": "img", "text": "x"}], 400, operation)
+        self.assertIn("smart-prompt", json.dumps(receipt, ensure_ascii=False))
+        undo_op = uuid.uuid4().hex
+        done = self.edit([{"op": "move_node", "node_id": "loop", "x": 900, "y": 10}], operation_id=undo_op)
+        self.call("undo_edit", {"canvas_id": self.cid, "operation_id": undo_op, "expected_revision": done["revision"]})
+        self.assertEqual(next(n for n in core.load_canvas(self.cid)["nodes"] if n["id"] == "loop")["x"], 400)
+
+    def test_create_smart_canvas(self):
+        created = self.call("create_canvas", {"project_id": self.project["id"], "title": "智能分镜", "kind": "smart",
+                                              "expected_revision": self.call("list_projects")["revision"],
+                                              "operation_id": uuid.uuid4().hex})
+        self.assertEqual(created["kind"], "smart")
+        self.assertTrue(created["url"].startswith("/static/smart-canvas.html?id="))
+        self.assertEqual(core.load_canvas(created["canvas_id"])["kind"], "smart")
+
+    def test_generation_tools_stay_ordinary_only(self):
+        self.call("apply_nodes", {"canvas_id": self.cid, "operation_id": uuid.uuid4().hex,
+                                  "expected_revision": plans.revision(core.load_canvas(self.cid)),
+                                  "nodes": [{"key": "a", "kind": "image", "title": "t", "prompt": "p",
+                                             "provider_id": "x", "model": "y"}]}, 400)
+
+
 class FeedbackTests(Base):
     def test_agent_feedback_falls_back_to_github_issue_link(self):
         with patch.dict(os.environ, {"DEEPWHITE_FEEDBACK_WEBHOOK": ""}):
@@ -206,7 +268,12 @@ class ClientTests(Base):
         upgraded = next(row for row in result["skills"] if row["id"] == "deepwhite-canvas")
         self.assertTrue(upgraded["changed"])
         self.assertEqual((Path(upgraded["backup"]) / "SKILL.md").read_text(encoding="utf-8"), "用户改过")
-        self.assertIn("version: \"1.1.0\"", (self.root / ".claude/skills/deepwhite-canvas/SKILL.md").read_text(encoding="utf-8"))
+        # Clients load every subfolder of skills/; backups and staging must stay outside it.
+        skills = self.root / ".claude/skills"
+        self.assertNotEqual(Path(upgraded["backup"]).parent, skills)
+        self.assertEqual(sorted(p.name for p in skills.iterdir()), ["deepwhite-avatar", "deepwhite-canvas", "deepwhite-film"])
+        latest = next(s["version"] for s in studio_clients.catalog() if s["id"] == "deepwhite-canvas")
+        self.assertIn(f"version: \"{latest}\"", (self.root / ".claude/skills/deepwhite-canvas/SKILL.md").read_text(encoding="utf-8"))
         self.act("doubao", "connect", 409)
         self.act("claude_desktop", "install_skills", 409)
         archive = self.client.get("/api/studio/clients/skills/deepwhite-film.zip")

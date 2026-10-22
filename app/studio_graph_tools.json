@@ -33,7 +33,7 @@
   },
   {
     "name": "create_canvas",
-    "description": "在现有项目中新建普通画布，不生成内容。expected_revision 来自 list_projects。相同 operation_id 和内容可重试，永不重复创建。",
+    "description": "在现有项目中新建画布（kind: classic 普通画布，默认；smart 智能画布），不生成内容。expected_revision 来自 list_projects。相同 operation_id 和内容可重试，永不重复创建。",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -57,6 +57,13 @@
           "minLength": 8,
           "maxLength": 80,
           "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "classic",
+            "smart"
+          ]
         }
       },
       "required": [
@@ -76,7 +83,7 @@
   },
   {
     "name": "edit_canvas",
-    "description": "批量编辑普通画布：文字增改删、任意节点移动/重命名/删除、按画布规则连线与断开（文字/图片/语言模型→生成节点，生成节点→下游生成或输出）。先 get_canvas 获取 expected_revision；同批新增节点以 $key 引用。删除节点会移除其连线与分组引用（删除分组不删除成员）；任何任务进行中拒绝编辑。不触发生成；撤销用 undo_edit，只能撤销最近一次且无后续改动的结构编辑。",
+    "description": "批量编辑画布（普通画布与智能画布）：文字增改删、任意节点移动/重命名/删除、按画布规则连线与断开。普通画布：文字/图片/语言模型→生成节点，生成节点→下游生成或输出；智能画布：任意节点→任意节点作为输入，循环节点自动开启图片/提示词输入。断开用 disconnect（普通画布连线 id）或 disconnect_nodes（两端节点，两种画布都可用）。先 get_canvas 获取 expected_revision；同批新增节点以 $key 引用。删除节点会移除其连线、输入与分组引用；任何任务进行中拒绝编辑。不触发生成；撤销用 undo_edit，只能撤销最近一次且无后续改动的结构编辑。",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -305,6 +312,32 @@
                   "op",
                   "node_id",
                   "title"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "const": "disconnect_nodes"
+                  },
+                  "from": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 81,
+                    "pattern": "^\\$?[A-Za-z0-9_-]+$"
+                  },
+                  "to": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 81,
+                    "pattern": "^\\$?[A-Za-z0-9_-]+$"
+                  }
+                },
+                "required": [
+                  "op",
+                  "from",
+                  "to"
                 ],
                 "additionalProperties": false
               }
