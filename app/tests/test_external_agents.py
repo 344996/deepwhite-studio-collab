@@ -268,7 +268,12 @@ class ClientTests(Base):
         upgraded = next(row for row in result["skills"] if row["id"] == "deepwhite-canvas")
         self.assertTrue(upgraded["changed"])
         self.assertEqual((Path(upgraded["backup"]) / "SKILL.md").read_text(encoding="utf-8"), "用户改过")
-        self.assertIn("version: \"1.1.0\"", (self.root / ".claude/skills/deepwhite-canvas/SKILL.md").read_text(encoding="utf-8"))
+        # Clients load every subfolder of skills/; backups and staging must stay outside it.
+        skills = self.root / ".claude/skills"
+        self.assertNotEqual(Path(upgraded["backup"]).parent, skills)
+        self.assertEqual(sorted(p.name for p in skills.iterdir()), ["deepwhite-avatar", "deepwhite-canvas", "deepwhite-film"])
+        latest = next(s["version"] for s in studio_clients.catalog() if s["id"] == "deepwhite-canvas")
+        self.assertIn(f"version: \"{latest}\"", (self.root / ".claude/skills/deepwhite-canvas/SKILL.md").read_text(encoding="utf-8"))
         self.act("doubao", "connect", 409)
         self.act("claude_desktop", "install_skills", 409)
         archive = self.client.get("/api/studio/clients/skills/deepwhite-film.zip")
