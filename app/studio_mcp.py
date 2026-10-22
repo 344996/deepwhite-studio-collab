@@ -123,13 +123,13 @@ def _request_json(url: str, method: str = "GET", payload=None, headers=None, *, 
         number = getattr(reason, "winerror", None) or getattr(reason, "errno", None)
         if isinstance(reason, PermissionError) or number in (errno.EACCES, errno.EPERM, 10013):
             raise BridgeError("当前进程无权访问本机画布端口。", "connection_permission_denied",
-                "在运行 Codex 的同一 Windows 环境执行连接检查。检查客户端权限或组织网络策略；无需关闭系统防护。") from None
+                "在运行智能体客户端的同一 Windows 环境执行连接检查。检查客户端权限或组织网络策略；无需关闭系统防护。") from None
         if isinstance(reason, (TimeoutError, socket.timeout)) or number in (errno.ETIMEDOUT, 10060):
             raise BridgeError("连接本机画布超时。", "connection_timeout",
                 "确认画布仍在运行且端口一致；等待更新或启动结束后重试。") from None
         if isinstance(reason, ConnectionRefusedError) or number in (errno.ECONNREFUSED, 10061):
             raise BridgeError("本机画布未监听此端口，连接被拒绝。", "connection_refused",
-                "先在运行 Codex 的电脑启动画布，再从该画布设置复制配置。127.0.0.1 不会连接到别人的电脑。") from None
+                "先在运行智能体客户端的电脑启动画布，再从该画布设置复制配置。127.0.0.1 不会连接到别人的电脑。") from None
         if isinstance(reason, socket.gaierror):
             raise BridgeError("无法解析本机服务地址。", "name_resolution_failed",
                               "请使用画布生成的 127.0.0.1 配置，确认客户端运行环境。") from None
@@ -180,7 +180,7 @@ def _read_control_config() -> tuple[str, str]:
                           "检查当前用户能否读取画布数据目录，保留原文件并从设置重新配置。") from None
     if not isinstance(config, dict) or config.get("enabled") is not True:
         raise BridgeError("MCP 控制未启用；请在 DeepWhite Studio 设置中启用。", "control_disabled",
-                          "在运行 Codex 的这台电脑启用“外接智能体 → 允许 MCP 访问”。")
+                          "在运行智能体客户端的这台电脑启用“外接智能体 → 允许 MCP 访问”。")
     token = config.get("token")
     if not isinstance(token, str) or not token.strip():
         raise BridgeError("MCP 控制已启用，但本机控制 token 尚未配置。", "control_token_missing",
@@ -267,7 +267,7 @@ def preflight(base_url: str):
     """Read-only checks run in the bridge environment, with no generated work."""
     checks = []
     report = {"ok": False, "transport": "stdio", "version": SERVER_INFO["version"], "checks": checks,
-              "scope": "本检查仅验证执行它的进程；Codex 的实际连接还需在 Codex 中发现并调用工具。"}
+              "scope": "本检查仅验证执行它的进程；客户端的实际连接还需在客户端中发现并调用工具。"}
     def step(name, action):
         try:
             result = action()
