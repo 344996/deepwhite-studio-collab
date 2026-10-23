@@ -18,6 +18,7 @@ function harness(wrapped=false){
     studioSmartCaptureDraft:payload=>{const token={revision:drafts.length+1};drafts.push({token,payload});return token;},
     canvasForStorage:()=>JSON.parse(JSON.stringify({...ctx.canvas,nodes:ctx.nodes})),
     applyMergedServerCanvas:remote=>{ctx.canvas.updated_at=remote.updated_at;},
+    smartMergeConflicts:[],rememberSmartServerNodes:()=>{},normalizeLegacySmartNode:x=>x,
     setTimeout:fn=>{timers.set(++timer,fn);return timer;},clearTimeout:id=>timers.delete(id),
     fetch:(url,options)=>new Promise(resolve=>{calls.push({url,body:JSON.parse(options.body),resolve});})};
   vm.createContext(ctx);

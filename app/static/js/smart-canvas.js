@@ -5376,7 +5376,54 @@ function syncRunButtonState(node=selectedNode()){
     // 不再因为“画布上有任意循环/级联在跑”就全局禁用——跑循环时仍可对其他节点点生成。
     runBtn.disabled = !isSmartRunnableNode(node) || smartNodeInFlight(node) || smartCascadeIsLoopRunning(node?.id);
 }
-function mergeSmartNode(local, remote){
+// SAVE-01: last node state the server confirmed (load, save ack or merge). Merges compare both
+// sides with it, so an unsaved local edit is never mistaken for a stale copy of the remote one.
+let smartServerNodeBase = new Map();
+let smartMergeConflicts = [];
+// Node content edited on the canvas: when both sides changed it, the user chooses.
+const SMART_CONFLICT_FIELDS = {text:'提示词', title:'标题', promptSeparator:'分段符'};
+// This page's composer drafts and unsubmitted receipt: the local draft wins, with a notice.
+const SMART_DRAFT_KEYS = ['promptDraftHtml','promptDraftText','promptDraftTouched','studioPrompt','userInput','systemPrompt','audioPrompt','studioSubmission'];
+function smartStableJson(value){
+    if(value === undefined) return 'undefined';
+    if(value === null || typeof value !== 'object') return JSON.stringify(value);
+    if(Array.isArray(value)) return '[' + value.map(smartStableJson).join(',') + ']';
+    return '{' + Object.keys(value).filter(k => value[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + smartStableJson(value[k])).join(',') + '}';
+}
+function rememberSmartServerNodes(list){
+    smartServerNodeBase = new Map((list || []).filter(n => n?.id).map(n => [n.id, JSON.parse(JSON.stringify(smartNodeStorageSource(n)))]));
+}
+function setSmartNodeField(node, key, value){
+    if(value === undefined) delete node[key];
+    else node[key] = value;
+}
+function mergeSmartNodeFields(merged, local, remote, base, conflicts){
+    const keys = new Set([...Object.keys(local), ...Object.keys(remote)]);
+    keys.delete('images');
+    keys.delete('promptDraftHtml');
+    for(const key of keys){
+        // Runtime-only fields (DOM handles, loop contexts) are never saved and may be cyclic.
+        if(key.startsWith('_') || key === 'studioSavingSubmission') continue;
+        const l = smartStableJson(local[key]), r = smartStableJson(remote[key]), b = smartStableJson(base[key]);
+        if(l === r || l === b) continue;
+        const takeLocal = () => {
+            setSmartNodeField(merged, key, local[key]);
+            if(key === 'promptDraftText') setSmartNodeField(merged, 'promptDraftHtml', local.promptDraftHtml);
+        };
+        if(r === b){ takeLocal(); continue; }
+        // Both sides changed it. Content keeps the local value and waits for the user's choice;
+        // drafts keep the local draft; layout and run state keep the latest saved side as before.
+        if(Object.hasOwn(SMART_CONFLICT_FIELDS, key)){
+            takeLocal();
+            conflicts.push({nodeId:local.id, field:key, remote:remote[key]});
+        }else if(SMART_DRAFT_KEYS.includes(key)){
+            takeLocal();
+            if(key !== 'promptDraftTouched' && key !== 'studioSubmission') conflicts.push({nodeId:local.id, field:key, draft:true});
+        }
+    }
+    return merged;
+}
+function mergeSmartNode(local, remote, base=null, conflicts=[]){
     const images = mergeSmartImageLists(local.images, remote.images);
     const localDone = smartNodeHasCompletedResult(local);
     const remoteDone = smartNodeHasCompletedResult(remote);
@@ -5393,13 +5440,16 @@ function mergeSmartNode(local, remote){
     if(smartNodeInFlight(local)){
         return {...local, images};
     }
-    // 否则以对方（最新保存方）的布局/标题/设置为基底，但图片取并集——双方生成结果都不丢
+    // 否则以对方（最新保存方）的布局/标题/设置为基底，但图片取并集——双方生成结果都不丢；
+    // 只有本地改过的字段保留本地值（见 mergeSmartNodeFields）。
     const merged = {...remote, images};
+    if(base) mergeSmartNodeFields(merged, local, remote, base, conflicts);
+    else SMART_DRAFT_KEYS.forEach(key => { if(Object.hasOwn(local, key)) merged[key] = local[key]; });
     return smartNodeHasDisplayResult(merged) && (merged.pending || merged.queued || smartPendingTasks(merged).length)
         ? completeSmartNodeWithImages(merged, images)
         : merged;
 }
-function mergeSmartNodeLists(localNodes, remoteNodes){
+function mergeSmartNodeLists(localNodes, remoteNodes, conflicts=[]){
     const localById = new Map((localNodes || []).map(n => [n.id, n]));
     const remoteById = new Map((remoteNodes || []).map(n => [n.id, n]));
     const order = [];
@@ -5411,7 +5461,7 @@ function mergeSmartNodeLists(localNodes, remoteNodes){
         const remote = remoteById.get(id);
         if(local && !remote) return local;     // 仅本地存在：保留（我新建的节点；对方删了也宁可复活也不丢结果）
         if(remote && !local) return remote;     // 仅对方存在：加入对方新建的节点
-        return mergeSmartNode(local, remote);
+        return mergeSmartNode(local, remote, smartServerNodeBase.get(id) || null, conflicts);
     }).filter(Boolean);
 }
 function mergeSmartConnections(localConns, remoteConns, nodeIds){
@@ -5429,9 +5479,15 @@ function mergeSmartConnections(localConns, remoteConns, nodeIds){
 function applyMergedServerCanvas(serverCanvas){
     if(!serverCanvas || !canvas) return false;
     const remoteNodes = (Array.isArray(serverCanvas.nodes) ? serverCanvas.nodes : []).map(normalizeLegacySmartNode).filter(Boolean);
-    const mergedNodes = mergeSmartNodeLists(nodes, remoteNodes);
+    const conflicts = [];
+    const mergedNodes = mergeSmartNodeLists(nodes, remoteNodes, conflicts);
     const nodeIds = new Set(mergedNodes.map(n => n.id));
     nodes = mergedNodes;
+    rememberSmartServerNodes(remoteNodes);
+    const replacedDrafts = conflicts.filter(c => c.draft);
+    if(replacedDrafts.length) toast(`外部也改了 ${new Set(replacedDrafts.map(c => nodes.find(n => n.id === c.nodeId)?.title || c.nodeId)).size} 个节点的输入框草稿，已保留本页草稿。`);
+    const contentConflicts = conflicts.filter(c => !c.draft);
+    if(contentConflicts.length) showSmartMergeConflicts(contentConflicts);
     canvas.connections = mergeSmartConnections(canvas.connections, serverCanvas.connections, nodeIds);
     const cleanedState = clearCompletedNodeBusyStates();
     const recoveredLoopOutputs = recoverStuckLoopOutputsFromLogs();
@@ -5447,6 +5503,52 @@ function applyMergedServerCanvas(serverCanvas){
     resumeSmartPendingTasks();
     resumeJimengPendingNodes();
     return true;
+}
+function showSmartMergeConflicts(conflicts){
+    for(const item of conflicts){
+        const index = smartMergeConflicts.findIndex(c => c.nodeId === item.nodeId && c.field === item.field);
+        if(index >= 0) smartMergeConflicts[index] = item;
+        else smartMergeConflicts.push(item);
+    }
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    let bar = document.getElementById('studioSmartConflict');
+    if(!bar){
+        bar = document.createElement('div');
+        bar.id = 'studioSmartConflict';
+        bar.setAttribute('role', 'alert');
+        bar.style.cssText = 'position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:100002;padding:14px 18px;background:var(--panel,#26332e);color:var(--text,#f0ebdb);border:1px solid #bd914e;border-radius:12px;box-shadow:0 8px 28px #0003;max-width:min(720px,calc(100vw - 32px));box-sizing:border-box;display:flex;gap:12px;align-items:center;flex-wrap:wrap';
+        const text = document.createElement('span');
+        text.style.cssText = 'flex:1 1 280px;min-width:0;overflow-wrap:anywhere';
+        const keep = document.createElement('button');
+        keep.type = 'button';
+        keep.textContent = '保留我的修改';
+        keep.onclick = () => resolveSmartMergeConflicts('local');
+        const take = document.createElement('button');
+        take.type = 'button';
+        take.textContent = '采用外部版本';
+        take.onclick = () => resolveSmartMergeConflicts('remote');
+        bar.append(text, keep, take);
+        document.body.append(bar);
+    }
+    const names = smartMergeConflicts.map(c => {
+        const node = nodes.find(n => n.id === c.nodeId);
+        return `${node?.title || c.nodeId} · ${SMART_CONFLICT_FIELDS[c.field] || c.field}`;
+    });
+    bar.firstChild.textContent = `外部也修改了你尚未保存的内容：${names.join('、')}。自动保存已暂停，请选择保留哪一版。`;
+}
+function resolveSmartMergeConflicts(side){
+    if(side === 'remote'){
+        for(const c of smartMergeConflicts){
+            const node = nodes.find(n => n.id === c.nodeId);
+            if(!node) continue;
+            setSmartNodeField(node, c.field, c.remote);
+        }
+        render();
+    }
+    smartMergeConflicts = [];
+    document.getElementById('studioSmartConflict')?.remove();
+    scheduleSave();
 }
 async function mergeReloadCanvasNow(){
     if(!canvasId) return;
@@ -6047,6 +6149,9 @@ async function loadCanvas(){
         document.title = canvas.title || tr('canvas.smartCanvas');
         document.getElementById('smartTitle').textContent = canvas.title || tr('canvas.smartCanvas');
         nodes = (Array.isArray(canvas.nodes) ? canvas.nodes : []).map(normalizeLegacySmartNode).filter(Boolean);
+        rememberSmartServerNodes(nodes);
+        smartMergeConflicts = [];
+        document.getElementById('studioSmartConflict')?.remove();
         migrateSmartGroupImageMembers();
         canvas.connections = Array.isArray(canvas.connections) ? canvas.connections : [];
         nodes.forEach(n => {
@@ -6107,6 +6212,7 @@ async function saveCanvas(){
     const origin=canvas,id=origin?.id;
     const done=(ok,code,error='',saved,pending=false)=>studioCanvasSaveResult({ok,canvasId:id||'',code,error,pending,...(saved?{canvas:saved}:{})});
     if(!id||!origin||id!==canvasId)return done(false,'unavailable','画布尚未就绪，未保存。');
+    if(smartMergeConflicts.length)return done(false,'conflict','外部修改与未保存内容冲突，请先选择保留哪一版。');
     if(canvasSyncInFlight){smartQueuedSave=origin;return done(false,'busy','正在保存，最新修改已排队。',undefined,true);}
     const current=()=>canvas===origin&&canvas.id===id&&canvasId===id;
     clearTimeout(saveTimer);saveTimer=null;
@@ -6134,23 +6240,22 @@ async function saveCanvas(){
             window.StudioCanvasDrafts?.failed('检测到外部更新，浏览器草稿保留。',id);
             const serverCanvas=data.detail?.canvas||data.canvas;
             if(serverCanvas){
-                // Keep handwritten drafts and the unsubmitted receipt while merging
-                // remote media/results with the existing native merge algorithm.
-                const draftKeys=['promptDraftHtml','promptDraftText','promptDraftTouched','studioPrompt','userInput','systemPrompt','audioPrompt','studioSubmission'];
+                // Three-way merge against the last confirmed server state keeps every
+                // field only this page changed (handwritten text included).
                 const composerDraft=typeof promptInput!=='undefined'&&promptInput?promptInput.innerHTML:null;
-                const drafts=new Map(nodes.map(node=>[node.id,Object.fromEntries(draftKeys.filter(k=>Object.hasOwn(node,k)).map(k=>[k,node[k]]))]));
                 applyMergedServerCanvas(serverCanvas);
-                for(const node of nodes)Object.assign(node,drafts.get(node.id)||{});
                 if(composerDraft!==null)promptInput.innerHTML=composerDraft;
                 origin.nodes=nodes;
             }else if(data.detail?.updated_at)origin.updated_at=data.detail.updated_at;
             clearTimeout(saveTimer);
+            if(smartMergeConflicts.length)return done(false,'conflict','外部修改与未保存内容冲突，自动保存已暂停，请选择保留哪一版。');
             saveTimer=setTimeout(()=>{saveTimer=null;if(current())saveCanvas();},300);
-            return done(false,'conflict','检测到外部更新，已合并结果并保留本地手写草稿；请确认后重试。');
+            return done(false,'conflict','检测到外部更新，已合并并保留本地修改，正在重新保存。',undefined,true);
         }
         if(!res.ok)throw Error('保存失败（HTTP '+res.status+'），手写内容仍保留，请重试。');
         if(!data.canvas||data.canvas.id!==id)throw Error('服务器未确认画布保存，手写内容仍保留，请重试。');
         origin.updated_at=data.canvas.updated_at;
+        rememberSmartServerNodes((data.canvas.nodes||storageCanvas.nodes||[]).map(normalizeLegacySmartNode).filter(Boolean));
         window.StudioCanvasDrafts?.ack(draftToken,data.canvas);
         const pending=(smartSaveRevisions.get(origin)||0)!==sentRevision||smartQueuedSave===origin;
         if(pending)smartQueuedSave=origin;
@@ -6297,10 +6402,30 @@ function cloneSmartNode(node, dx=0, dy=0){
     if(copy.type === 'smart-group') copy.title = copy.title || '智能分组';
     return copy;
 }
+// GROUP-01: a copied smart group brings its members (recursively), so the copy never
+// shares node objects with the original group.
+function smartCopySourceNodes(ids){
+    const out = [];
+    const seen = new Set();
+    const visit = id => {
+        const node = nodes.find(n => n.id === id);
+        if(!node || seen.has(node.id)) return;
+        seen.add(node.id);
+        out.push(node);
+        if(isSmartGroupNode(node)) (Array.isArray(node.items) ? node.items : []).forEach(visit);
+    };
+    ids.forEach(visit);
+    return out;
+}
+function remapSmartCopyMembers(copies, idMap){
+    copies.forEach(copy => {
+        if(isSmartGroupNode(copy) && Array.isArray(copy.items)) copy.items = copy.items.map(id => idMap.get(id)).filter(Boolean);
+    });
+}
 function copySelectedNodes(){
     if(!canvas || isEditableTarget(document.activeElement)) return;
     const ids = selectedNodeIds();
-    const copiedNodes = ids.map(id => nodes.find(n => n.id === id)).filter(Boolean);
+    const copiedNodes = smartCopySourceNodes(ids);
     if(!copiedNodes.length) return;
     const idSet = new Set(copiedNodes.map(n => n.id));
     const copiedConnections = (canvas.connections || []).filter(c => idSet.has(c.from) && idSet.has(c.to));
@@ -6334,6 +6459,7 @@ function pasteNodes(){
         }
         if(copy.sourceNodeId) copy.sourceNodeId = idMap.get(copy.sourceNodeId) || '';
     });
+    remapSmartCopyMembers(copies, idMap);
     const newConnections = (nodeClipboard.connections || []).map(conn => ({
         ...conn,
         from:idMap.get(conn.from),
@@ -6388,7 +6514,7 @@ function pasteAssetsFromInbox(){
 }
 function duplicateForAltDrag(node, preserveConnections=false){
     const ids = (isNodeSelected(node.id) ? selectedNodeIds() : [node.id]);
-    const sourceNodes = ids.map(id => nodes.find(n => n.id === id)).filter(Boolean);
+    const sourceNodes = smartCopySourceNodes(ids);
     if(!sourceNodes.length) return node;
     pushUndo();
     const idMap = new Map();
@@ -6405,6 +6531,7 @@ function duplicateForAltDrag(node, preserveConnections=false){
         }
         if(copy.sourceNodeId) copy.sourceNodeId = preserveConnections ? (idMap.get(copy.sourceNodeId) || copy.sourceNodeId) : '';
     });
+    remapSmartCopyMembers(copies, idMap);
     if(preserveConnections){
         const idSet = new Set(sourceNodes.map(n => n.id));
         const newConnections = (canvas.connections || [])
@@ -15772,7 +15899,7 @@ async function generateUrlsForCurrentSettings(node, prompt, refs, runSettings=se
         return {urls, kind:mediaKindForUrls(urls, 'image')};
     }
     const urls = activeSettings.engine === 'runninghub'
-        ? await runRunningHubGeneration(prompt, refs, activeSettings)
+        ? await runRunningHubGeneration(prompt, refs, activeSettings, {node})
         : activeSettings.engine === 'modelscope'
             ? await runModelscopeGeneration(prompt, refs, activeSettings)
             : [];
@@ -16476,7 +16603,7 @@ async function runGeneration(){
         const outImages = rhModelMode
             ? await runApiGeneration(prompt, refs, runningHubModelApiSettings(settings),legacyOptions)
             : settings.engine === 'runninghub'
-                ? await runRunningHubGeneration(prompt, refs)
+                ? await runRunningHubGeneration(prompt, refs, settings, {node})
                 : settings.engine === 'modelscope'
                 ? await runModelscopeGeneration(prompt, refs)
                 : await runApiGeneration(prompt, refs,settings,legacyOptions);
@@ -16629,7 +16756,58 @@ function runningHubPayloadError(stage, data, fallback, extra={}){
     if(code !== '') parts.push(`code=${code}`);
     return smartDetailedError(parts.join('：'), {stage, taskId, code, raw, ...(detailObj || {}), ...extra});
 }
-async function runRunningHubGeneration(prompt, refs, runSettings=settings){
+// RH-SMART-NATIVE-DURABILITY: smart canvas, cascade and MiniMax RH app/workflow runs use the
+// durable request ledger. The request id and its snapshot are saved with the canvas before the
+// single paid POST; any later attempt on the same node queries that request instead of resubmitting.
+const SMART_RH_OPEN_STATES = ['submitting','queued','running','archiving','unknown','uncertain'];
+async function smartRhLedger(url, body){
+    const res = await fetch(url, body === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok){
+        const error = new Error(apiErrorMessage(data, `RH 请求失败（HTTP ${res.status}）`));
+        error.status = res.status;
+        throw error;
+    }
+    return data;
+}
+async function findSmartRhRequest(requestId){
+    try { return await smartRhLedger('/api/studio/runninghub/tasks/' + encodeURIComponent(requestId)); }
+    catch(e){ if(e.status === 404) return null; throw e; }
+}
+function applySmartRhRecord(owner, record, runSettings){
+    owner.studioRhStatus = record.status;
+    if(record.task_id){ owner.studioRhRemote = record.task_id; runSettings.rhTaskId = record.task_id; }
+}
+async function waitSmartRhRequest(owner, record, runSettings){
+    for(let i = 0; i < 720; i++){
+        applySmartRhRecord(owner, record, runSettings);
+        if(record.status === 'succeeded'){
+            scheduleSave();
+            const urls = resultMediaUrls(record.outputs || []);
+            if(!urls.length) throw new Error(tr('smart.rhOutputsEmpty'));
+            return urls;
+        }
+        if(record.status === 'failed'){ scheduleSave(); throw smartDetailedError(record.error || tr('smart.rhFailed'), {stage:'执行', taskId:record.task_id || ''}); }
+        if(record.status === 'uncertain'){ scheduleSave(); throw smartDetailedError(record.error || 'RH 提交结果待核实，请到 RH 查询原任务；不会自动重新提交。', {stage:'提交', taskId:record.task_id || ''}); }
+        await sleep(2500);
+        try { record = await smartRhLedger('/api/studio/runninghub/tasks/' + encodeURIComponent(record.id)); }
+        catch(e){ throw smartDetailedError('RH 任务查询失败：' + (e.message || '') + '。原请求已保存，再次运行会继续查询，不会重新提交。', {stage:'查询', taskId:owner.studioRhRemote || ''}); }
+    }
+    throw new Error(tr('smart.rhTimeout'));
+}
+async function runRunningHubGeneration(prompt, refs, runSettings=settings, options={}){
+    const owner = options.node || {};
+    const originCanvas = canvas;
+    // Resume the node's open request (lost reply, reload or restart) before building anything new.
+    if(owner.studioRhRequest && SMART_RH_OPEN_STATES.includes(owner.studioRhStatus)){
+        let previous;
+        try { previous = await findSmartRhRequest(owner.studioRhRequest); }
+        catch(e){ throw smartDetailedError('无法查询上一次 RH 请求：' + (e.message || '') + '。请稍后再试，不会重新提交。', {stage:'查询'}); }
+        if(previous && previous.status !== 'uncertain') return waitSmartRhRequest(owner, previous, runSettings);
+        if(previous && !confirm(`上一次 RH 提交结果待核实（请求 ${owner.studioRhRequest}），可能已在 RH 产生费用。请先到 RH 后台核对。\n\n仍要提交一个新的任务吗？`)){
+            throw smartDetailedError('上一次 RH 提交结果待核实，未重新提交。', {stage:'提交'});
+        }
+    }
     const ref = selectedRunningHubRef(runSettings);
     if(!ref) throw new Error(tr('smart.rhNeedConfig'));
     const fields = rhActiveFields(runSettings);
@@ -16639,47 +16817,43 @@ async function runRunningHubGeneration(prompt, refs, runSettings=settings){
     const media = rhMediaForRun(prompt, refs);
     const nodeInfoList = await rhBuildNodeInfoList(media, runSettings, randomValues);
     const workflowExtras = mode === 'workflow' ? await rhBuildWorkflowRequestExtras(media, nodeInfoList, runSettings) : {};
-    const endpoint = mode === 'workflow' ? '/api/runninghub/workflow-submit' : '/api/runninghub/submit';
     const body = mode === 'workflow'
         ? {workflowId:ref.id, nodeInfoList, useWallet:runSettings.rhPayment === 'wallet', ...workflowExtras}
         : {webappId:ref.id, nodeInfoList, instanceType:runSettings.rhInstanceType || '', useWallet:runSettings.rhPayment === 'wallet'};
     if(mode === 'workflow') runSettings.rhWorkflowId = ref.id;
     else runSettings.rhAppId = ref.id;
     runSettings.rhMode = mode;
-    const submit = await fetch(endpoint, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(body)
-    }).then(async r => {
-        const data = await r.clone().json().catch(async () => ({detail:await r.text().catch(() => '')}));
-        if(!r.ok || data.success === false) throw runningHubPayloadError('提交', data, tr('smart.rhFailed'), {
-            endpoint,
-            workflowId:body.workflowId || '',
-            webappId:body.webappId || '',
-            nodeInfoList:nodeInfoList.slice(0, 40),
-            hasWorkflow:Boolean(body.workflow)
-        });
-        return data.data || data;
-    });
-    const taskId = submit.taskId;
-    if(!taskId) throw new Error(tr('smart.rhNoTaskId'));
-    runSettings.rhTaskId = taskId;
-    const useWallet = runSettings.rhPayment === 'wallet';
-    for(let i = 0; i < 720; i++){
-        await sleep(2500);
-        const data = await fetch(`/api/runninghub/query?taskId=${encodeURIComponent(taskId)}&useWallet=${useWallet ? '1' : '0'}`).then(async r => {
-            const json = await r.clone().json().catch(async () => ({detail:await r.text().catch(() => '')}));
-            if(!r.ok || json.success === false) throw runningHubPayloadError('查询', json, tr('smart.rhFailed'), {taskId});
-            return json.data || json;
-        });
-        if(data.status === 'SUCCESS'){
-            const urls = resultMediaUrls(data.image_items?.length ? data.image_items : (data.urls || []));
-            if(!urls.length) throw new Error(tr('smart.rhOutputsEmpty'));
-            return urls;
-        }
-        if(data.status === 'FAILED') throw runningHubPayloadError('执行', data, data.failReason || tr('smart.rhFailed'), {taskId});
+    if(!originCanvas?.id || canvas !== originCanvas) throw new Error('画布已切换，本次 RH 提交已取消。');
+    const request = {request_id:crypto.randomUUID(), canvas_id:String(originCanvas.id), node_id:String(owner.id || ''), kind:mode === 'workflow' ? 'workflow' : 'app', payload:JSON.parse(JSON.stringify(body))};
+    const saved = nodes.includes(owner);
+    owner.studioRhRequest = request.request_id;
+    owner.studioRhSnapshot = JSON.parse(JSON.stringify(request));
+    owner.studioRhStatus = 'submitting';
+    delete owner.studioRhRemote;
+    const notSubmitted = message => {
+        if(owner.studioRhRequest === request.request_id){ delete owner.studioRhRequest; delete owner.studioRhSnapshot; owner.studioRhStatus = 'not_submitted'; }
+        return smartDetailedError('未提交 · ' + message, {stage:'提交'});
+    };
+    if(saved){
+        if(!window.StudioSave?.ensureCurrent) throw notSubmitted('保存保护尚未就绪。');
+        try { await window.StudioSave.ensureCurrent({canvasId:String(originCanvas.id), nodeId:owner.id, jobId:request.request_id, requestField:'studioRhRequest', snapshotField:'studioRhSnapshot'}); }
+        catch(e){ throw notSubmitted(e.message || '请求未能保存。'); }
     }
-    throw new Error(tr('smart.rhTimeout'));
+    let record;
+    try { record = await smartRhLedger('/api/studio/runninghub/tasks', request); }
+    catch(error){
+        // The reply was lost or rejected: only the ledger knows whether the request was reserved.
+        let found;
+        try { found = await findSmartRhRequest(request.request_id); }
+        catch(e){
+            owner.studioRhStatus = 'uncertain';
+            scheduleSave();
+            throw smartDetailedError('RH 提交结果待核实：' + (error.message || '连接中断') + '。原请求已保存，再次运行会先查询，不会重新提交。', {stage:'提交'});
+        }
+        if(!found){ scheduleSave(); throw notSubmitted(error.message || tr('smart.rhFailed')); }
+        record = found;
+    }
+    return waitSmartRhRequest(owner, record, runSettings);
 }
 async function runApiVideoGeneration(prompt, refs, runSettings=settings, options={}){
     if(!runSettings.videoModel) throw new Error(tr('smart.errNoVideoModel'));
@@ -17057,7 +17231,7 @@ async function runMinimaxRunningHub(node){
     smartMinimaxSetRunningHubParam(runSettings, fields, [/aspect[_\s-]?ratio|\bratio\b|画面比例|比例/], ['115::aspect_ratio'], aspect);
     smartMinimaxSetRunningHubParam(runSettings, fields, [/megapixels?|百万像素/], ['115::megapixels'], Number(seg?.megapixels || node.megapixels || 0.4));
     const refs = smartMinimaxRunRefs(node);
-    const urls = await runRunningHubGeneration(prompt, refs, runSettings);
+    const urls = await runRunningHubGeneration(prompt, refs, runSettings, {node});
     if(!urls.length) throw new Error(tr('smart.errNoOutVideos'));
     return {urls, kind:mediaKindForUrls(urls, 'video'), runSettings};
 }
