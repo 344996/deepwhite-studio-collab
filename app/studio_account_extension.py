@@ -114,6 +114,26 @@ def _balance_item(provider_id, name, status, balance=None, unit='', message=''):
             'unit': str(unit or '')[:16], 'updated_at': _now_iso(), 'message': str(message or '')[:180]}
 
 
+async def _wallet_unit(data):
+    """PRICE-02: the unit to show for a Key wallet amount; the amount itself is never converted.
+
+    CNY and USD keep their codes. CUSTOM is the site's own currency, so its symbol comes from the
+    same public site settings the account balance uses.
+    """
+    for key in ('symbol', 'currency_symbol', 'currency'):
+        if isinstance(data.get(key), str) and data[key].strip():
+            return data[key].strip()[:16], ''
+    mode = str(data.get('display_type') or 'CNY').upper()
+    if mode != 'CUSTOM':
+        return mode, ''
+    try:
+        config = await _safe_call({'cookies': httpx.Cookies()}, 'GET', '/api/status')
+    except HTTPException:
+        config = {}
+    symbol = str((config or {}).get('custom_currency_symbol') or '').strip() if isinstance(config, dict) else ''
+    return (symbol[:16], '') if symbol else ('', '站点使用自定义货币，未提供货币符号；数值按站点余额显示。')
+
+
 async def _deepwhite_key_balance(provider):
     if urlparse(str(provider.get('base_url') or '')).hostname != 'api.deepwhiteai.com':
         return _balance_item(provider.get('id'), provider.get('name'), 'unsupported', message='未发现此渠道的受支持余额查询接口。')
@@ -136,9 +156,10 @@ async def _deepwhite_key_balance(provider):
         if response.status_code >= 400 or not isinstance(payload, dict) or payload.get('code') is False:
             return _balance_item(provider.get('id'), provider.get('name'), 'error', message='DeepWhite API Key 钱包查询失败，请检查密钥或稍后重试。')
         data = payload.get('data') if isinstance(payload.get('data'), dict) else {}
-        amount, unit = _amount(data.get('amount')), data.get('display_type') or 'CNY'
+        amount = _amount(data.get('amount'))
+        unit, note = await _wallet_unit(data)
         if amount is not None:
-            return _balance_item(provider.get('id'), provider.get('name'), 'available', amount, unit)
+            return _balance_item(provider.get('id'), provider.get('name'), 'available', amount, unit, message=note)
         return _balance_item(provider.get('id'), provider.get('name'), 'unsupported', unit=unit, message='余额接口未返回可展示的货币金额。')
     except httpx.HTTPError:
         return _balance_item(provider.get('id'), provider.get('name'), 'error', message='DeepWhite API Key 钱包暂时无法连接。')

@@ -5531,6 +5531,7 @@ function openImageEditor(nodeId, initialMode='crop'){
     _syncGridCustomUndoBtn();
     _updateZoomLabel();
     const modal = document.getElementById('imageEditModal');
+    if(!modal.classList.contains('open')) isolateImageEditor(modal);
     const img = document.getElementById('cropImage');
     img.style.width = '';
     img.style.height = '';
@@ -5571,8 +5572,39 @@ function openImageEditor(nodeId, initialMode='crop'){
     setImageEditMode(initialMode);
     refreshIcons();
 }
+// UI-01: while the image editor is open the rest of the page is inert, so neither Tab nor a
+// click reaches the canvas behind it; closing returns focus to the control that opened it.
+let imageEditInert = [];
+let imageEditOpener = null;
+function isolateImageEditor(modal){
+    imageEditOpener = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
+    imageEditInert = [];
+    for(let el = modal; el?.parentElement; el = el.parentElement){
+        for(const sibling of el.parentElement.children){
+            if(sibling === el || sibling.inert || ['SCRIPT','STYLE','LINK'].includes(sibling.tagName)) continue;
+            sibling.inert = true;
+            imageEditInert.push(sibling);
+        }
+    }
+    const panel = modal.querySelector('.image-edit-panel');
+    if(!panel) return;
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-labelledby', 'imageEditTitle');
+    if(!panel.hasAttribute('tabindex')) panel.tabIndex = -1;
+    panel.focus({preventScroll:true});
+}
+function releaseImageEditor(){
+    imageEditInert.forEach(el => { el.inert = false; });
+    imageEditInert = [];
+    const opener = imageEditOpener;
+    imageEditOpener = null;
+    if(opener?.isConnected) opener.focus({preventScroll:true});
+}
 function closeImageEditor(){
+    const wasOpen = document.getElementById('imageEditModal').classList.contains('open');
     document.getElementById('imageEditModal').classList.remove('open');
+    if(wasOpen) releaseImageEditor();
     const img = document.getElementById('cropImage');
     img.onload = null;
     delete img.dataset.editorSrcToken;

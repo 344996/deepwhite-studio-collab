@@ -276,6 +276,34 @@ class StudioControl(unittest.TestCase):
         self.assertEqual(first['job_id'],second['job_id']); self.assertEqual(submit.await_count,1)
         self.assertEqual(control._load()['remaining_runs'],0)
 
+    def test_receipt_write_failure_after_submit_recovers_the_original_job(self):
+        # TASK-01: the job was accepted, then writing the approval receipt failed.
+        self._save_generator()
+        with patch.object(generation,'checked',return_value=None):
+            pending=asyncio.run(control._generate(self.cid,'node1','request-013'))
+        async def accepted(payload):
+            generation.save({'id':payload.request_id,'status':'queued','created_at':0,'error':'','request':{},'children':[]})
+            return {'id':payload.request_id,'status':'queued'}
+        real_save=control._save
+        def failing_receipt(state):
+            if (state['runs'].get('gen:request-013') or {}).get('job_id') or any(p.get('request_id')=='request-013' and p.get('status')=='approved' for p in state['pending']):
+                raise OSError('disk full')
+            real_save(state)
+        with patch.object(generation,'checked',return_value=None), patch.object(generation,'submit',new=AsyncMock(side_effect=accepted)) as submit:
+            with patch.object(control,'_save',side_effect=failing_receipt):
+                first=asyncio.run(control._approve(pending['approval_id'],{'action':'approve'}))
+            self.assertEqual(first['job_id'],'request-013')
+            self.assertEqual(first['receipt'],'failed')
+            self.assertIn('request-013',first['message'])
+            again=asyncio.run(control._approve(pending['approval_id'],{'action':'approve'}))
+            resumed=asyncio.run(control._generate(self.cid,'node1','request-013'))
+        self.assertEqual(submit.await_count,1,'recovery submitted a second job')
+        self.assertEqual((again['job_id'],resumed['job_id']),('request-013','request-013'))
+        self.assertTrue(again.get('recovered'))
+        state=control._load()
+        self.assertEqual(state['runs']['gen:request-013']['job_id'],'request-013')
+        self.assertEqual(next(p for p in state['pending'] if p['request_id']=='request-013')['status'],'approved')
+
     def test_approval_submits_once_and_job_result_is_persisted_to_node(self):
         self._save_generator()
         with patch.object(generation,'checked',return_value=None):

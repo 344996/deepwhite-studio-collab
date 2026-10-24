@@ -301,7 +301,7 @@ async def _generate(canvas_id, node_id, request_id):
     if old:
         if old.get('status') == 'pending': return {'approval_required': True, 'approval_id': old['approval_id']}
         if old.get('job_id'): return {'job_id': old['job_id'], 'status': old.get('status', 'queued')}
-        if old.get('status') == 'submitting': return {'request_id': request_id, 'status': 'uncertain'}
+        if old.get('status') == 'submitting': return _recover_receipt(request_id) or {'request_id': request_id, 'status': 'uncertain'}
     canvas = _canvas(canvas_id); node = next((n for n in canvas.get('nodes', []) if n.get('id') == node_id), None)
     if not node or node.get('type') not in ('generator', 'video'): raise HTTPException(404, '生成节点不存在。')
     if node.get('running') or node.get('studioJobState') in ('queued','running','paused','submitting','uncertain'):
@@ -334,20 +334,43 @@ async def _generate(canvas_id, node_id, request_id):
     return await _submit_generation(canvas_id, node_id, request_id, digest, node, payload)
 
 
+def _receipt_failed(job_id, status):
+    return {'job_id': job_id, 'status': status, 'receipt': 'failed',
+            'message': f'任务已提交（编号 {job_id}），但本地回执未能写入。再次请求同一 request_id 会按原编号恢复，不会重复提交。'}
+
+
+def _recover_receipt(request_id):
+    """TASK-01: rebuild a lost receipt from the job saved under the same request id; never submits."""
+    if not (generation.directory() / f'{request_id}.json').exists(): return None
+    job = generation.read(request_id)
+    state = _load(); row = state['runs'].setdefault('gen:' + request_id, {})
+    row.update(status=job.get('status'), job_id=job.get('id'))
+    for item in state['pending']:
+        if item.get('request_id') == request_id and item.get('status') == 'submitting':
+            item.update(status='approved', job_id=job.get('id'))
+    _save(state)
+    return {'job_id': job.get('id'), 'status': job.get('status'), 'recovered': True}
+
+
 async def _submit_generation(canvas_id, node_id, request_id, digest, node, payload):
+    # The job is stored under request_id, so a receipt lost after this call can be rebuilt.
     result = await generation.submit(payload)
-    state = _load(); row = state['runs'].get('gen:' + request_id, {})
-    row.update(status=result.get('status'), job_id=result.get('id'), digest=digest, canvas_id=canvas_id, node_id=node_id)
-    state['runs']['gen:' + request_id] = row; _save(state)
+    job_id = result.get('id')
+    try:
+        state = _load(); row = state['runs'].get('gen:' + request_id, {})
+        row.update(status=result.get('status'), job_id=job_id, digest=digest, canvas_id=canvas_id, node_id=node_id)
+        state['runs']['gen:' + request_id] = row; _save(state)
+    except OSError:
+        return _receipt_failed(job_id, result.get('status'))
     canvas = _canvas(canvas_id); target = next((n for n in canvas.get('nodes', []) if n.get('id') == node_id), None)
     if target:
-        target['running'] = True; target['studioJob'] = result.get('id'); target['studioJobState'] = result.get('status')
-        target['studioControlJob'] = result.get('id')
+        target['running'] = True; target['studioJob'] = job_id; target['studioJobState'] = result.get('status')
+        target['studioControlJob'] = job_id
         _touch(canvas)
-    worker = generation.WORKERS.get(result.get('id'))
+    worker = generation.WORKERS.get(job_id)
     if worker:
-        _track_worker(worker, canvas_id, node_id, result.get('id'))
-    return {'job_id': result.get('id'), 'status': result.get('status')}
+        _track_worker(worker, canvas_id, node_id, job_id)
+    return {'job_id': job_id, 'status': result.get('status')}
 
 
 def _track_worker(worker, canvas_id, node_id, job_id):
@@ -402,6 +425,9 @@ async def _approve(approval_id, payload):
     if action not in ('approve', 'reject'): raise HTTPException(400, "action 必须为 'approve' 或 'reject'。")
     state = _load(); item = next((p for p in state['pending'] if p.get('id') == approval_id), None)
     if not item: raise HTTPException(404, '审批不存在。')
+    if item.get('status') == 'submitting' and not item.get('job_id'):
+        recovered = _recover_receipt(item['request_id'])
+        if recovered: return recovered
     if item.get('status') != 'pending': return {'status': item['status'], 'job_id': item.get('job_id')}
     if action == 'reject':
         item['status'] = 'rejected'; state['runs']['gen:' + item['request_id']]['status'] = 'rejected'; _save(state)
@@ -416,8 +442,12 @@ async def _approve(approval_id, payload):
     generation.checked(payload)
     item['status'] = 'submitting'; _save(state)
     result = await _submit_generation(item['canvas_id'], item['node_id'], item['request_id'], item['digest'], node, payload)
-    state = _load(); item = next((p for p in state['pending'] if p.get('id') == approval_id), None)
-    item.update(status='approved', job_id=result.get('job_id')); _save(state)
+    if result.get('receipt') == 'failed': return result
+    try:
+        state = _load(); item = next((p for p in state['pending'] if p.get('id') == approval_id), None)
+        item.update(status='approved', job_id=result.get('job_id')); _save(state)
+    except OSError:
+        return _receipt_failed(result.get('job_id'), result.get('status'))
     return result
 
 

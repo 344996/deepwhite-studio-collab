@@ -268,6 +268,7 @@ def legacy_items():
 async def preview(payload):
     if not isinstance(payload, dict): raise HTTPException(400, '预览内容格式无效。')
     kind = payload.get('kind')
+    diagnostics = []
     if payload.get('definition') is not None:
         definition = normalize_definition(payload['definition'])
     elif isinstance(payload.get('entry'), dict):
@@ -294,6 +295,8 @@ async def preview(payload):
                 result = await core.runninghub_app_info(target)
                 data = result.get('data') or {}
                 fields = data.get('nodeInfoList') or data.get('fields')
+                if data.get('fieldSource') == 'curl':
+                    diagnostics.append('参数来自 RH 官方 curl 示例中的 JSON（只解析，未执行命令）。')
                 entry = {'id': target, 'title': data.get('webappName') or data.get('name') or 'RH ' + target, 'fields': fields}
             else:
                 result = await core.fetch_runninghub_workflow(core.RunningHubWorkflowConfig(workflowId=target, title=payload.get('name') or target))
@@ -310,7 +313,7 @@ async def preview(payload):
     return {'draft': True, 'name': str(payload.get('name') or definition['entry']['title'])[:120],
             'provider': 'runninghub', 'kind': definition['kind'], 'target_id': definition['target_id'],
             'revision': 0, 'fields': definition['entry']['fields'],
-            'versions': [{'revision': 0, 'definition': definition}], 'diagnostics': [],
+            'versions': [{'revision': 0, 'definition': definition}], 'diagnostics': diagnostics,
             'notice': '仅预览，尚未保存或执行。RH 应用只固定本地参数配置，不冻结平台内部实现。'}
 
 

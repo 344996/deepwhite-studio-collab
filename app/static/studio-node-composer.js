@@ -44,7 +44,7 @@
         card.append(element('strong','',log.model||'未记录模型'),element('p','',log.prompt||''));
         const details=element('details'),summary=element('summary','','参数和任务编号'),pre=element('pre','',JSON.stringify({模型:log.model,参数:log.request||{},耗时毫秒:log.runMs,平台:log.platform},null,2));details.append(summary,pre);card.append(details);
         if(log.error){const error=element('p','studio-history-error',window.StudioHistoryView.readableError(log.error));error.title=log.error;card.append(error);}
-        card.append(element('p','studio-history-bill','实际费用未知 · 未记录账单'));
+        card.append(element('p','studio-history-bill','实际费用待对账 · 平台未返回金额'));
         for(const output of outputs){
           const row=element('div','studio-history-output'),media=element(output.kind==='video'?'video':output.kind==='audio'?'audio':'img');
           window.StudioHistoryView.prepareMedia(media,media.tagName==='IMG'?smartMediaPreviewUrl(output,768):displayMediaUrl(output),displayMediaUrl(output));if(media.tagName!=='IMG')media.controls=true;

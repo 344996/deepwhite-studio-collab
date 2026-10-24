@@ -133,6 +133,15 @@
     let result=n.type==='llm'?[...llmInputImages(n).map(url=>({url,kind:'image'})),...(n.studioRefs||[])]:generatorSources(n).flatMap(s=>s.refs||[]);
     const seen=new Set();result=result.filter(r=>r.url&&!seen.has(r.url)&&(seen.add(r.url),true)&&!(n.studioExcludedRefs||[]).includes(r.url)).map(r=>({...r,kind:r.kind||mediaKindForRef(r)||'image',role:n.studioRefRoles?.[r.url]||r.role||''}));
     const order=n.studioRefOrder||[];result.sort((a,b)=>(order.indexOf(a.url)<0?999:order.indexOf(a.url))-(order.indexOf(b.url)<0?999:order.indexOf(b.url)));
+    // REF-01: each reference keeps the number it first got ("参考N"), so moving it changes its
+    // send position but not its name; the prompt is converted to positions when it is sent.
+    if(n.type!=='llm'){
+      n.studioRefNumbers??={};
+      for(const r of result){
+        if(!n.studioRefNumbers[r.url])n.studioRefNumbers[r.url]=Math.max(0,...Object.values(n.studioRefNumbers))+1;
+        r.label='参考'+n.studioRefNumbers[r.url];
+      }
+    }
     if(n.type==='video'&&/seedance/i.test(n.model||'')){
       n.studioRefLabels??={};
       for(const r of result){
@@ -148,7 +157,12 @@
   }
   const mentionMode=n=>n.type==='video'&&/seedance/i.test(n.model||'')&&!n.useFrameRoles;
   function sentPrompt(n){
-    const text=prompt(n);if(!mentionMode(n))return text;
+    const text=prompt(n);
+    if(!mentionMode(n)){
+      if(n.type==='llm')return text;
+      const position={};refs(n).forEach((r,i)=>{position[r.label]='参考'+(i+1);});
+      return text.replace(/参考\s*(\d+)/g,(all,k)=>position['参考'+k]||all);
+    }
     const count={image:0,video:0,audio:0},map={};for(const r of refs(n)){count[r.kind]++;map[r.mention]='@'+{image:'Image',video:'Video',audio:'Audio'}[r.kind]+' '+count[r.kind];}
     return text.replace(/@(图片|视频|音频)\s*(\d+)/g,(all,t,i)=>map['@'+t+i]||all+'（素材缺失）');
   }
@@ -159,7 +173,7 @@
     if(job.request?.provider_id==='deepwhite-local-comfy')return '本地运行 · 不扣 API 额度';
     if(job.request?.provider_id==='dreamina-cli')return '即梦账号积分结算 · 具体消耗以即梦任务结果为准';
     const usage=(job.children||[]).map(c=>c.usage);
-    if(!usage.length||usage.some(u=>typeof u?.amount!=='number'||!u.currency)||new Set(usage.map(u=>u.currency)).size!==1)return '实际费用未知 · 平台尚未返回账单';
+    if(!usage.length||usage.some(u=>typeof u?.amount!=='number'||!u.currency)||new Set(usage.map(u=>u.currency)).size!==1)return '实际费用待对账 · 平台未返回金额（不是 0 元）';
     return '实际费用：'+(usage[0].currency==='CNY'?'¥':usage[0].currency+' ')+usage.reduce((sum,u)=>sum+u.amount,0).toFixed(3);
   }
   function request(n,id){return {request_id:id,canvas_id:canvasId(),node_id:n.id,provider_id:provider(n),model:n.model,kind:kind(n),prompt:sentPrompt(n),system_prompt:system(n),skill_ids:[],params:{...values(n)},references:refs(n),count:n.type==='generator'?Math.max(1,Math.min(8,Number(n.count||1))):1,multimodal:n.type==='video'?n.multimodal!==false:true,frame_mode:!!n.useFrameRoles};}
@@ -250,12 +264,12 @@
   function panel(n,wrap){
     const box=stop(document.createElement('section'));box.className='studio-basics';
     const s=spec(n),params=values(n),items=refs(n);
-    box.innerHTML=`<div class="studio-ref-head"><strong>参考素材${items.length?' · '+items.length:''}</strong><button type="button" data-add-ref>上传参考素材</button></div><small>支持拖入或粘贴；也可以连接已有素材节点。</small><div class="studio-ref-list"></div><div class="studio-basic-params"></div><small class="studio-contract-note">${esc(s?.note||'正在读取模型参数…')}</small><details class="studio-sent"><summary>查看实际发送的提示词与素材</summary><pre></pre></details><div class="studio-job-state" aria-live="polite"></div>`;
+    box.innerHTML=`<div class="studio-ref-head"><strong>参考素材${items.length?' · '+items.length:''}</strong><button type="button" data-add-ref>上传参考素材</button></div><small>支持拖入或粘贴；也可以连接已有素材节点。${mentionMode(n)?'提示词里的 @图片N 标记绑定对应素材；删除标记不会移除连线提供的素材。':'提示词里写“参考N”指缩略图上的编号；调整顺序后发送时会自动换成实际位置。'}</small><div class="studio-ref-list"></div><div class="studio-basic-params"></div><small class="studio-contract-note">${esc(s?.note||'正在读取模型参数…')}</small><details class="studio-sent"><summary>查看实际发送的提示词与素材</summary><pre></pre></details><div class="studio-job-state" aria-live="polite"></div>`;
     box.querySelector('[data-add-ref]').onclick=()=>choose(n);
     const list=box.querySelector('.studio-ref-list');
     items.forEach((r,index)=>{
       const row=document.createElement('div');row.className='studio-ref-item';
-      row.innerHTML=`${r.kind==='image'?`<img src="${esc(r.url)}" alt="参考图 ${index+1}">`:`<span>${r.kind==='video'?'视频':'音频'}</span>`}<span class="studio-ref-name">${esc(r.name||'参考素材 '+(index+1))}</span>${n.type==='video'&&r.kind==='image'?`<select aria-label="参考素材 ${index+1} 用途"><option value="">参考图</option><option value="first_frame">首帧</option><option value="last_frame">尾帧</option></select>`:''}<button title="前移" ${index===0?'disabled':''} data-up>↑</button><button title="后移" ${index===items.length-1?'disabled':''} data-down>↓</button><button data-replace>替换</button><button title="移除参考素材" data-remove>×</button>`;
+      row.innerHTML=`${r.kind==='image'?`<img src="${esc(r.url)}" alt="${esc(r.label||'参考图 '+(index+1))}">`:`<span>${r.kind==='video'?'视频':'音频'}</span>`}<span class="studio-ref-name">${r.label&&!mentionMode(n)?`<b class="studio-ref-label">${esc(r.label)}</b> `:''}${esc(r.name||r.label||'参考素材 '+(index+1))}</span>${n.type==='video'&&r.kind==='image'?`<select aria-label="参考素材 ${index+1} 用途"><option value="">参考图</option><option value="first_frame">首帧</option><option value="last_frame">尾帧</option></select>`:''}<button title="前移" ${index===0?'disabled':''} data-up>↑</button><button title="后移" ${index===items.length-1?'disabled':''} data-down>↓</button><button data-replace>替换</button><button title="移除参考素材" data-remove>×</button>`;
       if(mentionMode(n)){
         const mention=document.createElement('button');mention.type='button';mention.className='studio-ref-mention';mention.textContent=r.mention;mention.title='点击在提示词中引用此素材';mention.setAttribute('aria-label','引用 '+r.mention);
         mention.onclick=()=>insertMention(n,r.mention);row.querySelector('.studio-ref-name').before(mention);
@@ -564,6 +578,6 @@
       }
     }catch{if(canvasId()===origin&&recovered===origin)recovered='';}
   },1500);
-  window.StudioStageOne={api,request,run,track,apply,changed,actions,canvasId,states,getProviders:()=>apiProviders,getCapabilities:()=>capabilities,getJob:id=>jobs.get(id),isSupported:supported};
+  window.StudioStageOne={api,request,run,track,apply,changed,actions,canvasId,states,references:refs,getProviders:()=>apiProviders,getCapabilities:()=>capabilities,getJob:id=>jobs.get(id),isSupported:supported};
   window.dispatchEvent(new Event('studio-stage-one-ready'));
 })();

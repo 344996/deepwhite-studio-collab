@@ -30,13 +30,14 @@
     root.studioRefreshReferences=()=>{
       strip.querySelectorAll('.studio-reference-thumb').forEach(e=>e.remove());
       const seen=new Set(),excluded=node.studioExcludedRefs||[];
-      const refs=generatorSources(node).flatMap(s=>s.refs||[]).filter(r=>r.url&&!excluded.includes(r.url)&&!seen.has(r.url)&&(seen.add(r.url),true));
+      // REF-01: the same order and names the request uses, so 参考N always shows the same image.
+      const refs=window.StudioStageOne?.references?window.StudioStageOne.references(node):generatorSources(node).flatMap(s=>s.refs||[]).filter(r=>r.url&&!excluded.includes(r.url)&&!seen.has(r.url)&&(seen.add(r.url),true));
       popup.querySelector('.studio-linked-previews')?.remove();
       const previews=document.createElement('div');previews.className='studio-linked-previews';
       refs.forEach((r,i)=>{
         const item=document.createElement('button');item.type='button';item.className='studio-reference-thumb';item.title=r.name||'参考素材 '+(i+1);
-        if((r.kind||'image')==='image'){const img=document.createElement('img');img.src=r.url;img.alt='参考图 '+(i+1);item.append(img);}else item.textContent=r.kind==='video'?'视频':'音频';
-        const label=document.createElement('span');label.textContent='参考'+(i+1);item.append(label);
+        if((r.kind||'image')==='image'){const img=document.createElement('img');img.src=r.url;img.alt=r.label||'参考图 '+(i+1);item.append(img);}else item.textContent=r.kind==='video'?'视频':'音频';
+        const label=document.createElement('span');label.textContent=r.mention||r.label||'参考'+(i+1);item.append(label);
         item.onmousedown=e=>e.stopPropagation();item.onclick=e=>{e.stopPropagation();button.click();};strip.insertBefore(item,button);
         if(!Array.from(list.querySelectorAll('img')).some(img=>img.getAttribute('src')===r.url)){const preview=item.cloneNode(true);preview.title=r.name||'参考素材 '+(i+1);previews.append(preview);}
       });

@@ -202,10 +202,13 @@
     if (action === 'approve' && !window.confirm('批准后会立即执行这次生成请求。要继续吗？')) return;
     setBusy(true); say(action === 'approve' ? '正在批准并执行…' : '正在拒绝请求…');
     try {
-      await api(`/api/studio/control/approvals/${encodeURIComponent(id)}`, 'POST', {action});
+      const result = await api(`/api/studio/control/approvals/${encodeURIComponent(id)}`, 'POST', {action});
       try { render(await api(endpoint)); }
       catch { /* The approval action succeeded; keep its success message if refresh is unavailable. */ }
-      say(action === 'approve' ? '已批准；本地服务已接收执行请求。' : '已拒绝此请求。');
+      // TASK-01: say plainly when the job ran but its local receipt was lost or rebuilt.
+      if (result?.receipt === 'failed') say(result.message, true);
+      else if (result?.recovered) say('已按原编号 ' + result.job_id + ' 找回任务记录，没有重复提交。');
+      else say(action === 'approve' ? '已批准；本地服务已接收执行请求。' : '已拒绝此请求。');
     } catch (error) { say(error.message, true); }
     finally { setBusy(false); }
   }

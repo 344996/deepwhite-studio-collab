@@ -21,6 +21,10 @@ def profile(mid,kind):
         if re.search(r'glm-5\.[23](?!-)|deepseek-v4(?!.*vision)',m): p['max_images']=0
         if 'v4.1-flash' in m: p['max_images']=8
         p['prompt_max']=100000
+        # LIVE-LLM-01: OpenAI-compatible chat output controls; validated, never silently dropped.
+        # Kept apart from `fields`, which UIs render as option lists.
+        p['controls']={'max_tokens':{'label':'输出上限（Token）','type':'int','min':1,'max':128000},
+                       'temperature':{'label':'温度','type':'number','min':0,'max':2}}
         return p
     if kind=='audio':
         # This deliberately narrow list mirrors the documented DeepWhite adapters.
@@ -140,6 +144,16 @@ def parameters(mid,kind,values):
     spec=profile(mid,kind)
     if not spec['supported']:raise HTTPException(400,spec['note'])
     result={}
+    for key,field in spec.get('controls',{}).items():
+        value=values.get(key)
+        if value is None or value=='':continue
+        try:
+            if type(value) is bool:raise ValueError
+            number=int(value) if field['type']=='int' and (isinstance(value,int) or re.fullmatch(r'\d+',str(value).strip())) else float(value) if field['type']=='number' else None
+            if number is None:raise ValueError
+        except (TypeError,ValueError):raise HTTPException(400,f'{field["label"]}需要填写数字。')
+        if not field['min']<=number<=field['max']:raise HTTPException(400,f'{field["label"]}需要在 {field["min"]}–{field["max"]} 之间。')
+        result[key]=number
     for key,field in spec['fields'].items():
         value=values.get(key,field.get('default',''))
         if field.get('type')=='text':

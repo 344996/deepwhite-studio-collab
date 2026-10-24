@@ -10461,6 +10461,7 @@ async def fetch_runninghub_model_registry(provider=None, include_fallback=True, 
     errors = []
     source = ""
     items = []
+    openapi_status = None  # HTTP status of the authenticated endpoint; None when unreachable
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         for source_name, url in urls:
             try:
@@ -10470,6 +10471,8 @@ async def fetch_runninghub_model_registry(provider=None, include_fallback=True, 
                 else:
                     req_headers = headers if source_name == "openapi" else {"Accept": "application/json"}
                     resp = await client.get(url, headers=req_headers)
+                    if source_name == "openapi":
+                        openapi_status = resp.status_code
                     if resp.status_code >= 400 or looks_like_html_response(resp.text):
                         errors.append(f"{source_name}: HTTP {resp.status_code} {resp.text[:180]}")
                         continue
@@ -10494,6 +10497,7 @@ async def fetch_runninghub_model_registry(provider=None, include_fallback=True, 
     if combined:
         meta = {
             "source": source or "llm",
+            "openapi_status": openapi_status,
             "openapi_count": len(items),
             "llm_count": len(llm_items),
             "llm_source": llm_meta.get("source") or "",
@@ -10504,6 +10508,7 @@ async def fetch_runninghub_model_registry(provider=None, include_fallback=True, 
         fallback = runninghub_registry_fallback()
         meta = {
             "source": "fallback",
+            "openapi_status": openapi_status,
             "openapi_count": 0,
             "llm_count": 0,
             "llm_source": "",
@@ -12761,8 +12766,40 @@ async def runninghub_app_info(webappId: str = ""):
         raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:500])
     if isinstance(raw, dict) and raw.get("code") not in (0, "0", None):
         raise HTTPException(status_code=400, detail=raw.get("msg") or f"RunningHub 查询失败 code={raw.get('code')}")
-    data = raw.get("data") if isinstance(raw, dict) else {}
-    return {"success": True, "data": data or {}}
+    data = dict(raw.get("data") or {}) if isinstance(raw, dict) and isinstance(raw.get("data"), dict) else {}
+    if isinstance(data.get("curl"), str):
+        data["curl"] = runninghub_redact_curl(data["curl"], api_key)
+    if isinstance(data.get("nodeInfoList"), list):
+        data["fieldSource"] = "nodeInfoList"
+    else:
+        # RH's documented demo may carry the parameters only inside its curl example.
+        fields = runninghub_fields_from_curl(data.get("curl"))
+        if fields is None:
+            raise HTTPException(status_code=400, detail="RH 应用信息中没有可识别的参数：未返回 nodeInfoList，"
+                                "curl 示例里也没有可解析的 JSON 参数。没有保存或执行任务。")
+        data["nodeInfoList"] = fields
+        data["fieldSource"] = "curl"
+    return {"success": True, "data": data}
+
+
+def runninghub_fields_from_curl(curl):
+    """nodeInfoList from the JSON body of RH's curl example. The command is only parsed, never run."""
+    text = str(curl or "")[:200_000]
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r"\{", text):
+        try:
+            value, _ = decoder.raw_decode(text, match.start())
+        except ValueError:
+            continue
+        if isinstance(value, dict) and isinstance(value.get("nodeInfoList"), list):
+            return [dict(item) for item in value["nodeInfoList"] if isinstance(item, dict)]
+    return None
+
+
+def runninghub_redact_curl(curl, api_key=""):
+    text = re.sub(r'("apiKey"\s*:\s*")[^"]*(")', r"\1[已隐藏]\2", str(curl))
+    text = re.sub(r"(apiKey=)[^&'\"\s]+", r"\1[已隐藏]", text)
+    return text.replace(api_key, "[已隐藏]") if api_key else text
 
 @app.post("/api/runninghub/submit")
 async def runninghub_submit(payload: RunningHubSubmitRequest):
@@ -13792,6 +13829,33 @@ def apply_agnes_model_defaults(base_url, grouped, ids):
     grouped["video"] = sorted(set(grouped.get("video") or []))
     return grouped, ids
 
+RUNNINGHUB_CATALOG_LABELS = {"openapi": "官方 OpenAPI", "github": "公开 GitHub 注册表", "local": "本地注册表",
+                              "llm": "LLM 网关", "fallback": "内置兜底列表"}
+
+
+def runninghub_connection_stages(meta):
+    """What the probe actually proved: service reached, key accepted, where the catalog came from.
+
+    A public or built-in catalog only shows the catalog is readable; it never proves the key works.
+    """
+    status = meta.get("openapi_status")
+    source = str(meta.get("source") or "")
+    auth = ("failed" if status in (401, 403) else "ok" if status is not None and 200 <= status < 300
+            else "unverified")
+    return {"service": status is not None, "auth": auth, "auth_status": status, "catalog": source}
+
+
+def runninghub_connection_message(stages):
+    catalog = RUNNINGHUB_CATALOG_LABELS.get(stages["catalog"], stages["catalog"] or "未知来源")
+    if stages["auth"] == "ok":
+        return f"RunningHub 鉴权通过，模型目录来自{catalog}。具体应用或工作流的权限在运行时再核对。"
+    if stages["auth"] == "failed":
+        return (f"RunningHub 鉴权失败（HTTP {stages['auth_status']}）：API Key 无效、已过期或没有权限。"
+                f"模型目录仍可从{catalog}读取，这只说明目录可读，不代表连接成功。")
+    reached = f"返回 HTTP {stages['auth_status']}" if stages["service"] else "无法连接"
+    return f"未能核实 RunningHub 鉴权：OpenAPI {reached}。模型目录来自{catalog}，只说明目录可读。"
+
+
 @app.post("/api/providers/test-connection")
 async def test_provider_connection(payload: TestConnectionPayload):
     """测试请求地址是否可用：调上游 /v1/models。验证通过时同时把模型清单按类别返回，避免再调一次拉取接口。"""
@@ -13831,10 +13895,12 @@ async def test_provider_connection(payload: TestConnectionPayload):
         probe_key = api_key_from_payload(payload, protocol)
         provider = {"id": "runninghub", "name": "RunningHub", "base_url": (payload.base_url or RUNNINGHUB_DEFAULT_BASE_URL).strip().rstrip("/"), "protocol": "runninghub", "api_key": probe_key, "wallet_api_key": probe_key}
         payload_models = await runninghub_models_payload(provider)
+        stages = runninghub_connection_stages(payload_models.get("raw") or {})
         return {
-            "ok": True,
-            "status": 200,
-            "message": "RunningHub OpenAPI 可用，已拉取官方直连模型注册表。",
+            "ok": stages["auth"] == "ok",
+            "status": 200 if stages["auth"] == "ok" else (stages["auth_status"] or 0),
+            "message": runninghub_connection_message(stages),
+            "stages": stages,
             "model_count": payload_models["total"],
             "image_models": payload_models["image_models"],
             "chat_models": payload_models["chat_models"],
