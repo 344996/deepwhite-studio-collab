@@ -136,6 +136,69 @@ def seedance_prompt(prompt,refs):
     return re.sub(r'@(图片|视频|音频)\s*(\d+)',convert,prompt)
 
 
+REASONING_MODEL=re.compile(r'^(o\d|gpt-5)',re.I)
+
+
+def chat_limits(model,params):
+    """LIVE-LLM-01: the body fields for the chat output controls and what the limit means.
+
+    Reasoning models take max_completion_tokens, which also counts their thinking tokens.
+    """
+    body={}
+    if 'temperature' in params:body['temperature']=params['temperature']
+    if params.get('max_tokens') is None:return body,None
+    reasoning=bool(REASONING_MODEL.match(model))
+    field='max_completion_tokens' if reasoning else 'max_tokens'
+    body[field]=params['max_tokens']
+    return body,{'field':field,'value':params['max_tokens'],'includes_reasoning':reasoning}
+
+
+def billing(usage):
+    """LIVE-LLM-02: an amount only when the platform reported one; otherwise pending, never 0."""
+    if isinstance(usage,dict) and isinstance(usage.get('amount'),(int,float)) and not isinstance(usage.get('amount'),bool) and usage.get('currency'):
+        return {'status':'reported','amount':usage['amount'],'currency':str(usage['currency'])}
+    return {'status':'pending','note':'平台未返回金额，待与账单核对；不是 0 元。'}
+
+
+SUBMISSION_VERSION=1
+
+
+def redact_url(url):
+    """Signed URLs expire and grant access: keep only scheme, host and path."""
+    parts=urlsplit(str(url or ''))
+    return f'{parts.scheme}://{parts.netloc}{parts.path}' if parts.scheme in ('http','https') else str(url or '')
+
+
+def file_sha256(url):
+    if not str(url or '').startswith('/'):return ''
+    path=core.output_file_from_url(url)
+    if not path or not Path(path).is_file():return ''
+    digest=hashlib.sha256()
+    with open(path,'rb') as stream:
+        for block in iter(lambda:stream.read(1<<20),b''):digest.update(block)
+    return digest.hexdigest()
+
+
+def submission_snapshot(job,endpoint,sources,uploaded,body):
+    """REF-03: what this service is about to send, recorded locally before the POST.
+
+    It links the job, model, request version, source files and upload identities in
+    their final order. It shows what was sent from here, not what the platform received.
+    """
+    return {'recorded':'local_before_send','note':'本地发送前记录，用于核对；不能证明平台实际收到完全相同的字节。',
+            'request_version':SUBMISSION_VERSION,'job_id':job['id'],'model':job['resolved_model'],'endpoint':endpoint,
+            'references':[{'position':i+1,'kind':source.get('kind','image'),'label':str(source.get('label') or ''),
+                           'source':source['url'] if str(source['url']).startswith('/') else redact_url(source['url']),
+                           'sha256':file_sha256(source['url']),'uploaded_as':redact_url(sent['url'])}
+                          for i,(source,sent) in enumerate(zip(sources,uploaded))],
+            'body_sha256':hashlib.sha256(json.dumps(body,ensure_ascii=False,sort_keys=True).encode()).hexdigest()}
+
+
+def safe_id(value):
+    value=str(value or '')
+    return value if re.fullmatch(r'[\w.:-]{1,120}',value) else ''
+
+
 def checked(payload):
     if payload.provider_id==studio_comfy.PROVIDER:return studio_comfy.checked(payload)
     import studio_dreamina
@@ -167,6 +230,8 @@ def checked(payload):
         raw=catalog.resolve_model(payload.provider_id,payload.model,payload.kind,images,videos,audios,False if payload.frame_mode else payload.multimodal)
     spec=profile(raw,payload.kind)
     params=parameters(raw,payload.kind,payload.params)
+    if payload.kind=='chat' and 'temperature' in params and REASONING_MODEL.match(raw):
+        raise HTTPException(400,'此推理模型不支持温度参数，请去掉温度设置后再试。')
     if payload.kind=='audio' and payload.params.get('channel') not in ('',None,spec['channel']):raise HTTPException(400,'所选音频模型不属于当前生成频道。')
     if payload.kind=='audio' and raw in ('mureka-v8-bgm','mureka-v9-bgm'):
         if bool(payload.prompt.strip())==bool(params.get('instrumental_id')):raise HTTPException(400,'Mureka 伴奏请填写音乐描述或伴奏模板 ID，两者只能填写一项。')
@@ -367,12 +432,15 @@ async def execute(job_id):
                     if req['kind']=='chat':
                         content=[{'type':'text','text':req['prompt']}]+[{'type':'image_url','image_url':{'url':r['url']}} for r in refs]
                         messages=([{'role':'system','content':req['system_prompt']}] if req['system_prompt'] else [])+[m for m in req['messages'] if m.get('role') in ('user','assistant')]+[{'role':'user','content':content if refs else req['prompt']}]
-                        body={'model':job['resolved_model'],'messages':messages,'stream':False};endpoint='/chat/completions'
+                        limits,output_limit=chat_limits(job['resolved_model'],req['params'])
+                        body={'model':job['resolved_model'],'messages':messages,'stream':False,**limits};endpoint='/chat/completions'
+                        if output_limit:child['output_limit']=output_limit
                     elif req['kind']=='audio':
                         endpoint,body=audio_body(job['resolved_model'],req['prompt'],req['params'])
                     else:
                         body=media_body(job['resolved_model'],req['kind'],req['prompt'],req['params'],refs,req['frame_mode'])
                         endpoint='/image/generations' if req['kind']=='image' else '/videos'
+                    child['submission']=submission_snapshot(job,endpoint,req['references'],refs,body)
                     child['status']='submitting';job['status']='running';save(job)
                     core.native_before_submit()
                     try:
@@ -384,6 +452,9 @@ async def execute(job_id):
                             child['http_status']=response.status_code
                             request_id=response.headers.get('x-request-id') or response.headers.get('request-id')
                             if request_id and re.fullmatch(r'[\w.:-]{1,120}',request_id):child['platform_request_id']=request_id
+                            try:failed_body=response.json()
+                            except ValueError:failed_body={}
+                            if isinstance(failed_body,dict) and safe_id(failed_body.get('id')):child['upstream_response_id']=safe_id(failed_body['id'])
                             response.raise_for_status()
                         data=response.json()
                     except Exception:
@@ -399,7 +470,11 @@ async def execute(job_id):
                         if not text:
                             job['status']='uncertain'
                             raise HTTPException(502,'模型未返回文本，请在平台查看本次调用。')
-                        child.update(status='succeeded',text=text,usage=data.get('usage'));save(job);continue
+                        # LIVE-LLM-02: keep what lets this result be matched to the platform's records.
+                        receipt={'upstream_response_id':safe_id(data.get('id')),
+                                 'platform_request_id':safe_id(response.headers.get('x-request-id') or response.headers.get('request-id'))}
+                        child.update(status='succeeded',text=text,usage=data.get('usage'),billing=billing(data.get('usage')),
+                                     **{k:v for k,v in receipt.items() if v});save(job);continue
                     record=data.get('data',data)
                     if isinstance(record,list):record=record[0] if record else {}
                     task_id=record.get('id') or record.get('task_id') or data.get('id') or data.get('task_id')

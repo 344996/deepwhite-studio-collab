@@ -107,10 +107,15 @@
         w=record.contentRect.width+px('paddingLeft')+px('paddingRight')+px('borderLeftWidth')+px('borderRightWidth');
         h=record.contentRect.height+px('paddingTop')+px('paddingBottom')+px('borderTopWidth')+px('borderBottomWidth');
       }
+      if(entry.measuredWidth!==Math.round(w)||entry.measuredHeight!==Math.round(h))linksStale=true;
       entry.measuredWidth=Math.round(w);entry.measuredHeight=Math.round(h);mapMeasurements++;mapDirty.add(entry.node.id);
     }
     if(mapStructure||mapDirty.size)queueMap();
+    // LINK-01: a card that grows later (price area, mode switch) moves its ports; redraw
+    // the connections from the live ports once per frame instead of only the minimap.
+    if(linksStale&&!linksFrame)linksFrame=requestAnimationFrame(()=>{linksFrame=0;linksStale=false;refreshGeometry();});
   });
+  let linksStale=false,linksFrame=0;
   const mapMutations=new MutationObserver(records=>{
     for(const record of records){
       if(record.type==='childList'&&record.target===nodesEl){mapStructure=true;continue;}

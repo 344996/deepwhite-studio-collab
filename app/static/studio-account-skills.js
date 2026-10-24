@@ -84,7 +84,9 @@
         row.className = 'dw-balance-row';
         const name = document.createElement('span'); name.textContent = item.name;
         const amount = document.createElement('strong');
-        amount.textContent = item.status === 'available' && item.balance != null ? `${item.balance} ${item.unit || ''}`.trim() : item.status === 'unsupported' ? '未接入' : '暂不可用';
+        // A currency symbol (¥, $) goes before the amount; a code or unit (CNY, 积分) after it.
+        const symbol = /^[^\p{L}\p{N}]{1,3}$/u.test(item.unit || '');
+        amount.textContent = item.status === 'available' && item.balance != null ? (symbol ? `${item.unit}${item.balance}` : `${item.balance} ${item.unit || ''}`.trim()) : item.status === 'unsupported' ? '未接入' : '暂不可用';
         const state = document.createElement('small'); state.textContent = item.message || (item.status === 'available' ? `更新于 ${item.updated_at}` : item.status === 'unsupported' ? '该渠道没有受支持的余额查询方式' : '余额读取失败，请稍后刷新');
         const stamp = document.createElement('small'); stamp.textContent = item.updated_at ? new Date(item.updated_at).toLocaleString() : '';
         row.append(name, amount, state, stamp); list.append(row);

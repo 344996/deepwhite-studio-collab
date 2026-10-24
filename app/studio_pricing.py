@@ -78,11 +78,15 @@ def estimate(raw, mid, request):
     entries = profile.get('entries') or []
     fields = [feature(k) for k in profile.get('active_features') or []]
     source = '历史估价'
-    if profile.get('status') != 'ready' or not entries:
-        observed = raw.get('observed_prices',{}).get(mid) or {}
-        entries = observed.get('entries') or []
-        # Task identifiers are not comparable price features. Such evidence cannot price a new task.
-        fields = list({feature(k) for e in entries for k in e.get('params',{})})
+    observed = raw.get('observed_prices',{}).get(mid) or {}
+    observed_entries = observed.get('entries') or []
+    # Task identifiers are not comparable price features. Such evidence cannot price a new task.
+    observed_fields = list({feature(k) for e in observed_entries for k in e.get('params',{})})
+    # PRICE-01: bills split by a dimension the estimate ignores (e.g. resolution) price that
+    # dimension; reusing the estimate's single sample would show the 1K price for 2K.
+    finer = [k for k in observed_fields if k not in fields and params.get(k) not in (None, '')]
+    if profile.get('status') != 'ready' or not entries or (observed_entries and finer):
+        entries, fields = observed_entries, observed_fields
         source = '同参数历史账单'
     if not entries:
         return unknown

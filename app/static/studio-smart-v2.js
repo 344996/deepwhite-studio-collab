@@ -158,7 +158,8 @@
     for(const n of found){const b=el('button','sv2-search-result');b.type='button';b.dataset.nodeId=n.id;const name=el('strong','');name.textContent=n.title|| (n.type==='smart-prompt'?'提示词':'图片节点');const kind=el('span','');kind.textContent=n.type==='smart-prompt'?'提示词':n.type==='smart-group'?'分组':n.type==='smart-loop'?'循环':n.type==='smart-minimax'?'MiniMax':n.runSettings?.apiKind==='video'?'视频':'图片';b.append(name,kind);b.onclick=()=>{savePromptDraftForCurrent();selectedId=n.id;selectedIds=[];selectedImage={nodeId:'',index:-1};render();search.close();centerNode(n);};list.append(b);}
     if(!found.length){const p=el('p','sv2-search-empty');p.textContent='没有找到节点，试试其他关键词。';list.append(p);}
   }
-  function setZoom(scale){const center=viewportCenter(),next=Math.max(0.06,Math.min(2,scale));viewport.scale=next;viewport.x=innerWidth/2-center.x*next;viewport.y=innerHeight/2-center.y*next;applyViewport();scheduleSave();}
+  const zoomRange=window.STUDIO_SMART_ZOOM||{min:.1,max:8};
+  function setZoom(scale){const center=viewportCenter(),next=Math.max(zoomRange.min,Math.min(zoomRange.max,scale));viewport.scale=next;viewport.x=innerWidth/2-center.x*next;viewport.y=innerHeight/2-center.y*next;applyViewport();scheduleSave();}
   function zoomBy(factor){setZoom(viewport.scale*factor);}
   function centerNode(node){const rect=nodeRect(node);viewport.x=innerWidth/2-(rect.x+rect.width/2)*viewport.scale;viewport.y=innerHeight*.38-(rect.y+rect.height/2)*viewport.scale;applyViewport();scheduleSave();}
   // These overlays keep their original DOM/handlers. Only their screen geometry changes.
@@ -272,7 +273,7 @@
     const left=Math.min(...rects.map(r=>r.x)),top=Math.min(...rects.map(r=>r.y)),right=Math.max(...rects.map(r=>r.x+r.width)),end=Math.max(...rects.map(r=>r.y+r.height));
     const safe=safeArea(),active=selectedNode();let available={...safe};fitDock=null;
     if(active&&editor.classList.contains('open')){const size=sizeEditor(safe);if(safe.right-safe.left-size.width-24>=260){available.right-=size.width+24;fitDock={nodeId:active.id,x:available.right+24,y:safe.top+(safe.bottom-safe.top-size.height)/2};}else if(safe.bottom-safe.top-size.height-24>=120){available.bottom-=size.height+24;fitDock={nodeId:active.id,x:safe.left+(safe.right-safe.left-size.width)/2,y:available.bottom+24};}}
-    const scale=Math.max(.06,Math.min(1,(available.right-available.left-40)/Math.max(1,right-left),(available.bottom-available.top-40)/Math.max(1,end-top))),bounds=shell.getBoundingClientRect();
+    const scale=Math.max(zoomRange.min,Math.min(1,(available.right-available.left-40)/Math.max(1,right-left),(available.bottom-available.top-40)/Math.max(1,end-top))),bounds=shell.getBoundingClientRect();
     viewport.scale=scale;viewport.x=(available.left+available.right)/2-bounds.left-(left+right)/2*scale;viewport.y=(available.top+available.bottom)/2-bounds.top-(top+end)/2*scale;fittingView=true;try{applyViewport();}finally{fittingView=false;}scheduleSave();requestOverlayLayout();
   }
   function sync(){empty.hidden=nodes.length>0;zoom.querySelector('span').textContent=Math.round(viewport.scale*100)+'%';if(search.open)renderSearch();window.StudioCanvasWorkspace?.sync();}

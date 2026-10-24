@@ -11,7 +11,7 @@
     "inputs": [
       {
         "file": "canvas.html",
-        "sha256": "2b69b6cd8d5dee102e3485169d45086b20becee8476392694fe859224ae53383"
+        "sha256": "5242caacd83542bf316e8c3ce07bdd04c2ceb84d6639b8dc8fd7aa518d5a5d02"
       },
       {
         "file": "js/api-settings.js",
@@ -23,11 +23,11 @@
       },
       {
         "file": "js/canvas-list.js",
-        "sha256": "46b58c8828a640f1ef29bc0e77f02eee7c357137d8d8ceb6921acf23e39ed691"
+        "sha256": "f53923f18038971ff439b2fac72ce07a60501314906a4dd30bec4298747f5aa5"
       },
       {
         "file": "js/canvas.js",
-        "sha256": "71b3ff9bf11b168b56210543f58deb32f84cbda6d66e34f0427b0a3be8c507b9"
+        "sha256": "a62e862a65a549525503698f4e2070610b4c4fb1189c35f85e466c92bbe3b43b"
       },
       {
         "file": "js/comfyui-settings.js",
@@ -55,7 +55,7 @@
       },
       {
         "file": "js/smart-canvas.js",
-        "sha256": "aeac1f27deacbf1913bf49dccb01537475609239283fa6489651080d83809a60"
+        "sha256": "e76fd77524a772079e511a399cc6247fe8c375200fa4b01fcf854c27061ec65c"
       },
       {
         "file": "js/theme.js",
@@ -67,7 +67,7 @@
       },
       {
         "file": "studio-account-skills.js",
-        "sha256": "41af9e91d5ce87a27483a437eaf9b36f1af03d8f4de03f9e51bc1b897a708969"
+        "sha256": "5e2a30ed5cd83a8e8850c82a9b62b30702fadc9e04a9dcc18014eb90900c2b89"
       },
       {
         "file": "studio-asset-presets.js",
@@ -83,7 +83,7 @@
       },
       {
         "file": "studio-assets.js",
-        "sha256": "2cfe1818577d9128b87d3f620c64d6665086b1d2a4635b30960bbc643b7830ef"
+        "sha256": "cf30cc548a9561d6d0e5917d7f777c60d65a4281bb0bb1272423e90f2b23597b"
       },
       {
         "file": "studio-audio.js",
@@ -94,6 +94,10 @@
         "sha256": "c886e4a79186f23b69581036e810dd9270bf76fe678be1f713f59456e35facba"
       },
       {
+        "file": "studio-canvas-connections.js",
+        "sha256": "538ebf2d8911b9a43a4a56757a419065ba461b464d9fe1eca565c030e44f265b"
+      },
+      {
         "file": "studio-canvas-drafts.js",
         "sha256": "1f9d19f318ef63dc925ea790c7823315fbaa5f0e31d2225496a7de6c59e9ce11"
       },
@@ -102,8 +106,20 @@
         "sha256": "8e66e5a3912478042ad7ac83eed15d10b29362713c31240ed336e7816f1bf59c"
       },
       {
+        "file": "studio-canvas-inspector.js",
+        "sha256": "e6695058ca74a56bc2e89b26af2756d73aea499cea4b64e3e0c058b30a4ccb46"
+      },
+      {
         "file": "studio-canvas-v2.js",
-        "sha256": "127a3881bab3020476469cdc2134090add5e703240537b51e75acd254a4c359e"
+        "sha256": "0414b2a586b262610abc45d7020a728363803eb9567254f45021809f653aab3b"
+      },
+      {
+        "file": "studio-canvas-workspace.js",
+        "sha256": "bb16de27c2447f1a1ce866fbada0cbadc5e46e8d733bf8452540069ebea318fc"
+      },
+      {
+        "file": "studio-clients.js",
+        "sha256": "484c564d9f6c16c982eb2b1f8446e04591c0d9c8e353841e6999288e34c41aa0"
       },
       {
         "file": "studio-compact-generation.js",
@@ -115,15 +131,31 @@
       },
       {
         "file": "studio-control.js",
-        "sha256": "c312e521fec35fcf8292256e9d2ee3ddb23d5152bb805fae931140493dd799fd"
+        "sha256": "e681acb620f77f1ea1d84f0e6925e6f632fb44ec19a265f6de445b8eed641acc"
       },
       {
         "file": "studio-dreamina.js",
         "sha256": "8cda04807f54977af7d13e7a6b05e5fd26e0a54954a6f6d827524f5024f71010"
       },
       {
+        "file": "studio-feedback.js",
+        "sha256": "c8109dba9421138c72590086731a26166da7af473817bf1156283d849a5ab209"
+      },
+      {
+        "file": "studio-focus-edit.js",
+        "sha256": "7a3d9a33ebf7b7515e182d898f97120f0c7602c60aac1e5cb59f8e09fd760832"
+      },
+      {
         "file": "studio-frame-capture.js",
         "sha256": "e7e682fb889708f46ca74492349479653cb22366dfd3cc25b6ffaa4b8edd7843"
+      },
+      {
+        "file": "studio-gallery-import.js",
+        "sha256": "73c87e725a9778914f36cfb3bcd32bbe43fd2da714bffaf6ef6ba40fe7f7764b"
+      },
+      {
+        "file": "studio-history-view.js",
+        "sha256": "0af3cc1ae2dfc75ff054b84be2b59938393cda45a168d7104c17ab52629464f4"
       },
       {
         "file": "studio-home-0927.js",
@@ -131,11 +163,15 @@
       },
       {
         "file": "studio-home-v2.js",
-        "sha256": "4bf4ac99a372edaab01bcb17042130f8f916f0c1ab367d625ddb605976ee76ce"
+        "sha256": "2e067a6a46ddec0028efbf698414cc98ee4248e972065afabc323084550f0d78"
       },
       {
         "file": "studio-home.js",
         "sha256": "4a3493561467efe33fcf817e277cbdffe99f4afd9f0c84fce6abbf620069d9cc"
+      },
+      {
+        "file": "studio-interactions.js",
+        "sha256": "fb20da1864940a6a03438b786128e350bf7d46b2c93bc5df7d72f29c354a45c0"
       },
       {
         "file": "studio-layout-0927.js",
@@ -155,19 +191,23 @@
       },
       {
         "file": "studio-milk-theme.js",
-        "sha256": "dc7eeaeb5965a7f0abeeeaef2628dd5240e372339e890b1fa56bd60982e3e868"
+        "sha256": "82e184b5dbcd35dfeeceed2bd191169ee6617c7836b91dc21190ef2ccc607a45"
       },
       {
         "file": "studio-models.js",
-        "sha256": "4ae071ba74441561c9ba0ae81709cd0cf165c72fb6a0dd5b9326e0b7977c435f"
+        "sha256": "786baf0ad18efb80311e18c51be64844888ad6bf1ec963d1b86a334d4631ee8b"
       },
       {
         "file": "studio-native-tasks.js",
         "sha256": "78a62477764818a62f931e5fd6851b4cee96bef2ab17ee97543342256e730d84"
       },
       {
+        "file": "studio-node-composer.js",
+        "sha256": "e305dad86d0ff3c7be3b29a7d8fba1716c402205beee727e7b866cdfcb53170a"
+      },
+      {
         "file": "studio-node-editor.js",
-        "sha256": "941d5019b28186d78e334665362f681cd8d05dbd5532027bd423b161acae4374"
+        "sha256": "2ecff0e05c4117eb748badfb84ff8bde470851e937cd8090d5154959c2885746"
       },
       {
         "file": "studio-node-menu.js",
@@ -175,11 +215,19 @@
       },
       {
         "file": "studio-node-polish.js",
-        "sha256": "1b8612657135de1e3784125e6776ebc7f383a9cc95f86c5c9af2032288b92eb2"
+        "sha256": "4bf9e3c4579678838c8521485aeef8694651f30370a9a31887295a232a35f77c"
       },
       {
         "file": "studio-preview.js",
         "sha256": "2e3572c6b06002e83b880260db1219e10652c6a29a121933c9c3fb7cf26e024c"
+      },
+      {
+        "file": "studio-provider-capabilities.js",
+        "sha256": "b550db7d77ee7f27cef9148bbc6bab4f2cc334fe7beef5f367073f6e1cb5c45b"
+      },
+      {
+        "file": "studio-ref-semantics.js",
+        "sha256": "9afdf67065fd437cf3a555327e8d58df7486dc486174a497b34ef6c1aff5cb98"
       },
       {
         "file": "studio-rh-workflows.js",
@@ -190,24 +238,28 @@
         "sha256": "8aaeb1f60bd43ed7fe17b548653652e4415483ab3e94839facbfd304693d290c"
       },
       {
+        "file": "studio-settings-navigation.js",
+        "sha256": "f9dcb7da163dc049730eda230691a2ee7e5fdd1dc64223d73c77eb417155b486"
+      },
+      {
         "file": "studio-settings-v2.js",
-        "sha256": "104c31571ef5ae62fd7b834ecf55f545f2c69f3506b150c69b5efe7f379b4bdf"
+        "sha256": "3121fe631d10f1cda59ad5701e0eb3d956486ee475e80a3c9a9fa1d05c238b23"
       },
       {
         "file": "studio-settings.js",
-        "sha256": "96b4caa4f71156540a2347328573903598a1a8429d3c3b50abf877ce14e7511f"
+        "sha256": "d2e47a9dc78b83d845427c197ec4ee1448afd03051ccea56c201b1f407fe90f4"
       },
       {
         "file": "studio-skill-nodes.js",
-        "sha256": "a1799b9928ff7ad36fe7a500d3ce3cf439004c2479031072f339bd91d7315cbc"
+        "sha256": "03726103c251372c504be7535e9165c7fba02b5c8dbe06a3dd6bd56f1226dc54"
       },
       {
         "file": "studio-smart-v2.js",
-        "sha256": "bb71247cd2f98b1503bd4440410c525f307f0248ed0e1384c1fe05a6afa1c088"
+        "sha256": "1e403aa114c0b1391f8203470bb4894f7b7bea2982475f8fd0c4f7e4ed876fcf"
       },
       {
         "file": "studio-stage-one.js",
-        "sha256": "8550ca85656d9e39284e97a18b7938af233c8805f24d708299db7a4eb360d200"
+        "sha256": "e70c72f21f61e298ac456521774deaf3735568ecfa2bba7e5bc1d1ed2313bbc5"
       },
       {
         "file": "studio-storage.js",
@@ -219,19 +271,27 @@
       },
       {
         "file": "studio-tools-v2.js",
-        "sha256": "80faf80f1ab74fa7a4357324dfab260e571646a89f9ad75a0dd90b9888bf2e37"
+        "sha256": "0bb927e3ae5c959537ee28fd87360d621d3e87c308d8b3465159d8d9b6e416c8"
       },
       {
         "file": "studio-tools.js",
         "sha256": "986aca81b176d84b5bdc23e62417c92add10883b6f133f3988ab568afbe27a3f"
       },
       {
+        "file": "studio-updates.js",
+        "sha256": "42d59f7bb8b0046a0c938170b7e05a976509857d680629014cade662fff3c944"
+      },
+      {
         "file": "studio-workflows.js",
-        "sha256": "cdf4c1161d1e3e01d64538ced37769eb7c12ce6129e7d902bb479b5f2c7cec26"
+        "sha256": "471299348107d6ea30ed82f615c583e79e03a4d22ec703c6c247071fab506d2e"
+      },
+      {
+        "file": "studio-workspace.js",
+        "sha256": "70409c10268cc5535039a715467e482ff83540b40e3bf0bf0789052e6ec4e06e"
       }
     ],
-    "candidateCount": 52282,
-    "candidatesSha256": "d97dbea6c3be4778dbfee1a495c3e9a147ba5456bd1af7f387e65c1e439152d8"
+    "candidateCount": 54964,
+    "candidatesSha256": "04dfec9b6eff99a3ff34c0d9389dfa92c8be016968f9eb665abe7b0b34f385af"
   },
-  "cssSha256": "ab1f30f774ee81d00bce9a956583db7db4e526e95650684c02ff8ceb16897e31"
+  "cssSha256": "fa0e9de4fe5ef27ae03188ab8c0675acaf9a4389178bc6d7ca90a809fc10fa50"
 }

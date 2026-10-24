@@ -1339,6 +1339,10 @@ function isEditableTarget(target){
     const el = target || document.activeElement;
     return !!el?.closest?.('input, textarea, select, option, [contenteditable="true"], .prompt-node-control, .prompt-input');
 }
+// UX-02: one zoom range for both canvases (classic: studio-canvas-v2.js ZOOM_MIN/ZOOM_MAX).
+const SMART_ZOOM_MIN = 0.1;
+const SMART_ZOOM_MAX = 8;
+window.STUDIO_SMART_ZOOM = Object.freeze({min:SMART_ZOOM_MIN, max:SMART_ZOOM_MAX});
 function safeScale(value){
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : 1;
@@ -2203,7 +2207,7 @@ function fitAllNodesViewport(){
     const pad = 160;
     const width = Math.max(1, maxX - minX + pad * 2);
     const height = Math.max(1, maxY - minY + pad * 2);
-    const nextScale = Math.max(0.06, Math.min(0.82, (shell.clientWidth - 80) / width, (shell.clientHeight - 80) / height));
+    const nextScale = Math.max(SMART_ZOOM_MIN, Math.min(0.82, (shell.clientWidth - 80) / width, (shell.clientHeight - 80) / height));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
     viewport.scale = nextScale;
@@ -18659,7 +18663,7 @@ shell.addEventListener('wheel', e => {
         const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
         const factor = Math.exp(Math.max(-4,Math.min(4,-dy*.002)));
         // Retain the same usable range as this canvas's zoom buttons.
-        viewport.scale = Math.max(.06,Math.min(2,safeScale(viewport.scale)*factor));
+        viewport.scale = Math.max(SMART_ZOOM_MIN,Math.min(SMART_ZOOM_MAX,safeScale(viewport.scale)*factor));
         viewport.x = sx - before.x * viewport.scale;
         viewport.y = sy - before.y * viewport.scale;
     }

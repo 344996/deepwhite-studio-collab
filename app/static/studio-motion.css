@@ -1,0 +1,38 @@
+/* UX-03: one entry-motion rule per kind of layer, shared by both canvases.
+   Menus and popovers 140ms, windows and dialogs 180ms, viewport positioning 210ms.
+   Motion uses opacity plus the individual translate/scale properties, so it composes with
+   the transforms that position each layer. Dragging and reduced-motion get none. */
+:root{
+  --studio-motion-menu:140ms;
+  --studio-motion-window:180ms;
+  --studio-motion-viewport:210ms;
+  --studio-ease-out:cubic-bezier(.2,.8,.2,1);
+}
+@keyframes studio-menu-in{from{opacity:0;translate:0 4px}to{opacity:1;translate:0 0}}
+@keyframes studio-window-in{from{opacity:0;translate:0 8px;scale:.985}to{opacity:1;translate:0 0;scale:1}}
+
+/* Menus and popovers */
+[popover]:popover-open,
+#workspaceMoreTools[open] .workspace-more-panel,
+.create-menu.open{animation:studio-menu-in var(--studio-motion-menu) var(--studio-ease-out) both}
+.smart-popover{transition-duration:var(--studio-motion-menu)!important;transition-timing-function:var(--studio-ease-out)!important}
+
+/* Windows and dialogs */
+dialog[open],
+.studio-workspace-refresh dialog[open],
+.image-edit-modal.open .image-edit-panel{animation:studio-window-in var(--studio-motion-window) var(--studio-ease-out) both}
+dialog[open]::backdrop{animation:studio-menu-in var(--studio-motion-window) linear both}
+
+/* Pointer drags and connections follow the pointer exactly. */
+.node.dragging,.image-node.dragging,.dragging .node,.dragging .image-node,body.studio-dragging *{transition:none!important;animation:none!important}
+
+@media (prefers-reduced-motion:reduce){
+  :root{--studio-motion-menu:0s;--studio-motion-window:0s;--studio-motion-viewport:0s}
+  [popover]:popover-open,#workspaceMoreTools[open] .workspace-more-panel,.create-menu.open,dialog[open],dialog[open]::backdrop,
+  .studio-workspace-refresh dialog[open],.image-edit-modal.open .image-edit-panel{animation:none!important}
+  .smart-popover{transition-duration:0s!important}
+}
+
+/* REF-02: reference semantics line under the smart composer. */
+.smart-ref-semantics{margin:6px 2px 0;font-size:12px;line-height:1.5;color:var(--muted,#8a948f);overflow-wrap:anywhere}
+.smart-ref-semantics[hidden]{display:none}

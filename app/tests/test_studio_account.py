@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import os
 import json
@@ -164,6 +165,29 @@ class StudioAccountTests(unittest.TestCase):
         self.assertEqual(items['dreamina-cli']['status'], 'unsupported')
         self.assertTrue(items['deepwhiteai']['updated_at'])
         self.assertNotIn('test-wallet-key', response.text)
+
+
+    def test_key_wallet_custom_currency_uses_the_site_symbol(self):
+        # PRICE-02: a site configured with a custom currency must not show the word CUSTOM.
+        for site, expected_unit in (({'quota_display_type': 'CUSTOM', 'custom_currency_symbol': '¥'}, '¥'), ({'quota_display_type': 'CUSTOM'}, '')):
+            with self.subTest(site=site):
+                def upstream(request, site=site):
+                    if request.url.path == '/api/usage/wallet/':
+                        return httpx.Response(200, json={'code': True, 'data': {'amount': 12.5, 'display_type': 'CUSTOM'}})
+                    if request.url.path == '/api/status':
+                        return httpx.Response(200, json={'success': True, 'data': site})
+                    return self.upstream(request)
+                account.TRANSPORT = httpx.MockTransport(upstream)
+                provider = {'id': 'deepwhiteai', 'name': 'DeepWhite API', 'base_url': 'https://api.deepwhiteai.com/v1'}
+                fake_core = SimpleNamespace(provider_env_key_value=lambda provider_id: 'test-wallet-key')
+                with patch.dict(sys.modules, {'main': fake_core}):
+                    item = asyncio.run(account_extension._deepwhite_key_balance(provider))
+                self.assertEqual(item['status'], 'available')
+                self.assertEqual(item['balance'], 12.5)
+                self.assertEqual(item['unit'], expected_unit)
+                self.assertNotIn('CUSTOM', json.dumps(item, ensure_ascii=False))
+                if not expected_unit:
+                    self.assertIn('自定义', item['message'])
 
 
 if __name__ == '__main__':
