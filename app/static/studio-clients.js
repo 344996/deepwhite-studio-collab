@@ -39,8 +39,11 @@
     if (skill.state === 'latest') return ['最新 v' + skill.installed, 'ok'];
     if (skill.state === 'upgrade') return ['v' + skill.installed + ' → v' + skill.latest, 'warn'];
     if (skill.state === 'foreign') return ['同名文件夹 · v' + skill.latest, 'warn'];
+    if (skill.state === 'damaged') return ['文件缺失 · 需修复', 'warn'];
+    if (skill.state === 'modified') return ['已被修改 · v' + skill.installed, 'warn'];
     return ['未安装 · v' + skill.latest, 'idle'];
   }
+  const NEEDS_INSTALL = ['upgrade', 'missing', 'foreign', 'damaged', 'modified'];
   function button(label, cls, onClick, attention = false) {
     const node = el('button', label, 'client-button ' + (cls || ''));
     node.type = 'button';
@@ -106,17 +109,20 @@
         mcp === 'different' ? 'accent' : '', () => act(client, 'connect'), mcp === 'different'));
     }
     const manualSkills = client.skills.some(skill => skill.state === 'manual');
-    const needs = client.skills.filter(skill => skill.state === 'upgrade' || skill.state === 'missing' || skill.state === 'foreign');
+    const needs = client.skills.filter(skill => NEEDS_INSTALL.includes(skill.state));
     if (manualSkills) {
       actions.append(button('下载 Skills', '', () => client.skills.forEach(download)));
     } else if (client.detected && needs.length) {
       const upgrade = needs.some(skill => skill.state === 'upgrade');
-      actions.append(button(busy === client.id + ':install_skills' ? '正在安装…' : upgrade ? '升级 Skills' : '安装 Skills',
-        upgrade ? 'danger' : '', () => act(client, 'install_skills'), upgrade));
+      const repair = !upgrade && needs.some(skill => skill.state === 'damaged' || skill.state === 'modified');
+      actions.append(button(busy === client.id + ':install_skills' ? '正在安装…' : upgrade ? '升级 Skills' : repair ? '修复 Skills' : '安装 Skills',
+        upgrade || repair ? 'danger' : '', () => act(client, 'install_skills'), upgrade || repair));
     }
     if (actions.childElementCount) node.append(actions);
     const hint = mcp === 'blocked' ? client.mcp.message : manualSkills && client.detected ? client.skills_hint : '';
     if (hint) node.append(el('p', hint, 'client-hint'));
+    // Show where Skills go before anything is installed there.
+    if (client.skills_path && client.detected && !manualSkills) node.append(el('p', 'Skills 位置：' + client.skills_path, 'client-hint client-path'));
     return node;
   }
 

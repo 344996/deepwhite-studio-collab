@@ -62,8 +62,12 @@ def _claude_desktop_dir():
 
 
 def _codex_dir():
-    raw = os.environ.get("CODEX_HOME", "").strip()
-    return Path(raw).expanduser() if raw else _home() / ".codex"
+    # Same resolution as the Codex config, so Skills and MCP always share one directory.
+    import studio_codex_setup
+    try:
+        return studio_codex_setup.codex_home()
+    except studio_codex_setup.SetupError as exc:
+        raise ClientError(str(exc)) from None
 
 
 def _hermes_dir():
@@ -220,8 +224,15 @@ def _yaml_find(lines):
     return top, start, stop
 
 
+def _yaml_text(raw):
+    try:
+        return (raw or b"").decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise ClientError("Hermes 配置文件不是 UTF-8 编码，原文件未改动。请用文本编辑器另存为 UTF-8 后点“刷新”。") from None
+
+
 def _yaml_state(raw, entry):
-    lines = (raw or b"").decode("utf-8-sig").splitlines()
+    lines = _yaml_text(raw).splitlines()
     top, start, stop = _yaml_find(lines)
     if start is None:
         return "missing"
@@ -229,7 +240,7 @@ def _yaml_state(raw, entry):
 
 
 def _yaml_apply(raw, entry, remove=False):
-    text = (raw or b"").decode("utf-8-sig")
+    text = _yaml_text(raw)
     lines = text.splitlines()
     top, start, stop = _yaml_find(lines)
     if start is not None:
@@ -292,6 +303,32 @@ def _installed(folder):
         return None
 
 
+def _skill_health(folder, marker):
+    """Check an installed Skill against its marker's file list, not only its version.
+
+    "damaged": the entry SKILL.md or a listed file is missing; "modified": a file no
+    longer matches its recorded hash; "ok" otherwise.
+    """
+    manifest = marker.get("sha256") if isinstance(marker.get("sha256"), dict) else {}
+    state = "ok"
+    for name in sorted(set(manifest) | {"SKILL.md"}):
+        relative = Path(name)
+        if relative.is_absolute() or ".." in relative.parts:
+            return "damaged"
+        path = folder / relative
+        if path.is_symlink() or not path.is_file():
+            return "damaged"
+        digest = manifest.get(name)
+        if digest and hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            state = "modified"
+    return state
+
+
+def _skill_current(folder, marker, skill):
+    return (marker is not None and _version_tuple(marker.get("version")) >= _version_tuple(skill["version"])
+            and _skill_health(folder, marker) == "ok")
+
+
 def skill_rows(client_id):
     spec = CLIENTS[client_id]
     rows = []
@@ -304,8 +341,13 @@ def skill_rows(client_id):
             marker = _installed(folder)
             if marker:
                 row["installed"] = str(marker.get("version", ""))
-                row["state"] = ("latest" if _version_tuple(row["installed"]) >= _version_tuple(skill["version"])
-                                else "upgrade")
+                health = _skill_health(folder, marker)
+                if health == "damaged":
+                    row["state"] = "damaged"
+                elif _version_tuple(row["installed"]) < _version_tuple(skill["version"]):
+                    row["state"] = "upgrade"
+                else:
+                    row["state"] = "latest" if health == "ok" else "modified"
             else:
                 row["state"] = "foreign" if folder.exists() else "missing"
         rows.append(row)
@@ -321,8 +363,7 @@ def install_skills(client_id):
         base = spec["skills"]()
         for skill in catalog():
             folder = base / skill["id"]
-            marker = _installed(folder)
-            if marker and _version_tuple(marker.get("version")) >= _version_tuple(skill["version"]):
+            if _skill_current(folder, _installed(folder), skill):
                 results.append({"id": skill["id"], "changed": False})
                 continue
             files = _skill_files(skill["id"])
@@ -416,17 +457,42 @@ def manual_config(client_id, configuration):
     return {"format": "json", "text": json.dumps({"mcpServers": {SERVER: entry}}, ensure_ascii=False, indent=2)}
 
 
+def skills_path(client_id):
+    spec = CLIENTS[client_id]
+    return str(spec["skills"]()) if spec["skills"] else ""
+
+
 def describe(client_id, configuration):
     spec = CLIENTS[client_id]
     detected = spec["marker"]().exists()
     return {"id": client_id, "name": spec["name"], "detected": detected,
             "mcp": mcp_state(client_id, configuration), "skills": skill_rows(client_id),
+            "skills_path": skills_path(client_id),
             "skills_hint": spec.get("skills_hint", ""), "restart_hint": spec.get("restart_hint", "连接或安装 Skills 后请重启该客户端。"),
             "manual": manual_config(client_id, configuration)}
 
 
+def _unreadable(client_id, configuration, exc):
+    # One client's broken files must not hide the others; this one stays repairable.
+    spec = CLIENTS[client_id]
+    reason = str(exc) if isinstance(exc, ClientError) else "无法读取此客户端的配置或 Skills，请检查文件编码与权限后点“刷新”。"
+    try:
+        manual = manual_config(client_id, configuration)
+    except Exception:
+        manual = {"format": "text", "text": ""}
+    return {"id": client_id, "name": spec["name"], "detected": True, "error": reason,
+            "mcp": {"state": "blocked", "config_path": "", "message": reason}, "skills": [], "skills_path": "",
+            "skills_hint": spec.get("skills_hint", ""), "restart_hint": spec.get("restart_hint", ""), "manual": manual}
+
+
 def listing(configuration):
-    return {"items": [describe(client_id, configuration) for client_id in CLIENTS], "skills": catalog()}
+    items = []
+    for client_id in CLIENTS:
+        try:
+            items.append(describe(client_id, configuration))
+        except Exception as exc:  # noqa: BLE001 - isolate per client
+            items.append(_unreadable(client_id, configuration, exc))
+    return {"items": items, "skills": catalog()}
 
 
 def connect(client_id, configuration, remove=False):

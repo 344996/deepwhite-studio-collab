@@ -79,13 +79,17 @@ class Handler(BaseHTTPRequestHandler):
         host = (self.headers.get("Host") or "").rsplit(":", 1)[0].lower()
         return host in LOOPBACK_HOSTS
 
+    def _origin_ok(self):
+        origin = self.headers.get("Origin")
+        return origin is None or origin in self.server.origins
+
     def _cors(self):
+        # Only after send_response(): headers written earlier would precede the status line.
         origin = self.headers.get("Origin")
         if origin and origin in self.server.origins:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
             self.send_header("Access-Control-Expose-Headers", "Mcp-Session-Id")
-        return origin is None or origin in self.server.origins
 
     def _reply(self, status, body=None, extra=None):
         data = b"" if body is None else json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -140,7 +144,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._host_ok():
             return self._reply(403, {"error": "host not allowed"})
-        if not self._cors():
+        if not self._origin_ok():
             return self._reply(403, {"error": "origin not allowed"})
         if self.path.split("?")[0] != "/mcp":
             return self._reply(404, {"error": "endpoint is /mcp"})

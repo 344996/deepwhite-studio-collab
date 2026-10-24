@@ -167,8 +167,14 @@ class CustomerSetup(unittest.TestCase):
         broken = copy.deepcopy(self.configuration)
         broken["launcher_warning"] = "broken"
         self.assertEqual(setup.status(broken)["state"], "blocked")
+        # CLIENT-04 (2026-10-22 handover): a relative CODEX_HOME resolves to one absolute directory
+        # that is shown to the user; reading the status still never writes anything.
         with patch.dict(os.environ, {"CODEX_HOME": "relative-home"}):
-            self.assertEqual(setup.status(self.configuration)["state"], "blocked")
+            relative = setup.status(self.configuration)
+            target = Path(os.path.abspath("relative-home"))
+            self.assertEqual(Path(relative["config_path"]), target / "config.toml")
+            self.assertIn(str(target), relative["message"])
+            self.assertFalse(target.exists())
         self.assertFalse(self.home.exists())
 
     def test_hardlinked_file_is_not_replaced(self):

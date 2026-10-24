@@ -103,6 +103,48 @@ class HttpTransportTests(unittest.TestCase):
                                    headers={"Origin": "https://evil.example"})
         self.assertEqual(response.status, 403)
 
+    def raw(self, method, origin=None, body=None, extra=""):
+        """Send one request on a plain socket and return the exact response head lines."""
+        data = b"" if body is None else json.dumps(body).encode("utf-8")
+        head = (f"{method} /mcp HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\nConnection: close\r\n"
+                f"Authorization: Bearer {self.server.token}\r\nContent-Type: application/json\r\n"
+                f"Content-Length: {len(data)}\r\n" + (f"Origin: {origin}\r\n" if origin else "") + extra + "\r\n")
+        with socket.create_connection(("127.0.0.1", self.port), timeout=30) as conn:
+            conn.sendall(head.encode("ascii") + data)
+            chunks = []
+            while True:
+                chunk = conn.recv(65536)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        return b"".join(chunks).split(b"\r\n\r\n", 1)[0].decode("latin-1").split("\r\n")
+
+    def assert_valid_head(self, lines, status):
+        # MCP-01: the status line comes first, every following line is one well-formed header.
+        self.assertRegex(lines[0], r"^HTTP/1\.1 %d " % status, "\n".join(lines))
+        for line in lines[1:]:
+            self.assertRegex(line, r"^[A-Za-z0-9-]+: ", "\n".join(lines))
+
+    def test_allowed_origin_gets_valid_response_with_one_cors_header(self):
+        initialize = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}}
+        lines = self.raw("POST", "https://www.doubao.com", initialize)
+        self.assert_valid_head(lines, 200)
+        allow = [line for line in lines if line.lower().startswith("access-control-allow-origin:")]
+        self.assertEqual(allow, ["Access-Control-Allow-Origin: https://www.doubao.com"])
+        self.assertEqual(sum(line.lower().startswith("vary:") for line in lines), 1)
+
+    def test_rejected_origin_and_preflights_have_valid_heads(self):
+        lines = self.raw("POST", "https://evil.example", {"jsonrpc": "2.0", "id": 1, "method": "ping"})
+        self.assert_valid_head(lines, 403)
+        self.assertFalse(any(line.lower().startswith("access-control-allow-origin:") for line in lines))
+        lines = self.raw("OPTIONS", "https://www.doubao.com", extra="Access-Control-Request-Method: POST\r\n")
+        self.assert_valid_head(lines, 204)
+        self.assertIn("Access-Control-Allow-Origin: https://www.doubao.com", lines)
+        lines = self.raw("OPTIONS", "https://evil.example", extra="Access-Control-Request-Method: POST\r\n")
+        self.assert_valid_head(lines, 403)
+        self.assertFalse(any(line.lower().startswith("access-control-allow-origin:") for line in lines))
+
     def test_token_is_separate_and_rotatable(self):
         first = transport.http_token()
         self.assertEqual(first, transport.http_token())
