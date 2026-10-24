@@ -56,12 +56,26 @@ def _regular(path, directory=False):
         raise SetupError("Codex 配置位置不是独立的普通文件或目录，已停止自动修改。")
 
 
-def _home():
+_RESOLVED_HOMES = {}
+
+
+def codex_home():
+    """The one absolute Codex directory used for its config and its Skills.
+
+    A relative CODEX_HOME is resolved against this service's working directory the
+    first time it is seen, so the target shown before an install is the one written.
+    """
     raw = os.environ.get("CODEX_HOME", "").strip()
     home = Path(raw).expanduser() if raw else Path.home() / ".codex"
-    if not home.is_absolute() or str(home).startswith(("\\\\", "//")):
-        raise SetupError("CODEX_HOME 必须是本机的绝对目录，请修正环境设置后重启画布。")
-    home = Path(os.path.abspath(home))
+    if str(home).startswith(("\\\\", "//")):
+        raise SetupError("CODEX_HOME 不能是网络路径，请改为本机目录后重启画布。")
+    if not home.is_absolute():
+        home = _RESOLVED_HOMES.setdefault(raw, Path(os.path.abspath(home)))
+    return Path(os.path.abspath(home))
+
+
+def _home():
+    home = codex_home()
     for parent in reversed((home, *home.parents)):
         _regular(parent, directory=True)
     return home
@@ -167,6 +181,9 @@ def status(configuration):
             "installed": "深白连接已配置。请在 Codex 中重启 MCP 连接，或退出并重新打开 Codex。",
             "different": "检测到另一份深白连接，可能来自旧安装目录。确认后可更新为当前画布。",
         }[state]
+        raw = os.environ.get("CODEX_HOME", "").strip()
+        if raw and not Path(raw).expanduser().is_absolute():
+            message += f" 注意：CODEX_HOME 是相对路径，已按画布的启动目录解析为 {home}；若 Codex 使用的不是这个目录，请把 CODEX_HOME 改为绝对路径。"
         result.update(state=state, revision=revision, message=message,
                       can_install=True, can_undo=_can_undo(home, document))
     except SetupError as exc:

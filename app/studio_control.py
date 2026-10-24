@@ -481,13 +481,11 @@ def install(app):
         action = payload.get('action')
         if action not in ('connect', 'disconnect', 'install_skills') or set(payload) - {'action'}:
             raise HTTPException(400, '操作无效，请刷新页面重试。')
-        if action == 'connect' and not _load().get('enabled'):
-            state = _load(); state['enabled'] = True; _save(state)  # Connecting implies allowing MCP access.
         configuration = codex_configuration(request)
         try:
             if action == 'install_skills':
                 result = {'skills': studio_clients.install_skills(client_id),
-                          'message': '已安装最新 Skills。' + studio_clients.CLIENTS[client_id].get(
+                          'message': f'已安装最新 Skills 到 {studio_clients.skills_path(client_id)}。' + studio_clients.CLIENTS[client_id].get(
                               'restart_hint', '请重启该客户端。')}
             else:
                 result = studio_clients.connect(client_id, configuration, remove=action == 'disconnect')
@@ -495,6 +493,9 @@ def install(app):
             raise HTTPException(exc.status_code, str(exc)) from None
         except OSError:
             raise HTTPException(409, '未能写入客户端文件，请检查目录权限或文件占用后重试；原文件已保留。') from None
+        # Connecting implies allowing MCP access, but only once the client file is written.
+        if action == 'connect' and not _load().get('enabled'):
+            state = _load(); state['enabled'] = True; _save(state)
         return {**result, 'client': studio_clients.describe(client_id, configuration)}
 
     @app.get('/api/studio/clients/skills/{skill_id}.zip')

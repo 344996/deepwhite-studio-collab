@@ -280,6 +280,70 @@ class ClientTests(Base):
         self.assertEqual(archive.status_code, 200)
         self.assertEqual(archive.headers["content-type"], "application/zip")
 
+    def test_skill_with_missing_entry_is_damaged_and_install_repairs_it(self):
+        # CLIENT-01: a version marker alone must not count as "latest".
+        self.act("claude_code", "install_skills")
+        folder = self.root / ".claude/skills/deepwhite-canvas"
+        (folder / "SKILL.md").unlink()
+        (self.root / ".claude/skills/deepwhite-film/SKILL.md").write_text("用户改过", encoding="utf-8")
+        rows = {r["id"]: r for r in self.listing()["claude_code"]["skills"]}
+        self.assertEqual(rows["deepwhite-canvas"]["state"], "damaged")
+        self.assertEqual(rows["deepwhite-film"]["state"], "modified")
+        self.assertEqual(rows["deepwhite-avatar"]["state"], "latest")
+        result = self.act("claude_code", "install_skills")
+        changed = {row["id"]: row["changed"] for row in result["skills"]}
+        self.assertEqual(changed, {"deepwhite-canvas": True, "deepwhite-film": True, "deepwhite-avatar": False})
+        marker = json.loads((folder / ".deepwhite-skill.json").read_text(encoding="utf-8"))
+        content = (folder / "SKILL.md").read_bytes()
+        self.assertEqual(marker["sha256"]["SKILL.md"], __import__("hashlib").sha256(content).hexdigest())
+        self.assertTrue(all(row["state"] == "latest" for row in result["client"]["skills"]))
+
+    def test_failed_connect_leaves_mcp_switch_unchanged(self):
+        # CLIENT-02: the MCP switch turns on only after the client file was written.
+        state = control._load(); state["enabled"] = False; control._save(state)
+        config = self.root / ".claude.json"
+        config.write_bytes(b'{"mcpServers": {broken')
+        self.act("claude_code", "connect", 409)
+        self.assertFalse(control._load()["enabled"])
+        self.assertEqual(config.read_bytes(), b'{"mcpServers": {broken')
+        config.write_text("{}", encoding="utf-8")
+        self.act("claude_code", "connect")
+        self.assertTrue(control._load()["enabled"])
+
+    def test_bad_hermes_encoding_only_blocks_hermes(self):
+        # CLIENT-03: one unreadable client must not break the whole list.
+        config = self.root / "Local/hermes/config.yaml"
+        config.write_bytes(b"model: \xff\xfe\x80 broken\n")
+        self.act("claude_code", "connect")
+        response = self.client.get("/api/studio/clients")
+        self.assertEqual(response.status_code, 200, response.text)
+        items = {item["id"]: item for item in response.json()["items"]}
+        self.assertEqual(items["claude_code"]["mcp"]["state"], "connected")
+        self.assertEqual(items["hermes"]["mcp"]["state"], "blocked")
+        self.assertIn("UTF-8", items["hermes"]["mcp"]["message"])
+        self.act("hermes", "connect", 409)
+        self.assertEqual(config.read_bytes(), b"model: \xff\xfe\x80 broken\n")
+
+    def test_relative_codex_home_resolves_to_one_absolute_target(self):
+        # CLIENT-04: a relative CODEX_HOME is resolved once; it is shown and is the only place written.
+        work = self.root / "work"
+        (work / "rel-codex").mkdir(parents=True)
+        previous = os.getcwd()
+        os.chdir(work)
+        self.addCleanup(os.chdir, previous)
+        with patch.dict(os.environ, {"CODEX_HOME": "rel-codex"}):
+            target = (work / "rel-codex").resolve()
+            item = self.listing()["codex"]
+            self.assertEqual(Path(item["skills_path"]), target / "skills")
+            self.assertTrue(Path(item["skills_path"]).is_absolute())
+            self.assertEqual(Path(item["mcp"]["config_path"]), target / "config.toml")
+            result = self.act("codex", "install_skills")
+            self.assertIn(str(target / "skills"), result["message"])
+            self.assertTrue((target / "skills/deepwhite-canvas/SKILL.md").is_file())
+            os.chdir(self.root)  # a later working directory must not move the target
+            self.assertFalse((self.root / "rel-codex").exists())
+            self.assertFalse((self.root / ".codex/skills").exists())
+
     def test_doubao_leftover_user_data_is_not_an_installation(self):
         (self.root / "Local/Doubao/User Data").mkdir(parents=True)
         (self.root / "Local/Doubao/Application").mkdir(parents=True)
