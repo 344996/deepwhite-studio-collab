@@ -3976,18 +3976,55 @@ async function rhBuildWorkflowRequestExtras(media, nodeInfoList, sourceSettings=
     const workflow = rhApplyNodeInfoListToWorkflow(rhPruneWorkflowForMissingFields(config.workflowJson || {}, missingOptional), nodeInfoList);
     return workflow ? {workflow} : {};
 }
-async function rhUploadValueIfNeeded(value, sourceSettings=settings){
+// RH-SMART-MANAGED-MEDIA: the same managed paths as the classic canvas. Local media is always
+// uploaded and referenced by its RH fileName; only a URL field keeps a public URL as is.
+const RH_MANAGED_MEDIA_PATH = /^\/(?:output\/|assets\/|input\/|api\/storage-files\/)/;
+function rhFieldTakesUrl(field){
+    return /url/i.test(String(field?.fieldName || ''));
+}
+async function rhUploadValueIfNeeded(value, sourceSettings=settings, field=null){
     const text = String(value || '').trim();
     if(!text) return '';
-    if(!/^https?:\/\//i.test(text) && !text.startsWith('/output/') && !text.startsWith('/assets/')) return text;
-    const res = await fetch('/api/runninghub/upload-asset', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({url:text, useWallet:(sourceSettings || settings).rhPayment === 'wallet'})
-    });
-    const data = await res.json();
-    if(!res.ok || data.success === false) throw new Error(data.detail || data.error || tr('smart.rhUploadFailed'));
-    return data.data?.fileName || text;
+    const publicUrl = /^https?:\/\//i.test(text);
+    if(!publicUrl && !RH_MANAGED_MEDIA_PATH.test(text)) return text;
+    if(publicUrl && rhFieldTakesUrl(field)) return text;
+    const failed = reason => new Error(`素材上传失败${field ? '（' + rhRequiredLabel(field) + '）' : ''}：${reason}，未提交。`);
+    let data;
+    try {
+        const res = await fetch('/api/runninghub/upload-asset', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({url:text, useWallet:(sourceSettings || settings).rhPayment === 'wallet'})
+        });
+        data = await res.json().catch(() => ({}));
+        if(!res.ok || data.success === false) throw failed(apiErrorMessage(data, tr('smart.rhUploadFailed')));
+    } catch(e){
+        throw e.message?.startsWith('素材上传失败') ? e : failed(e.message || tr('smart.rhUploadFailed'));
+    }
+    if(!data.data?.fileName) throw failed('RH 未返回 fileName');
+    return data.data.fileName;
+}
+// RH-SMART-SEED-PRECISION: integers beyond Number's exact range stay decimal strings, which RH
+// accepts; the field range is checked on the exact value and nothing is rounded.
+function rhRangeBound(raw){
+    if(raw === undefined || raw === null || String(raw).trim() === '') return null;
+    const text = String(raw).trim();
+    return /^[+-]?\d+$/.test(text) ? {big:BigInt(text), num:Number(text)} : Number.isFinite(Number(text)) ? {num:Number(text)} : null;
+}
+function rhExactNumberValue(value, field){
+    const text = String(value ?? '').trim();
+    const integer = /^[+-]?\d+$/.test(text);
+    if(!integer && (text === '' || Number.isNaN(Number(text)))) return value;
+    let min = rhRangeBound(field?.min), max = rhRangeBound(field?.max);
+    // Like the slider, a range whose max is not above its min is a placeholder, not a limit.
+    if(min && max && !(max.big !== undefined && min.big !== undefined ? max.big > min.big : max.num > min.num)) min = max = null;
+    const below = bound => integer && bound.big !== undefined ? BigInt(text) < bound.big : Number(text) < bound.num;
+    const above = bound => integer && bound.big !== undefined ? BigInt(text) > bound.big : Number(text) > bound.num;
+    if((min && below(min)) || (max && above(max))){
+        throw new Error(`参数超出允许范围：${rhRequiredLabel(field)}（${field.min ?? '不限'} ~ ${field.max ?? '不限'}），当前值 ${text}，未提交。`);
+    }
+    if(integer && !Number.isSafeInteger(Number(text))) return text.replace(/^\+/, '');
+    return Number(text);
 }
 async function rhBuildNodeInfoList(media, sourceSettings=settings, randomValues=smartRhRandomValues){
     const fields = rhActiveFields(sourceSettings);
@@ -4006,8 +4043,8 @@ async function rhBuildNodeInfoList(media, sourceSettings=settings, randomValues=
         }
         let value = rhParamValue(field, media, sourceSettings, fields, randomValues);
         if(rhFieldRole(field) === 'prompt' && !String(value || '').trim()) value = rhDefaultValue(field);
-        if(['image','video','audio'].includes(kind)) value = await rhUploadValueIfNeeded(value, sourceSettings);
-        if(['number','slider'].includes(kind) && String(value ?? '').trim() !== '' && !Number.isNaN(Number(value))) value = Number(value);
+        if(['image','video','audio'].includes(kind)) value = await rhUploadValueIfNeeded(value, sourceSettings, field);
+        if(['number','slider'].includes(kind)) value = rhExactNumberValue(value, field);
         result.push({nodeId:field.nodeId, fieldName:field.fieldName, fieldValue:value});
     }
     return result;
@@ -5390,27 +5427,60 @@ function smartStableJson(value){
     if(Array.isArray(value)) return '[' + value.map(smartStableJson).join(',') + ']';
     return '{' + Object.keys(value).filter(k => value[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + smartStableJson(value[k])).join(',') + '}';
 }
-function rememberSmartServerNodes(list){
+// SAVE-02: deletions are merged against the same confirmed state. A node or connection that
+// was confirmed and is now missing on one side was deleted there; it only survives when the
+// other side changed it, and then the user decides.
+let smartServerConnBase = new Set();
+const SMART_DELETED_REMOTE = '__deletedRemote';
+const SMART_DELETED_LOCAL = '__deletedLocal';
+const SMART_DELETE_CONFLICT_LABELS = {[SMART_DELETED_REMOTE]:'外部已删除，本页有未保存修改', [SMART_DELETED_LOCAL]:'本页已删除，外部有新修改'};
+function smartConnKey(c){
+    return `${c.from}->${c.to}:${c.kind || 'flow'}`;
+}
+function rememberSmartServerNodes(list, connections){
     smartServerNodeBase = new Map((list || []).filter(n => n?.id).map(n => [n.id, JSON.parse(JSON.stringify(smartNodeStorageSource(n)))]));
+    smartServerConnBase = new Set((Array.isArray(connections) ? connections : []).filter(Boolean).map(smartConnKey));
+}
+// Missing, null and empty text mean the same thing in a saved node.
+function smartSameValue(a, b){
+    const empty = value => value === undefined || value === null || value === '';
+    return (empty(a) && empty(b)) || smartStableJson(a) === smartStableJson(b);
+}
+// A saved node may lack the defaults rendering adds; compare the values the canvas actually uses.
+function smartEffectiveNode(node){
+    return node?.type === 'smart-prompt' ? applyPromptNodeDefaults({...node}) : node;
+}
+// Whether a node holds user work since the confirmed state: its content, drafts, media or a
+// running job. Layout and values that rendering derives on load do not count.
+function smartNodeEditedSince(node, base){
+    if(smartNodeInFlight(node)) return true;
+    node = smartEffectiveNode(node);
+    base = smartEffectiveNode(base);
+    const media = n => (n.images || []).map(img => mediaItemForStorage(stripImageGenerationMeta(img)));
+    if(smartStableJson(media(node)) !== smartStableJson(media(base))) return true;
+    return [...Object.keys(SMART_CONFLICT_FIELDS), ...SMART_DRAFT_KEYS].some(key => !smartSameValue(node[key], base[key]));
 }
 function setSmartNodeField(node, key, value){
     if(value === undefined) delete node[key];
     else node[key] = value;
 }
-function mergeSmartNodeFields(merged, local, remote, base, conflicts){
+function mergeSmartNodeFields(merged, rawLocal, remote, base, conflicts){
+    // Compare effective values; write back what this page actually holds.
+    const local = smartEffectiveNode(rawLocal);
+    remote = smartEffectiveNode(remote);
+    base = smartEffectiveNode(base);
     const keys = new Set([...Object.keys(local), ...Object.keys(remote)]);
     keys.delete('images');
     keys.delete('promptDraftHtml');
     for(const key of keys){
         // Runtime-only fields (DOM handles, loop contexts) are never saved and may be cyclic.
         if(key.startsWith('_') || key === 'studioSavingSubmission') continue;
-        const l = smartStableJson(local[key]), r = smartStableJson(remote[key]), b = smartStableJson(base[key]);
-        if(l === r || l === b) continue;
+        if(smartSameValue(local[key], remote[key]) || smartSameValue(local[key], base[key])) continue;
         const takeLocal = () => {
-            setSmartNodeField(merged, key, local[key]);
-            if(key === 'promptDraftText') setSmartNodeField(merged, 'promptDraftHtml', local.promptDraftHtml);
+            setSmartNodeField(merged, key, rawLocal[key]);
+            if(key === 'promptDraftText') setSmartNodeField(merged, 'promptDraftHtml', rawLocal.promptDraftHtml);
         };
-        if(r === b){ takeLocal(); continue; }
+        if(smartSameValue(remote[key], base[key])){ takeLocal(); continue; }
         // Both sides changed it. Content keeps the local value and waits for the user's choice;
         // drafts keep the local draft; layout and run state keep the latest saved side as before.
         if(Object.hasOwn(SMART_CONFLICT_FIELDS, key)){
@@ -5459,18 +5529,34 @@ function mergeSmartNodeLists(localNodes, remoteNodes, conflicts=[]){
     return order.map(id => {
         const local = localById.get(id);
         const remote = remoteById.get(id);
-        if(local && !remote) return local;     // 仅本地存在：保留（我新建的节点；对方删了也宁可复活也不丢结果）
-        if(remote && !local) return remote;     // 仅对方存在：加入对方新建的节点
-        return mergeSmartNode(local, remote, smartServerNodeBase.get(id) || null, conflicts);
+        const base = smartServerNodeBase.get(id) || null;
+        if(local && !remote){
+            if(!base) return local;     // 仅本地存在且服务器从未确认：本页新建的节点
+            if(!smartNodeEditedSince(local, base)) return null;     // 对方删除、本页未改：跟随删除
+            conflicts.push({nodeId:id, field:SMART_DELETED_REMOTE});
+            return local;     // 本页有修改：先保留，等用户选择
+        }
+        if(remote && !local){
+            if(!base) return remote;     // 对方新建的节点
+            if(!smartNodeEditedSince(remote, base)) return null;     // 本页删除、对方未改：保持删除
+            conflicts.push({nodeId:id, field:SMART_DELETED_LOCAL});
+            return remote;
+        }
+        return mergeSmartNode(local, remote, base, conflicts);
     }).filter(Boolean);
 }
-function mergeSmartConnections(localConns, remoteConns, nodeIds){
+function mergeSmartConnections(localConns, remoteConns, nodeIds, pendingIds=new Set()){
     const out = [];
     const seen = new Set();
+    const localKeys = new Set((localConns || []).filter(Boolean).map(smartConnKey));
+    const remoteKeys = new Set((remoteConns || []).filter(Boolean).map(smartConnKey));
     [...(localConns || []), ...(remoteConns || [])].forEach(c => {
         if(!c || !nodeIds.has(c.from) || !nodeIds.has(c.to)) return;
-        const key = `${c.from}->${c.to}:${c.kind || 'flow'}`;
+        const key = smartConnKey(c);
         if(seen.has(key)) return;
+        // A confirmed connection missing on one side was deleted there. Connections of a node
+        // whose deletion is waiting for the user stay until that choice removes the node.
+        if(smartServerConnBase.has(key) && !(localKeys.has(key) && remoteKeys.has(key)) && !pendingIds.has(c.from) && !pendingIds.has(c.to)) return;
         seen.add(key);
         out.push(c);
     });
@@ -5483,12 +5569,15 @@ function applyMergedServerCanvas(serverCanvas){
     const mergedNodes = mergeSmartNodeLists(nodes, remoteNodes, conflicts);
     const nodeIds = new Set(mergedNodes.map(n => n.id));
     nodes = mergedNodes;
-    rememberSmartServerNodes(remoteNodes);
+    const pendingDeletes = new Set(conflicts.filter(c => c.field === SMART_DELETED_REMOTE || c.field === SMART_DELETED_LOCAL).map(c => c.nodeId));
+    canvas.connections = mergeSmartConnections(canvas.connections, serverCanvas.connections, nodeIds, pendingDeletes);
+    rememberSmartServerNodes(remoteNodes, serverCanvas.connections);
+    if(selectedId && !nodeIds.has(selectedId)) selectedId = '';
+    selectedIds = selectedIds.filter(id => nodeIds.has(id));
     const replacedDrafts = conflicts.filter(c => c.draft);
     if(replacedDrafts.length) toast(`外部也改了 ${new Set(replacedDrafts.map(c => nodes.find(n => n.id === c.nodeId)?.title || c.nodeId)).size} 个节点的输入框草稿，已保留本页草稿。`);
     const contentConflicts = conflicts.filter(c => !c.draft);
     if(contentConflicts.length) showSmartMergeConflicts(contentConflicts);
-    canvas.connections = mergeSmartConnections(canvas.connections, serverCanvas.connections, nodeIds);
     const cleanedState = clearCompletedNodeBusyStates();
     const recoveredLoopOutputs = recoverStuckLoopOutputsFromLogs();
     canvas.updated_at = Number(serverCanvas.updated_at || canvas.updated_at || 0);
@@ -5533,19 +5622,22 @@ function showSmartMergeConflicts(conflicts){
     }
     const names = smartMergeConflicts.map(c => {
         const node = nodes.find(n => n.id === c.nodeId);
-        return `${node?.title || c.nodeId} · ${SMART_CONFLICT_FIELDS[c.field] || c.field}`;
+        return `${node?.title || c.nodeId} · ${SMART_CONFLICT_FIELDS[c.field] || SMART_DELETE_CONFLICT_LABELS[c.field] || c.field}`;
     });
     bar.firstChild.textContent = `外部也修改了你尚未保存的内容：${names.join('、')}。自动保存已暂停，请选择保留哪一版。`;
 }
 function resolveSmartMergeConflicts(side){
+    const deleted = side === 'remote' ? SMART_DELETED_REMOTE : SMART_DELETED_LOCAL;
     if(side === 'remote'){
         for(const c of smartMergeConflicts){
             const node = nodes.find(n => n.id === c.nodeId);
-            if(!node) continue;
+            if(!node || Object.hasOwn(SMART_DELETE_CONFLICT_LABELS, c.field)) continue;
             setSmartNodeField(node, c.field, c.remote);
         }
         render();
     }
+    // The chosen side deleted these nodes: remove them with the normal delete (connections, groups, undo).
+    smartMergeConflicts.filter(c => c.field === deleted && nodes.some(n => n.id === c.nodeId)).forEach(c => deleteNode(c.nodeId));
     smartMergeConflicts = [];
     document.getElementById('studioSmartConflict')?.remove();
     scheduleSave();
@@ -6149,7 +6241,7 @@ async function loadCanvas(){
         document.title = canvas.title || tr('canvas.smartCanvas');
         document.getElementById('smartTitle').textContent = canvas.title || tr('canvas.smartCanvas');
         nodes = (Array.isArray(canvas.nodes) ? canvas.nodes : []).map(normalizeLegacySmartNode).filter(Boolean);
-        rememberSmartServerNodes(nodes);
+        rememberSmartServerNodes(nodes, canvas.connections);
         smartMergeConflicts = [];
         document.getElementById('studioSmartConflict')?.remove();
         migrateSmartGroupImageMembers();
@@ -6255,7 +6347,7 @@ async function saveCanvas(){
         if(!res.ok)throw Error('保存失败（HTTP '+res.status+'），手写内容仍保留，请重试。');
         if(!data.canvas||data.canvas.id!==id)throw Error('服务器未确认画布保存，手写内容仍保留，请重试。');
         origin.updated_at=data.canvas.updated_at;
-        rememberSmartServerNodes((data.canvas.nodes||storageCanvas.nodes||[]).map(normalizeLegacySmartNode).filter(Boolean));
+        rememberSmartServerNodes((data.canvas.nodes||storageCanvas.nodes||[]).map(normalizeLegacySmartNode).filter(Boolean),data.canvas.connections||storageCanvas.connections);
         window.StudioCanvasDrafts?.ack(draftToken,data.canvas);
         const pending=(smartSaveRevisions.get(origin)||0)!==sentRevision||smartQueuedSave===origin;
         if(pending)smartQueuedSave=origin;
@@ -7433,12 +7525,17 @@ function openSmartCanvasShortcuts(){
 function closeSmartCanvasShortcuts(){
     smartShortcutModal?.classList.remove('open');
 }
-function promptNodeBodyHtml(node){
+// Rendering fills these in; merges compare nodes with the same defaults applied.
+function applyPromptNodeDefaults(node){
     node.llmProvider = resolveChatProviderId(node.llmProvider || '');
     node.llmModel = resolveChatModel(node.llmModel || '', node.llmProvider);
     node.llmSystemEnabled = node.llmSystemEnabled === true;
     node.promptSplitEnabled = node.promptSplitEnabled === true;
     node.promptSeparator = promptNodeSeparator(node);
+    return node;
+}
+function promptNodeBodyHtml(node){
+    applyPromptNodeDefaults(node);
     const readonly = node.llmEnabled ? 'readonly' : '';
     const systemPrompt = (node.llmSystemPrompt || '').trim();
     const inputThumbs = smartNodeInputThumbsHtml(promptNodeInputImages(node));
@@ -16818,7 +16915,7 @@ async function runRunningHubGeneration(prompt, refs, runSettings=settings, optio
     const nodeInfoList = await rhBuildNodeInfoList(media, runSettings, randomValues);
     const workflowExtras = mode === 'workflow' ? await rhBuildWorkflowRequestExtras(media, nodeInfoList, runSettings) : {};
     const body = mode === 'workflow'
-        ? {workflowId:ref.id, nodeInfoList, useWallet:runSettings.rhPayment === 'wallet', ...workflowExtras}
+        ? {workflowId:ref.id, nodeInfoList, instanceType:runSettings.rhInstanceType || '', useWallet:runSettings.rhPayment === 'wallet', ...workflowExtras}
         : {webappId:ref.id, nodeInfoList, instanceType:runSettings.rhInstanceType || '', useWallet:runSettings.rhPayment === 'wallet'};
     if(mode === 'workflow') runSettings.rhWorkflowId = ref.id;
     else runSettings.rhAppId = ref.id;

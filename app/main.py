@@ -10920,10 +10920,18 @@ def sanitize_seed_like_workflow_values(value, parent_key=""):
     # RH's official workflow example includes seeds larger than uint32. Preserve
     # explicit values; bounds belong to the selected workflow's field schema.
     if isinstance(value, dict):
-        return {key: sanitize_seed_like_workflow_values(item, key) for key, item in value.items()}
+        return {key: workflow_seed_value(key, item) for key, item in value.items()}
     if isinstance(value, list):
         return [sanitize_seed_like_workflow_values(item, parent_key) for item in value]
     return value
+
+def workflow_seed_value(key, item):
+    # The canvas keeps seeds beyond JavaScript's exact range as decimal strings; the
+    # workflow JSON needs the integer, and Python's int keeps every digit. Only a direct
+    # value is converted: a link such as ["5", 0] under the same key stays untouched.
+    if isinstance(item, str) and rh_is_seed_like_name(key) and re.fullmatch(r"[+-]?\d+", item.strip()):
+        return int(item.strip())
+    return sanitize_seed_like_workflow_values(item, key)
 
 def sanitize_runninghub_node_info_list(items):
     result = []
