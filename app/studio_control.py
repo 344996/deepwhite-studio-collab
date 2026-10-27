@@ -303,10 +303,13 @@ async def _generate(canvas_id, node_id, request_id):
         if old.get('job_id'): return {'job_id': old['job_id'], 'status': old.get('status', 'queued')}
         if old.get('status') == 'submitting': return _recover_receipt(request_id) or {'request_id': request_id, 'status': 'uncertain'}
     canvas = _canvas(canvas_id); node = next((n for n in canvas.get('nodes', []) if n.get('id') == node_id), None)
-    if not node or node.get('type') not in ('generator', 'video'): raise HTTPException(404, '生成节点不存在。')
+    if not node: raise HTTPException(404, '生成节点不存在。')
+    if node.get('type') not in ('generator', 'video') or str(node.get('model') or '').startswith('midjourney-'):
+        _control_request(canvas_id, node, request_id)  # raises the reason this node cannot be started here (F06)
     if node.get('running') or node.get('studioJobState') in ('queued','running','paused','submitting','uncertain'):
         raise HTTPException(409, '节点正在运行或等待核对。')
     payload, digest = _control_request(canvas_id, node, request_id)
+    estimate = await _approval_quote(payload)
     # Paid generation is gated by explicit approval or a bounded browser session.
     with LOCK:
         state = _load()
@@ -323,7 +326,7 @@ async def _generate(canvas_id, node_id, request_id):
             elif (node.get('apiProvider') or node.get('provider_id')) == studio_dreamina.PROVIDER:
                 quote='使用本机即梦账号，费用/积分以即梦账号实际账单为准。'
             else:
-                quote='暂无可靠估价；费用以 API 实际账单为准。'
+                quote=estimate
             state['pending'].append({'id': approval_id, 'request_id': request_id, 'canvas_id': canvas_id, 'node_id': node_id,
                                      'digest': digest, 'status': 'pending', 'created_at': time.time(), 'quote':quote,
                                      'input':payload.model_dump(),'title':node.get('studioTitle') or node.get('name','')})
@@ -332,6 +335,33 @@ async def _generate(canvas_id, node_id, request_id):
             _save(state)
             return {'approval_required': True, 'approval_id': approval_id}
     return await _submit_generation(canvas_id, node_id, request_id, digest, node, payload)
+
+
+async def _approval_quote(payload):
+    """F05: the approval card shows the canvas estimate and what it is based on, never a fixed "unknown".
+
+    A changed parameter changes the request digest, which creates a new approval and a new estimate."""
+    import studio_pricing as pricing
+    refs = [r if isinstance(r, dict) else r.model_dump() for r in (payload.references or [])]
+    kinds = [r.get('kind') or 'image' for r in refs]
+    request = pricing.Quote(provider_id=payload.provider_id, model=payload.model, kind=payload.kind, params=dict(payload.params or {}),
+                            count=max(1, min(8, int(payload.count or 1))), image_count=kinds.count('image'),
+                            video_count=kinds.count('video'), audio_count=kinds.count('audio'),
+                            multimodal=payload.multimodal, frame_mode=bool(payload.frame_mode))
+    try:
+        result = await pricing.quote_for(request)
+    except Exception:
+        result = {'price': None, 'label': '暂无可靠估价', 'note': '估价服务暂时不可用。'}
+    price, when = result.get('price'), time.time()
+    basis = f"{result.get('model') or payload.model} × {request.count}"
+    if price is None:
+        display = f"{result['label']}（{basis}）：{result.get('note', '')}费用以 API 实际账单为准。"
+    else:
+        display = (f"{result['label']}（{basis}，人民币，估价于 {time.strftime('%H:%M', time.localtime(when))}）。"
+                   f"{result.get('note', '')}估价不是扣款金额。")
+    return {'display': display, 'label': result['label'], 'price': price, 'currency': 'CNY' if price is not None else '',
+            'note': result.get('note', ''), 'model': result.get('model') or payload.model, 'count': request.count,
+            'estimated_at': when, 'source': result.get('source', '')}
 
 
 def _receipt_failed(job_id, status):

@@ -188,7 +188,12 @@ class LedgerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('archive failed',value['error'])
         for secret in ['old-secret','old-token','old-url-secret']:
             self.assertNotIn(secret,value['error'])
-        self.assertEqual(value['result'],result)
+        # F04 (2026-10-26): a signed result stays usable through a local handle, never as a public signed link.
+        handle=value['result']['images'][0]
+        self.assertTrue(handle.startswith('/api/studio/task-media/'),handle)
+        self.assertNotIn('media-signature',json.dumps(value,ensure_ascii=False))
+        self.assertEqual(ledger.signed_media_url(task['id'],handle.split('u=',1)[1]),result['images'][0])
+        self.assertEqual(ledger.raw(task['id'])['result'],result)
 
     async def test_comfy_thread_context_receipts_and_results_persist(self):
         payload=core.GenerateRequest(request_id='comfy-one',canvas_id='A',node_id='same')

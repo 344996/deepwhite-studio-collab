@@ -129,6 +129,36 @@ class LlmTests(unittest.TestCase):
             self.assertNotIn(secret, stored)
         self.assertNotIn("dummy-key", json.dumps(job, ensure_ascii=False))
 
+    def test_reference_tokens_stay_out_of_the_job_file_and_expire_with_the_job(self):
+        # REF-03 (2026-10-26 review): the full request.references still wrote the caller's token to disk.
+        secret = "https://public.example.com/scene.png?token=abc&X-Amz-Signature=sig123"
+        payload = generation.Generation(request_id="llm-" + uuid.uuid4().hex[:12], provider_id="deepwhite", model=self.model,
+                                        kind="chat", prompt="描述参考1", references=[{"url": secret, "kind": "image"}])
+        job_file = generation.directory() / f"{payload.request_id}.json"
+        on_disk = lambda: "\n".join(p.read_text(encoding="utf-8") for p in generation.directory().rglob("*") if p.is_file())
+        with patch.object(generation, "start", side_effect=lambda job_id: None):
+            asyncio.run(generation.submit(payload))
+        queued = job_file.read_text(encoding="utf-8")
+        for leaked in ("token=abc", "sig123", "X-Amz-Signature"):
+            self.assertNotIn(leaked, queued)
+        self.assertIn("https://public.example.com/scene.png", queued)
+        self.assertIn("token=abc", on_disk(), "the URL needed to run must be kept somewhere private until the job ends")
+        job = self.run_job_id(payload.request_id)
+        self.assertEqual(job["status"], "succeeded", job.get("error"))
+        sent = json.dumps(self.sent[-1], ensure_ascii=False)
+        self.assertIn(secret, sent, "the upstream must still receive the caller's working URL")
+        self.assertNotIn("token=abc", on_disk(), "the private copy outlived the job")
+        listed = json.dumps([generation.public(job)], ensure_ascii=False)
+        for leaked in ("token=abc", "sig123"):
+            self.assertNotIn(leaked, listed)
+
+    def run_job_id(self, job_id):
+        async def go():
+            generation.start(job_id)
+            await generation.WORKERS[job_id]
+            return generation.read(job_id)
+        return asyncio.run(go())
+
     def test_failed_reply_keeps_its_identifiers(self):
         self.reply = httpx.Response(400, headers={"x-request-id": "req-fail-1"}, json={"id": "err-77", "error": {"message": "bad"}})
         job = self.run_job(self.payload())

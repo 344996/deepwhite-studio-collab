@@ -41,6 +41,7 @@ class Submission(BaseModel):
     params: dict = Field(default_factory=dict)
     canvas_id: str = ''
     node_id: str = ''
+    attempt_id: str = ''
 
 
 def require_action(provider_id, action):
@@ -230,11 +231,32 @@ async def archive_result(result, record=None):
     return result
 
 
+ATTEMPT_ID=re.compile(r'[A-Za-z0-9][A-Za-z0-9._:\-]{0,127}')
+
+
+def checked_attempt(attempt_id):
+    if attempt_id and not ATTEMPT_ID.fullmatch(attempt_id): raise HTTPException(400,'提交编号格式不正确。')
+    return attempt_id
+
+
+def attempt_status(attempt_id):
+    """What the server knows about one page attempt; a reloaded page asks this instead of guessing."""
+    from studio_mj_history import find_attempt
+    record=find_attempt(checked_attempt(attempt_id))
+    if not record:return {'found':False}
+    return {'found':True,'history_id':record['id'],'task_id':(record.get('task_ids') or [''])[0],
+            'status':record['status'],'error':record.get('error',''),
+            'canvas_id':record['request']['canvas_id'],'node_id':record['request']['node_id']}
+
+
 async def submit(request):
+    from studio_mj_history import begin, find_attempt
+    previous=find_attempt(checked_attempt(request.attempt_id))
+    # A known attempt is already paid for or pending: report the original task, never POST again.
+    if previous:return {**await resume_history(previous['id']),'history_id':previous['id']}
     require_action(request.provider_id,request.action)
     params=validated(request.action,request.params)
     if params.get('task_id'):require_task_scope(request.provider_id,params['task_id'])
-    from studio_mj_history import begin
     record=begin(request,params)
     try:
         result=await upstream(request.provider_id,'POST','generations/'+request.action,params,request.action)
@@ -331,6 +353,9 @@ def install(app):
 
     @app.post('/api/studio/mj/history/{history_id}/resume')
     async def resume_history_route(history_id:str):return await resume_history(history_id)
+
+    @app.get('/api/studio/mj/attempts/{attempt_id}')
+    async def attempt_route(attempt_id:str):return attempt_status(attempt_id)
 
     original=core.generate_ai_image
     async def generate(prompt,size,quality,model,reference_images=None,provider_id='comfly',aspect_ratio='',resolution=''):

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1026 需求样式确认</title>
+<style>
+/* All colours in one place: dark grey-green, warm gold, off-white (studio-v2-theme). */
+:root{color-scheme:dark;--bg:#171c1d;--panel:#242828;--panel-2:#293233;--line:#3a4242;--text:#f2f3ef;--muted:#a8b0aa;--gold:#e3bd83;--gold-ink:#30291d;--green:#b9e7cf;--green-ink:#1b2a22;--danger:#e8a39b;--danger-bg:#3a2523;--ok-bg:#24352c;--warn-bg:#3a3324;--radius:10px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--gold)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+button.primary{background:var(--gold);color:var(--gold-ink);border-color:var(--gold);font-weight:650}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:17px;margin:0}
+header p{margin:0;color:var(--muted);font-size:12px}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:12px 20px;border-bottom:1px solid var(--line)}
+nav button[aria-selected="true"]{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+main{padding:20px;max-width:1200px;margin:0 auto}
+section[hidden]{display:none}
+h2{font-size:16px;margin:0 0 4px}
+.note{color:var(--muted);font-size:12px;margin:0 0 14px}
+.ask{border-left:3px solid var(--gold);background:var(--warn-bg);padding:9px 12px;border-radius:0 8px 8px 0;font-size:13px;margin:14px 0}
+.chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.chip.ok{background:var(--ok-bg);color:var(--green);border-color:transparent}
+.chip.warn{background:var(--warn-bg);color:var(--gold);border-color:transparent}
+.chip.err{background:var(--danger-bg);color:var(--danger);border-color:transparent}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.grid{display:grid;gap:12px}
+/* U03 */
+.board{position:relative;height:520px;border:1px solid var(--line);border-radius:var(--radius);background:radial-gradient(#353d3d 1px,transparent 1px) 0 0/22px 22px;overflow:hidden}
+.node{position:absolute;width:250px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}
+.node.selected{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.node .media{height:150px;border-radius:var(--radius) var(--radius) 0 0;background:linear-gradient(135deg,#3d4b45,#26302d);display:grid;place-items:center;color:var(--muted);font-size:12px}
+.node .head{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:8px 10px}
+.node .detail{border-top:1px solid var(--line);padding:10px;display:grid;gap:8px}
+.node .detail[hidden]{display:none}
+.node .error{color:var(--danger);font-size:12px;padding:0 10px 8px}
+.refs{display:flex;gap:6px}.refs span{width:42px;height:42px;border-radius:6px;background:#3b4644;display:grid;place-items:center;font-size:10px}
+.selbar{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:6px 14px;font-size:12px}
+/* U04/U05 */
+.picker{width:min(420px,100%)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
+.tabs button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.models{display:grid;gap:6px;max-height:300px;overflow:auto}
+.model{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.model .name{flex:1;min-width:0}.model small{color:var(--muted);display:block;font-size:11px}
+.star{border:0;background:none;font-size:16px;padding:2px 6px;color:var(--muted)}.star[aria-pressed="true"]{color:var(--gold)}
+.empty{color:var(--muted);font-size:13px;padding:14px;border:1px dashed var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:500}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+/* U06/U07, U11 */
+.settings{display:grid;grid-template-columns:190px minmax(0,1fr);gap:14px}
+.settings nav{flex-direction:column;border:0;padding:0}
+.settings nav button{text-align:left}
+.stages{display:grid;gap:6px;margin:10px 0}
+.stage{display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:8px;background:var(--bg);font-size:13px}
+.agents{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.cmd{display:flex;gap:6px;align-items:center}.cmd code{flex:1;min-width:0;overflow:auto;white-space:nowrap;background:var(--bg);padding:7px 9px;border-radius:7px;font-size:12px}
+details summary{cursor:pointer;color:var(--muted)}
+/* U09 */
+.composer{display:grid;gap:8px;max-width:620px}.composer textarea{min-height:110px;resize:vertical}
+.inline-error{color:var(--danger);font-size:12px}
+@media (max-width:760px){.settings{grid-template-columns:1fr}.settings nav{flex-direction:row}main{padding:14px}.board{height:620px}}
+@media (prefers-reduced-motion:no-preference){.node,.detail{transition:box-shadow .14s}}
+</style>
+</head>
+<body>
+<header>
+ <div><h1>1026 需求样式确认（可点击 Demo）</h1><p>只演示布局与交互，不连接真实服务、不生成、不扣费。确认后再接入正式画布。对应《画布测试与新需求交接报告》第 6、8 节。</p></div>
+</header>
+<nav role="tablist" aria-label="需求">
+ <button role="tab" data-tab="u03" aria-selected="true">U03 结果节点折叠</button>
+ <button role="tab" data-tab="u04">U04 常用模型</button>
+ <button role="tab" data-tab="u05">U05 厂商筛选</button>
+ <button role="tab" data-tab="u06">U06/U07 连接设置</button>
+ <button role="tab" data-tab="u09">U09 提示词说明</button>
+ <button role="tab" data-tab="u10">U10 智能画布退役</button>
+ <button role="tab" data-tab="u11">U11 智能体连接</button>
+</nav>
+<main>
+
+<section id="u03" role="tabpanel">
+ <h2>U03 生成结果节点：未选中只显示结果，选中后显示参数</h2>
+ <p class="note">点击节点展开，点击空白处收起；Shift+点击多选（多选时不展开参数）。生成中、失败状态在收起时仍可见。展开只改变本节点高度，不移动其他节点。</p>
+ <div class="board" id="board" tabindex="-1" aria-label="画布示意">
+  <div class="node" data-node="a" style="left:30px;top:30px" tabindex="0">
+   <div class="media">人物 C01 · 结果图</div>
+   <div class="head"><strong>人物 C01</strong><span class="chip ok">已完成</span></div>
+   <div class="detail" hidden>
+    <label>提示词<textarea rows="3">林夏，雨夜站台，湿外套，侧光</textarea></label>
+    <div><small class="note">参考素材</small><div class="refs"><span>参考1</span><span>参考2</span></div></div>
+    <div class="filters"><select aria-label="模型"><option>GPT Image 2</option></select><select aria-label="比例"><option>3:4</option></select><select aria-label="张数"><option>1 张</option></select></div>
+    <button class="primary">重新生成 · 预计 ¥0.142</button>
+   </div>
+  </div>
+  <div class="node" data-node="b" style="left:310px;top:30px" tabindex="0">
+   <div class="media">场景 S01 · 生成中</div>
+   <div class="head"><strong>场景 S01</strong><span class="chip warn">生成中 42%</span></div>
+   <div class="detail" hidden><label>提示词<textarea rows="3">老城修表铺，窗外雨夜，无人物</textarea></label><button disabled>生成中…</button></div>
+  </div>
+  <div class="node" data-node="c" style="left:590px;top:30px" tabindex="0">
+   <div class="media">视频 · 失败</div>
+   <div class="head"><strong>双图参考视频</strong><span class="chip err">失败</span></div>
+   <div class="error">余额不足：本次未扣费，可充值后重试</div>
+   <div class="detail" hidden><label>提示词<textarea rows="3">林夏走进修表铺</textarea></label><button class="primary">重试</button></div>
+  </div>
+  <div class="selbar" id="selbar" hidden></div>
+ </div>
+ <p class="ask">待确认：① 展开时参数在节点内部（如上）还是右侧固定面板；② 双击是预览（保留现有）还是展开；③ 重开画布时是否全部收起。</p>
+</section>
+
+<section id="u04" role="tabpanel" hidden>
+ <h2>U04 模型选择默认进入「常用」</h2>
+ <p class="note">图片与视频各自一份常用列表；星标即加入常用，立即生效并保存。同一型号在不同渠道分别显示渠道名。</p>
+ <div class="card picker">
+  <div class="tabs" id="kindTabs"><button aria-pressed="true" data-kind="image">图片模型</button><button aria-pressed="false" data-kind="video">视频模型</button></div>
+  <div class="tabs" id="scopeTabs"><button aria-pressed="true" data-scope="fav">常用</button><button aria-pressed="false" data-scope="all">全部模型</button></div>
+  <input id="modelSearch" type="search" placeholder="搜索模型或厂商" aria-label="搜索模型" style="width:100%;margin-bottom:8px">
+  <div class="models" id="modelList"></div>
+ </div>
+ <p class="ask">待确认：常用列表是否在所有画布间共享（建议共享，按 渠道+型号 记录）；型号停用后在常用中显示为灰色并提示，而不是直接移除。</p>
+</section>
+
+<section id="u05" role="tabpanel" hidden>
+ <h2>U05 模型管理：类型 × 厂商 × 关键词</h2>
+ <p class="note">厂商来自模型目录的厂商信息，未知时为「未分类」；调用渠道单独一列。批量启停只作用于当前筛选结果，按钮写明数量。</p>
+ <div class="filters">
+  <select id="fType" aria-label="类型"><option value="">全部类型</option><option>图片</option><option>视频</option><option>音频</option></select>
+  <select id="fVendor" aria-label="厂商"><option value="">全部厂商</option></select>
+  <input id="fText" type="search" placeholder="关键词" aria-label="关键词">
+  <button id="fClear">清除筛选</button>
+  <span style="flex:1"></span>
+  <button id="bulkOn">启用当前筛选</button><button id="bulkOff">停用当前筛选</button>
+ </div>
+ <table><thead><tr><th>型号</th><th>类型</th><th>厂商</th><th>调用渠道</th><th>状态</th></tr></thead><tbody id="mgmt"></tbody></table>
+ <p class="note" id="mgmtNote"></p>
+</section>
+
+<section id="u06" role="tabpanel" hidden>
+ <h2>U06/U07 设置页统一的连接入口</h2>
+ <p class="note">RunningHub 的密钥与默认偏好放在设置页；画布里的 RH 节点只选流程和本次参数，读取同一份配置。</p>
+ <div class="settings">
+  <nav aria-label="设置分类" id="setNav">
+   <button data-set="account">账户与 API</button><button data-set="rh" aria-pressed="true">RunningHub</button><button data-set="libtv">LibTV</button><button data-set="jimeng">即梦 CLI</button>
+  </nav>
+  <div class="card" id="setPanel"></div>
+ </div>
+</section>
+
+<section id="u09" role="tabpanel" hidden>
+ <h2>U09 去掉常驻字数说明</h2>
+ <p class="note">平时不显示“提示词 0 字。要求 1–20000 字”。只有点生成时内容为空或超出模型上限，才在输入框下就地提示；不截断、不清空文字。</p>
+ <div class="composer card">
+  <textarea id="u09Text" aria-label="提示词" placeholder="描述你想生成的画面"></textarea>
+  <div class="inline-error" id="u09Err" role="alert" hidden></div>
+  <div><button class="primary" id="u09Run">生成</button> <small class="note">（示例上限 200 字）</small></div>
+ </div>
+</section>
+
+<section id="u10" role="tabpanel" hidden>
+ <h2>U10 首页只保留经典画布；旧智能画布可找回</h2>
+ <p class="note">不再提供“新建智能画布”。旧项目在单独分组里，提供只读查看、导出和“迁移到经典画布”（先备份、迁移后原项目保留）。</p>
+ <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
+  <div class="card"><strong>新建画布</strong><p class="note">经典画布 · 支持 RH、ComfyUI、MCP、音频与剧本资产</p><button class="primary">新建</button></div>
+  <div class="card"><strong>《归航》分镜</strong> <span class="chip">经典</span><p class="note">今天 14:02</p><button>打开</button></div>
+ </div>
+ <h2 style="margin-top:18px">旧版智能画布（2 个）</h2>
+ <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))" id="legacy"></div>
+ <p class="ask">待确认（报告第 7 节第 3 项）：保留只读入口多久；迁移时不能直接转换的节点（智能分组、批次参数）是转成备注节点还是保留原始数据附件。</p>
+</section>
+
+<section id="u11" role="tabpanel" hidden>
+ <h2>U11 智能体连接：五个客户端，一键连接 + 验证命令</h2>
+ <p class="note">每张卡片：检测状态 → 连接 → 复制验证命令（只读当前测试画布，返回画布名和节点摘要，不收费、不含密钥）→ 回读结果。“已写入配置”与“已验证”分开显示。不再展示内置 Skills。</p>
+ <div class="grid agents" id="agents"></div>
+ <details style="margin-top:14px"><summary>高级设置（MCP 开关、生成授权与预算）</summary><div class="card" style="margin-top:8px"><label><input type="checkbox" checked> 允许外部智能体读写画布</label><br><label><input type="checkbox"> 允许外部智能体发起生成（每次需在页面确认）</label></div></details>
+</section>
+</main>
+<script>
+'use strict';
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Tabs
+$$('[role=tab]').forEach(tab=>tab.onclick=()=>{$$('[role=tab]').forEach(t=>t.setAttribute('aria-selected',t===tab));$$('[role=tabpanel]').forEach(p=>p.hidden=p.id!==tab.dataset.tab);});
+
+// U03: single selection expands; multi-selection only highlights.
+const selected=new Set();
+function paintNodes(){
+ $$('.node').forEach(n=>{const on=selected.has(n.dataset.node);n.classList.toggle('selected',on);n.querySelector('.detail').hidden=!(on&&selected.size===1);});
+ $('#selbar').hidden=selected.size<2;$('#selbar').textContent=`已选 ${selected.size} 个节点 · 多选时不展开参数`;
+}
+$$('.node').forEach(n=>{
+ n.addEventListener('click',e=>{if(e.target.closest('textarea,select,button'))return;e.stopPropagation();if(!e.shiftKey)selected.clear();selected.has(n.dataset.node)&&e.shiftKey?selected.delete(n.dataset.node):selected.add(n.dataset.node);paintNodes();});
+ n.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target===n){selected.clear();selected.add(n.dataset.node);paintNodes();}});
+});
+$('#board').addEventListener('click',()=>{selected.clear();paintNodes();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){selected.clear();paintNodes();}});
+
+// U04: favourites per kind, keyed by channel + model.
+const MODELS=[
+ {id:'gpt-image-2',name:'GPT Image 2',vendor:'OpenAI',kind:'image',channel:'DeepWhite'},
+ {id:'nb2',name:'香蕉 NB2',vendor:'Google',kind:'image',channel:'DeepWhite'},
+ {id:'nb2',name:'香蕉 NB2',vendor:'Google',kind:'image',channel:'自有渠道 A'},
+ {id:'seedream-5',name:'Seedream 5',vendor:'字节跳动',kind:'image',channel:'DeepWhite'},
+ {id:'mj-8.2',name:'Midjourney 8.2',vendor:'Midjourney',kind:'image',channel:'DeepWhite'},
+ {id:'seedance-mini',name:'Seedance Mini',vendor:'字节跳动',kind:'video',channel:'DeepWhite'},
+ {id:'kling-3',name:'可灵 3.0',vendor:'快手',kind:'video',channel:'DeepWhite'},
+ {id:'veo-3',name:'Veo 3 Fast',vendor:'Google',kind:'video',channel:'自有渠道 A'},
+ {id:'suno-sounds',name:'Suno 音效',vendor:'Suno',kind:'audio',channel:'DeepWhite'},
+ {id:'mystery-x',name:'mystery-x',vendor:'',kind:'image',channel:'自有渠道 A'}];
+const favKey=m=>m.channel+'|'+m.id;
+let favs=new Set(['DeepWhite|gpt-image-2','DeepWhite|seedance-mini']),kind='image',scope='fav';
+try{favs=new Set(JSON.parse(localStorage.getItem('demo1026.favs')||'null')||favs);}catch{}
+function paintPicker(){
+ const q=$('#modelSearch').value.trim().toLowerCase();
+ const list=MODELS.filter(m=>m.kind===kind&&(scope==='all'||favs.has(favKey(m)))&&(!q||(m.name+m.vendor).toLowerCase().includes(q)));
+ const dupes=new Set(MODELS.filter(m=>MODELS.filter(x=>x.id===m.id).length>1).map(m=>m.id));
+ $('#modelList').innerHTML=list.length?list.map(m=>`<div class="model"><span class="name">${esc(m.name)}<small>${esc(m.vendor||'未分类')}${dupes.has(m.id)?' · 渠道：'+esc(m.channel):''}</small></span><button class="star" aria-pressed="${favs.has(favKey(m))}" aria-label="${favs.has(favKey(m))?'移出常用':'加入常用'}" data-fav="${esc(favKey(m))}">★</button><button>选择</button></div>`).join('')
+  :`<div class="empty">${scope==='fav'?'还没有常用的'+(kind==='image'?'图片':'视频')+'模型。切到「全部模型」，点 ★ 加入常用。':'没有匹配的模型。'}</div>`;
+}
+$('#modelList').addEventListener('click',e=>{const b=e.target.closest('[data-fav]');if(!b)return;favs.has(b.dataset.fav)?favs.delete(b.dataset.fav):favs.add(b.dataset.fav);try{localStorage.setItem('demo1026.favs',JSON.stringify([...favs]));}catch{}paintPicker();});
+$('#kindTabs').onclick=e=>{const b=e.target.closest('[data-kind]');if(!b)return;kind=b.dataset.kind;$$('#kindTabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));paintPicker();};
+$('#scopeTabs').onclick=e=>{const b=e.target.closest('[data-scope]');if(!b)return;scope=b.dataset.scope;$$('#scopeTabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));paintPicker();};
+$('#modelSearch').oninput=paintPicker;paintPicker();
+
+// U05: filters and bulk actions on the filtered rows only.
+const enabled=new Map(MODELS.map(m=>[favKey(m),true]));
+const kindName={image:'图片',video:'视频',audio:'音频'};
+[...new Set(MODELS.map(m=>m.vendor||'未分类'))].forEach(v=>$('#fVendor').add(new Option(v,v)));
+const filtered=()=>MODELS.filter(m=>(!$('#fType').value||kindName[m.kind]===$('#fType').value)&&(!$('#fVendor').value||(m.vendor||'未分类')===$('#fVendor').value)&&(!$('#fText').value.trim()||(m.name+m.id).toLowerCase().includes($('#fText').value.trim().toLowerCase())));
+function paintMgmt(){
+ const rows=filtered();
+ $('#mgmt').innerHTML=rows.length?rows.map(m=>`<tr><td>${esc(m.name)}</td><td>${kindName[m.kind]}</td><td>${esc(m.vendor||'未分类')}</td><td>${esc(m.channel)}</td><td><span class="chip ${enabled.get(favKey(m))?'ok':''}">${enabled.get(favKey(m))?'启用':'停用'}</span></td></tr>`).join(''):'<tr><td colspan="5" class="note">没有符合筛选的型号。</td></tr>';
+ $('#bulkOn').textContent=`启用当前筛选（${rows.length}）`;$('#bulkOff').textContent=`停用当前筛选（${rows.length}）`;$('#bulkOn').disabled=$('#bulkOff').disabled=!rows.length;
+ $('#mgmtNote').textContent=`共 ${MODELS.length} 个型号，当前显示 ${rows.length} 个；批量操作不会改动隐藏的 ${MODELS.length-rows.length} 个。`;
+}
+['#fType','#fVendor','#fText'].forEach(s=>$(s).addEventListener('input',paintMgmt));
+$('#fClear').onclick=()=>{$('#fType').value='';$('#fVendor').value='';$('#fText').value='';paintMgmt();};
+$('#bulkOn').onclick=()=>{filtered().forEach(m=>enabled.set(favKey(m),true));paintMgmt();};
+$('#bulkOff').onclick=()=>{filtered().forEach(m=>enabled.set(favKey(m),false));paintMgmt();};
+paintMgmt();
+
+// U06/U07: one settings page per connection; RH stages are separate.
+const PANELS={
+ account:`<h2>账户与 API</h2><p class="note">已登录 DeepWhite 账户时，生成授权由账户自动管理，不需要再粘贴官方 Key；自有 API 渠道照常添加。</p><div class="stage"><span>DeepWhite 账户</span><span class="chip ok">已登录 · 生成授权已就绪</span></div><div class="stage"><span>自有渠道 A</span><span class="chip">手动 Key · 已保存</span></div>`,
+ rh:`<h2>RunningHub</h2><p class="note">画布中的 RH 节点读取这里的配置；修改默认偏好不会改动已有节点和已提交任务。</p>
+  <label>API Key <input type="password" value="••••••••••••" aria-label="RunningHub API Key" style="width:60%"></label> <small class="note">不回显明文</small>
+  <div class="stages" id="rhStages"><div class="stage"><span>服务可达</span><span class="chip">未测试</span></div><div class="stage"><span>密钥鉴权</span><span class="chip">未测试</span></div><div class="stage"><span>工作流目录可读</span><span class="chip">未测试</span></div><div class="stage"><span>执行权限（不提交任务）</span><span class="chip">未测试</span></div></div>
+  <button class="primary" id="rhTest">测试连接（不扣积分）</button>
+  <h3 style="font-size:14px;margin:16px 0 6px">默认执行偏好</h3><label><input type="radio" name="pay" checked> 会员积分</label> <label><input type="radio" name="pay"> 钱包余额</label><br><label>实例类型 <select><option>标准</option><option>plus</option></select></label>`,
+ libtv:`<h2>LibTV</h2><p class="ask">待确认（报告第 7 节第 2 项）：LibTV 要接入的是官方 API、账号授权、本地桥接，还是只打开网站？在拿到正式协议前，这里只显示“未接入”，不会标成已连接或可自动生成。</p><div class="stage"><span>状态</span><span class="chip">未接入 · 协议待确认</span></div>`,
+ jimeng:`<h2>即梦 CLI</h2><div class="stage"><span>本机即梦 CLI</span><span class="chip ok">已检测到 · 已登录</span></div>`};
+function paintSettings(key){$('#setPanel').innerHTML=PANELS[key];$$('#setNav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.set===key));
+ const t=$('#rhTest');if(t)t.onclick=()=>{const chips=$$('#rhStages .chip');const results=[['ok','可达'],['ok','鉴权通过'],['ok','可读 128 个流程'],['warn','目录可读，但此账号无执行权限']];chips.forEach((c,i)=>setTimeout(()=>{c.className='chip '+results[i][0];c.textContent=results[i][1];},250*(i+1)));};}
+$('#setNav').onclick=e=>{const b=e.target.closest('[data-set]');if(b)paintSettings(b.dataset.set);};paintSettings('rh');
+
+// U09: errors only on submit, text never cleared.
+$('#u09Run').onclick=()=>{const n=[...$('#u09Text').value.trim()].length,err=$('#u09Err');
+ err.hidden=!(n===0||n>200);err.textContent=n===0?'请先填写提示词。':`当前 ${n} 字，超过此模型上限 200 字；请删减后再生成，已输入的内容保留。`;if(err.hidden)err.textContent='';};
+$('#u09Text').oninput=()=>{$('#u09Err').hidden=true;};
+
+// U10: legacy smart canvases.
+$('#legacy').innerHTML=[['《七码头》资产拆解','10-24 · 11 个节点'],['产品图测试','10-12 · 4 个节点']].map(([t,m])=>`<div class="card"><strong>${t}</strong> <span class="chip">旧版智能</span><p class="note">${m}</p><div style="display:flex;gap:6px;flex-wrap:wrap"><button>只读查看</button><button>导出</button><button data-migrate>迁移到经典画布</button></div><p class="note" data-result></p></div>`).join('');
+$('#legacy').onclick=e=>{const b=e.target.closest('[data-migrate]');if(!b)return;const r=b.closest('.card').querySelector('[data-result]');r.textContent='已备份原项目 → 已创建经典画布副本；2 个节点无法直接转换，已保留为备注节点。原项目仍可只读查看。';b.disabled=true;};
+
+// U11: five clients, written vs verified kept apart.
+const AGENTS=[['Codex','ok','验证成功 · 读到「《归航》分镜」12 个节点'],['Claude Code','warn','已写入配置 · 待验证（请重启 Claude Code 后运行验证命令）'],['WorkBuddy','','已安装 · 未配置'],['豆包工作','err','未检测到：默认路径下没有找到豆包工作，可手动选择安装位置'],['DeepSeek Harness','','已安装 · 未配置']];
+$('#agents').innerHTML=AGENTS.map(([name,state,text],i)=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><strong>${name}</strong><span class="chip ${state}" data-state>${state==='ok'?'已验证':state==='warn'?'待验证':state==='err'?'未检测到':'未连接'}</span></div><p class="note" data-text>${text}</p>
+ <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="primary" data-connect="${i}" ${state==='err'?'disabled':''}>${state==='ok'?'重新连接':'一键连接'}</button>${state==='err'?'<button>选择安装位置</button>':''}${state==='ok'||state==='warn'?'<button>断开</button>':''}</div>
+ <div class="cmd" style="margin-top:8px"><code>请调用 deepwhite-studio 的 studio_status 和 get_canvas，只读「1026 测试画布」，回复画布名和节点数，不要生成。</code><button data-copy>复制</button></div></div>`).join('');
+$('#agents').onclick=e=>{
+ const c=e.target.closest('[data-copy]');if(c){navigator.clipboard?.writeText(c.previousElementSibling.textContent).catch(()=>{});c.textContent='已复制';setTimeout(()=>c.textContent='复制',1200);return;}
+ const b=e.target.closest('[data-connect]');if(!b)return;const card=b.closest('.card');
+ card.querySelector('[data-state]').className='chip warn';card.querySelector('[data-state]').textContent='待验证';
+ card.querySelector('[data-text]').textContent='已写入配置（原有配置已备份）。请在该客户端中运行下面的验证命令；收到回读结果后才显示“已验证”。';
+};
+</script>
+</body>
+</html>

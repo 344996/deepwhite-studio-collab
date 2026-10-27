@@ -114,6 +114,8 @@
   async function query(node,context){return node.studioMjTask?api(`/api/studio/mj/tasks/${encodeURIComponent(node.studioMjTask)}?provider_id=${encodeURIComponent(context.provider_id)}`):api(`/api/studio/mj/history/${encodeURIComponent(node.studioMjHistory)}/resume`,{});}
   async function persistAttempt(node,context){
     const attempt=uid('mj-attempt');node.studioMjAttempt=attempt;
+    // The server links this ID to the remote task, so a reload can always find what it paid for.
+    context.attempt_id=attempt;if(node.studioMjRequest)node.studioMjRequest.attempt_id=attempt;
     try{
       if(!context.canvas_id)throw Error('画布尚未保存');
       await saveCanvas();
@@ -145,6 +147,7 @@
   async function run(node,action){
     if(!node||node.running||polling.has(node.id))return;
     if(['pending','paused','submitting'].includes(node.studioMjStatus)&&(node.studioMjTask||node.studioMjHistory))return resume(node);
+    if(node.studioMjStatus==='submitting'&&node.studioMjAttempt)return reconcile(node);
     if(['uncertain','submitting'].includes(node.studioMjStatus)){node.studioMjStatus='uncertain';node.studioMjState='提交结果待核对，请先查看平台记录，勿重复提交。';rerender();return;}
     const context=JSON.parse(JSON.stringify({provider_id:node.apiProvider,action,params:mjParams(node,action),canvas_id:canvas?.id||'',node_id:node.id}));
     delete node.studioHistoryRestored;
@@ -162,7 +165,9 @@
         rerender();await persistAttempt(node,context);
         const result=await api('/api/studio/mj/submit',context);received=true;
         if(!nodes.includes(node))return;
-        node.studioMjRequest=JSON.parse(JSON.stringify(context));node.studioMjTask=result.task_id||'';node.lastTaskId=result.task_id||'';node.studioMjHistory=result.history_id||'';node.studioMjCompleted='';scheduleSave();if(!await track(node,result,context))return;
+        node.studioMjRequest=JSON.parse(JSON.stringify(context));node.studioMjTask=result.task_id||'';node.lastTaskId=result.task_id||'';node.studioMjHistory=result.history_id||'';node.studioMjCompleted='';
+        // Write the receipt now instead of after the 500ms debounce.
+        saveCanvas();if(!await track(node,result,context))return;
       }
       node.runStatus='done';node.runError='';
     }catch(e){failure(node,e,received);}
@@ -179,6 +184,35 @@
     try{if(await track(node,await query(node,context),context)){node.runStatus='done';node.runError='';}}
     catch(e){failure(node,e);}finally{node.running=false;polling.delete(node.id);rerender();}
   }
+  // A node left in "submitting" (reload, closed tab, restart) asks the server what became of
+  // its attempt: adopt the original task, or report that the paid POST never arrived.
+  const reconciling=new Set();
+  async function reconcile(node){
+    const attempt=node.studioMjAttempt;
+    if(!attempt||reconciling.has(attempt)||polling.has(node.id))return;
+    reconciling.add(attempt);
+    try{
+      let found;
+      for(let i=0;i<2;i++){
+        found=await api('/api/studio/mj/attempts/'+encodeURIComponent(attempt));
+        if(found.found)break;
+        await new Promise(r=>setTimeout(r,1500));
+      }
+      if(!nodes.includes(node)||node.studioMjAttempt!==attempt||node.studioMjStatus!=='submitting'||polling.has(node.id))return;
+      if(!found.found){
+        node.studioMjStatus='failed';node.runStatus='failed';
+        node.studioMjState=node.runError='上次提交未发出：服务端没有收到这次请求，未产生费用，可以重新生成。';
+        rerender();return;
+      }
+      node.studioMjTask=found.task_id||'';node.lastTaskId=found.task_id||'';node.studioMjHistory=found.history_id||'';
+      if(found.task_id||found.status!=='uncertain'){node.studioMjStatus='pending';rerender();return resume(node);}
+      node.studioMjStatus='uncertain';node.runStatus='uncertain';
+      node.studioMjState=node.runError='提交已到达服务端但结果待核对，请点击“查询已有任务”或查看平台记录，勿重复提交。';
+      rerender();
+    }catch{}
+    finally{reconciling.delete(attempt);}
+  }
+  const reconcileAll=()=>{for(const node of (typeof nodes!=='undefined'?nodes:[]))if(node?.studioMjStatus==='submitting'&&node.studioMjAttempt&&!node.studioMjTask&&!node.studioMjHistory)reconcile(node);};
   window.studioAddMj=point=>{
     const node=smart?createNode(point.x,point.y,[],{select:false}):addNode({id:uid('mj'),type:'midjourney',x:point.x,y:point.y,inputs:[]});
     node.studioKind='mj';node.title='MJ 工具';node.apiProvider=providers()[0]?.id||'';node.studioMjAction=actions(node.apiProvider)[0]||'blend';
@@ -242,6 +276,7 @@
       });
     }
     document.querySelectorAll('.studio-price').forEach(el=>{if(el._studioRequest)updateQuote(el,el._studioRequest());});
+    reconcileAll();
   }
   let timer;function schedule(){clearTimeout(timer);timer=setTimeout(decorate,180);}
   new MutationObserver(schedule).observe(document.getElementById('shell'),{childList:true,subtree:true});

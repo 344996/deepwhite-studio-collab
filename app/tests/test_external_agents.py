@@ -280,6 +280,26 @@ class ClientTests(Base):
         self.assertEqual(archive.status_code, 200)
         self.assertEqual(archive.headers["content-type"], "application/zip")
 
+    def test_failed_upgrade_restores_the_previous_skill(self):
+        # SKILL-ROLLBACK (2026-10-26 review, R4): the old copy was moved to a backup first, so a
+        # failing final move left no active Skill at all.
+        self.act("claude_code", "install_skills")
+        folder = self.root / ".claude/skills/deepwhite-canvas"
+        (folder / "SKILL.md").write_text("用户改过", encoding="utf-8")
+        original_move = studio_clients.shutil.move
+        def move(source, target):
+            if Path(target) == folder and ".deepwhite-skill-staging-" in str(source):
+                raise OSError("disk full while activating")
+            return original_move(source, target)
+        with patch.object(studio_clients.shutil, "move", side_effect=move):
+            detail = self.act("claude_code", "install_skills", 409)["detail"]
+        self.assertTrue((folder / "SKILL.md").is_file(), "the active Skill folder is gone after the failed upgrade")
+        self.assertEqual((folder / "SKILL.md").read_text(encoding="utf-8"), "用户改过")
+        self.assertIn("已恢复", detail)
+        skills = self.root / ".claude/skills"
+        self.assertEqual(sorted(p.name for p in skills.iterdir()), ["deepwhite-avatar", "deepwhite-canvas", "deepwhite-film"])
+        self.assertFalse(any(p.name.startswith(".deepwhite-skill-staging-") for p in skills.parent.iterdir()))
+
     def test_skill_with_missing_entry_is_damaged_and_install_repairs_it(self):
         # CLIENT-01: a version marker alone must not count as "latest".
         self.act("claude_code", "install_skills")

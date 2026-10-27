@@ -261,6 +261,35 @@ class NativeTasksTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(calls[0].url.host, 'cdn.invalid')
         self.assertTrue(value['result']['videos'][0].startswith('/output/'))
 
+    async def test_public_read_hides_signed_result_urls_but_recovery_keeps_them(self):
+        # F04 (2026-10-26 review): native.read() exposed X-Amz-Signature from remote_result.
+        signed = 'https://cdn.invalid/result.mp4?X-Amz-Credential=cred1&X-Amz-Signature=sig123&X-Amz-Expires=600'
+        task_id = self.begin()
+        calls = []
+        state = {'download': 403}
+        def handler(request):
+            calls.append(request)
+            if request.method == 'POST': return httpx.Response(200, json={'id': 'upstream', 'video_url': signed})
+            return httpx.Response(state['download'], content=b'fake video', headers={'content-type': 'video/mp4'})
+        with self.transport(handler): await native.run(task_id, 'video')
+        for download, outcome in ((403, 'paused'), (500, 'paused'), (200, 'succeeded')):
+            state['download'] = download
+            if download != 403:
+                ledger._ACTIVE.clear(); ledger._VOLATILE.clear()
+                with self.transport(handler):
+                    await native.resume(task_id); await self.settle(task_id)
+            value = native.read(task_id, 'video')
+            self.assertEqual(value['status'], outcome)
+            public = json.dumps(value, ensure_ascii=False)
+            for leaked in ('X-Amz-Signature', 'sig123', 'cred1'):
+                self.assertNotIn(leaked, public)
+        self.assertEqual([r.method for r in calls].count('POST'), 1)
+        downloads = [str(r.url) for r in calls if r.method == 'GET']
+        self.assertTrue(downloads and all('X-Amz-Signature=sig123' in url for url in downloads),
+                        'recovery must still download with the original signed URL')
+        self.assertTrue(value['result']['videos'][0].startswith('/output/'))
+        self.assertIn('sig123', json.dumps(ledger.raw(task_id), ensure_ascii=False), 'internal recovery data was discarded')
+
     async def test_known_receipt_query_resume_has_no_generation_post(self):
         task_id = self.begin(); self.receipt(task_id)
         calls = []
@@ -354,6 +383,20 @@ class NativeTasksTests(unittest.IsolatedAsyncioTestCase):
                 by_id=await client.get('/api/canvas-llm-tasks/'+task_id)
         generate.assert_not_called(); self.assertEqual(capabilities.json()['version'],1)
         self.assertEqual(result.json()['task_id'],task_id); self.assertEqual(by_id.json()['status'],'uncertain')
+
+    async def test_signed_result_handle_streams_only_links_stored_in_the_task(self):
+        app=FastAPI(); native.install(app)
+        signed='https://cdn.invalid/old.mp4?X-Amz-Signature=sig456'
+        task_id=self.begin(); ledger.update(task_id,status='paused',result={'videos':[signed]}); ledger.release(task_id)
+        handle=native.read(task_id,'video')['result']['videos'][0]
+        fetched=[]
+        def handler(request): fetched.append(str(request.url)); return httpx.Response(200,content=b'old video',headers={'content-type':'video/mp4'})
+        with self.transport(handler):
+            async with REAL_CLIENT(transport=httpx.ASGITransport(app=app),base_url='http://testserver') as client:
+                media=await client.get(handle)
+                unknown=await client.get('/api/studio/task-media/'+task_id+'?u='+'0'*24)
+        self.assertEqual((media.status_code,media.content,media.headers['content-type']),(200,b'old video','video/mp4'))
+        self.assertEqual(fetched,[signed]); self.assertEqual(unknown.status_code,404)
 
     async def test_each_http_provider_receipt_precedes_actual_builder_poll(self):
         cases=[('agnes','agnes-video-v2.0',core.generate_agnes_video,'wait_for_agnes_video_task','video-agnes'),

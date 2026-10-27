@@ -258,6 +258,46 @@ class StudioControl(unittest.TestCase):
         response=self.client.post('/api/studio/control/approvals/'+result['approval_id'],json={'action':'approve'})
         self.assertEqual(response.status_code,409)
 
+    def test_approval_card_shows_the_canvas_estimate_and_its_basis(self):
+        # F05 (2026-10-26): the card said "暂无可靠估价" while /api/studio/quote had a price.
+        import studio_pricing as pricing
+        self._save_generator()
+        raw={'pricing_version':'fixture','price_estimates':{'deepwhiteai-image-g-v2.5-lowprice':{'status':'ready','active_features':[],
+             'entries':[{'params':{},'price_cny':0.123,'sample_count':40}]}}}
+        deepwhite={'id':self.provider,'base_url':'https://api.deepwhiteai.com/v1'}
+        with patch.object(generation,'checked',return_value=None), patch.object(pricing,'snapshot',AsyncMock(return_value=raw)), \
+             patch.object(pricing.core,'get_api_provider',return_value=deepwhite), \
+             patch.object(pricing.catalog,'resolve_model',side_effect=lambda pid,model,*a,**k:model):
+            result=asyncio.run(control._generate(self.cid,'node1','request-q01'))
+            canvas_quote=asyncio.run(pricing.quote_for(pricing.Quote(provider_id=self.provider,model='deepwhiteai-image-g-v2.5-lowprice')))
+        card=next(p for p in control._load()['pending'] if p['id']==result['approval_id'])['quote']
+        self.assertEqual(card['price'],canvas_quote['price'])
+        self.assertAlmostEqual(card['price'],0.123)
+        self.assertEqual((card['currency'],card['model'],card['count']),('CNY','deepwhiteai-image-g-v2.5-lowprice',1))
+        self.assertTrue(card['estimated_at']); self.assertIn('¥0.123',card['display']); self.assertIn('不是扣款',card['display'])
+
+    def test_unsupported_channels_are_refused_with_a_reason_before_any_submit(self):
+        # F06 (2026-10-26): MCP generation covers image/video adapters only; MJ must not fall
+        # through to the generic image endpoint, and RH/audio say why instead of a generic error.
+        cases=[({'type':'generator','model':'midjourney-imagine'},'MJ'),
+               ({'type':'runninghub'},'RunningHub'),({'type':'audio','model':'suno-sounds'},'音频')]
+        for index,(extra,word) in enumerate(cases):
+            with self.subTest(word=word):
+                self.canvas['nodes']=[{'id':'node1','studioPrompt':'雨夜','apiProvider':self.provider,'studioParams':{},'studioRefs':[],'studioAssetRefs':[],'running':False,**extra}]
+                core.save_canvas(self.canvas)
+                with patch.object(generation,'submit',new_callable=AsyncMock) as submit:
+                    with self.assertRaises(HTTPException) as caught:asyncio.run(control._generate(self.cid,'node1',f'request-f06-{index}'))
+                submit.assert_not_called()
+                self.assertIn(word,caught.exception.detail);self.assertIn('画布',caught.exception.detail)
+
+    def test_unknown_price_says_so_with_the_reason(self):
+        self._save_generator()
+        with patch.object(generation,'checked',return_value=None):
+            result=asyncio.run(control._generate(self.cid,'node1','request-q02'))
+        card=next(p for p in control._load()['pending'] if p['id']==result['approval_id'])['quote']
+        self.assertIsNone(card['price']); self.assertEqual(card['currency'],'')
+        self.assertIn('此平台未提供可用的计价数据',card['display'])
+
     def test_rejected_generation_cannot_be_retried_with_same_request_id(self):
         self._save_generator()
         with patch.object(generation,'checked',return_value=None):

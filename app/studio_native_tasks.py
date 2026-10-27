@@ -528,6 +528,23 @@ async def resume(task_id):
 
 
 def install(app):
+    from fastapi import Response
+
+    @app.get('/api/studio/task-media/{task_id}')
+    async def task_media(task_id: str, u: str):
+        # F04: public results name a handle; the signed link stays inside the task record.
+        url = ledger.signed_media_url(task_id, u)
+        if not url:
+            raise HTTPException(404, '结果不存在')
+        try:
+            async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
+                response = await client.get(url)
+        except httpx.HTTPError:
+            raise HTTPException(502, '原始结果暂时无法下载，请稍后重试或查询原任务。')
+        if not response.is_success:
+            raise HTTPException(502, '原始结果链接已失效或拒绝访问，请查询原任务恢复。')
+        return Response(response.content, media_type=response.headers.get('content-type') or 'application/octet-stream')
+
     @app.get('/api/canvas-native-tasks/capabilities')
     async def capabilities():
         return {'version': 1, 'kinds': ['llm', 'video'], 'get_dispatches': False,

@@ -74,24 +74,74 @@
     return String(value||fallback).replace(/https?:\/\/[^\s<>"']+/gi,'[链接已隐藏]').replace(/((?:api[-_]?key|authorization|access[-_]?token|token|secret)["']?\s*[=:]\s*["']?)(?:Bearer\s+)?[^\s,;"']+/gi,'$1[已隐藏]').replace(/Bearer\s+[A-Za-z0-9._~-]+/gi,'Bearer [已隐藏]').slice(0,800);
   }
   async function api(url,body){const r=await fetch(url,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(readable(d.detail||d.error,'RH 请求失败'));return d;}
-  rhUploadValueIfNeeded=async(value,node)=>{
+  rhUploadValueIfNeeded=async(value,node,kind='')=>{
     const text=String(value??'').trim();if(!text)return '';
-    if(!/^https?:\/\//i.test(text)&&!/^\/(?:output\/|assets\/|input\/|api\/storage-files\/)/.test(text))return text;
+    // Every site-relative path (outputs, uploads, asset versions) is a local file RH cannot read:
+    // upload it, or fail. RH file names such as "api/x.png" have no leading slash.
+    if(!/^https?:\/\//i.test(text)&&!text.startsWith('/'))return text;
     try{
-      const data=await api('/api/runninghub/upload-asset',{url:text,useWallet:rhUseWallet(node)});
+      const data=await api('/api/runninghub/upload-asset',{url:text,useWallet:rhUseWallet(node),kind});
       if(!data.data?.fileName)throw Error('RH 未返回 fileName');
       return data.data.fileName;
     }catch(error){throw Error('素材上传失败：'+readable(error.message,'无法上传素材'));}
   };
   const present=value=>value!==undefined&&value!==null&&String(value).trim()!=='';
+  // RH-NEW-01: a field the workbench set to "保留工作流原设置" is read-only and never sent, so the
+  // workflow keeps its own value; an exposed field sends its current value, 0 and false included.
+  const keeps=field=>!['image','video','audio'].includes(rhFieldKind(field))&&field.sourceFromUpstream===false;
+  const keptRows=fields=>fields.map(f=>`<div class="rh-keep-original" data-rh-keep="${escapeHtml(rhParamKey(f.nodeId,f.fieldName))}"><b>${escapeHtml(f.label||f.fieldName)}</b><span>保留工作流原设置（只读，不发送）</span></div>`).join('');
+  const promptFieldsOld=renderRhPromptFields,paramsOld=renderRhParams;
+  renderRhPromptFields=(container,node,fields)=>{
+    const kept=(fields||[]).filter(f=>keeps(f)&&rhFieldRole(f)==='prompt');
+    promptFieldsOld(container,node,(fields||[]).filter(f=>!keeps(f)));
+    if(container&&kept.length)container.insertAdjacentHTML('beforeend',keptRows(kept));
+  };
+  renderRhParams=(container,node,fields,media)=>{
+    const kept=(fields||[]).filter(f=>keeps(f)&&rhFieldRole(f)!=='prompt');
+    paramsOld(container,node,(fields||[]).filter(f=>!keeps(f)),media);
+    if(container&&kept.length){container.querySelector('.rh-empty')?.remove();container.insertAdjacentHTML('beforeend',keptRows(kept));}
+  };
+  // What will be sent and where each value comes from, before paying; media are named, not uploaded.
+  function effectiveParams(node){
+    const media=rhMediaSources(node);
+    return rhActiveFields(node).map(field=>{
+      const key=rhParamKey(field.nodeId,field.fieldName),kind=rhFieldKind(field),param=node.rhParams?.[key],label=`${field.label||field.fieldName}（${field.nodeId}.${field.fieldName}）`;
+      if(keeps(field))return `${label}：不发送，使用工作流里保存的值`;
+      const value=rhFieldValue(node,field,media);
+      const source=['image','video','audio'].includes(kind)?((param?.sourceFromUpstream??field.sourceFromUpstream)===false?'手动值':'连线素材，提交前上传')
+        :randomSeed(field)&&rhRandomActive(node,key)?'随机种子':param?.value!==undefined?'画布中填写':rhFieldRole(field)==='prompt'&&media?.prompt?'连线文本':'工作流默认值';
+      return `${label} = ${String(value)===''?'（空）':String(value)} · 来源：${source}`;
+    }).join('\n');
+  }
+  window.rhEffectiveParams=effectiveParams;
+  const bodyOld=renderRhBody;
+  renderRhBody=node=>{
+    const wrap=bodyOld(node);
+    if(wrap instanceof Element&&rhActiveFields(node).length){
+      const details=document.createElement('details');details.className='rh-effective';details.innerHTML='<summary>查看最终发送的参数</summary><pre></pre>';
+      details.addEventListener('toggle',()=>{if(details.open)details.querySelector('pre').textContent=effectiveParams(node);});
+      for(const event of ['pointerdown','mousedown','wheel'])details.addEventListener(event,e=>e.stopPropagation());
+      wrap.append(details);
+    }
+    return wrap;
+  };
   rhBuildNodeInfoList=async(node,media)=>{
-    const result=[];
-    for(const field of rhActiveFields(node)){
+    const result=[],fields=rhActiveFields(node),connected=media||rhMediaSources(node);
+    // F07: an unreadable order or a partial mapping would send a sample file instead of the user's.
+    for(const field of fields)if(['image','video','audio'].includes(rhFieldKind(field))&&order(field)===9999&&field.imageOrder!==undefined&&field.imageOrder!==null&&String(field.imageOrder).trim()!=='')
+      throw Error(`RH 素材序号无效（${rhRequiredLabel(field)}：${field.imageOrder}），请改成数字，未提交。`);
+    for(const kind of ['image','video','audio']){
+      const wanted=fields.filter(f=>rhFieldKind(f)===kind&&(node.rhParams?.[rhParamKey(f.nodeId,f.fieldName)]?.sourceFromUpstream??f.sourceFromUpstream)!==false&&(rhCurrentKind(node)!=='workflow'||f.required===true)).length;
+      const have=(connected?.[kind]||[]).filter(m=>m?.url).length;
+      if(have&&have<wanted)throw Error(`已连接 ${have} 个${{image:'图片',video:'视频',audio:'音频'}[kind]}素材，但有 ${wanted} 个字段需要；缺少的字段会改用 RH 示例素材，已阻止提交。请补齐素材，或在字段设置里改为手动值。`);
+    }
+    for(const field of fields){
+      if(keeps(field))continue;
       const kind=rhFieldKind(field);let value=rhFieldValue(node,field,media);
       if(randomSeed(field)&&rhRandomActive(node,rhParamKey(field.nodeId,field.fieldName)))seedRange(field);
       if(/seed|种子/i.test([field.fieldName,field.label].join(' '))&&typeof value==='number'&&!Number.isSafeInteger(value))throw Error('种子超出精确整数范围，请以字符串填写。');
       if(rhCurrentKind(node)==='workflow'&&kind==='image'&&field.required!==true&&!present(value))continue;
-      if(['image','video','audio'].includes(kind))value=await rhUploadValueIfNeeded(value,node);
+      if(['image','video','audio'].includes(kind))value=await rhUploadValueIfNeeded(value,node,kind);
       if(['number','slider'].includes(kind)&&present(value)){
         if(!Number.isFinite(Number(value)))throw Error('数值参数无效：'+rhRequiredLabel(field));
         // Preserve integer text beyond JS's exact range; RH accepts string values.

@@ -161,7 +161,10 @@
     if(!mentionMode(n)){
       if(n.type==='llm')return text;
       const position={};refs(n).forEach((r,i)=>{position[r.label]='参考'+(i+1);});
-      return text.replace(/参考\s*(\d+)/g,(all,k)=>position['参考'+k]||all);
+      // A number that belonged to a removed reference must not fall through to whatever is now
+      // at that position; numbers never given out (e.g. 参考1990) stay plain text.
+      const given=new Set(Object.values(n.studioRefNumbers||{}).map(String));
+      return text.replace(/参考\s*(\d+)/g,(all,k)=>position['参考'+k]||(given.has(k)?all+'（素材缺失）':all));
     }
     const count={image:0,video:0,audio:0},map={};for(const r of refs(n)){count[r.kind]++;map[r.mention]='@'+{image:'Image',video:'Video',audio:'Audio'}[r.kind]+' '+count[r.kind];}
     return text.replace(/@(图片|视频|音频)\s*(\d+)/g,(all,t,i)=>map['@'+t+i]||all+'（素材缺失）');
@@ -187,8 +190,11 @@
       const form=new FormData();for(const f of list)form.append('files',f);
       const response=await fetch('/api/ai/upload',{method:'POST',body:form});if(!response.ok)throw Error('素材上传失败，请重新选择文件。');
       const data=await response.json();pushUndo();
-      if(replace){
-        if(n.studioRefLabels?.[replace]&&data.files[0]){n.studioRefLabels[data.files[0].url]=n.studioRefLabels[replace];delete n.studioRefLabels[replace];}
+      if(replace&&data.files[0]){
+        // REF-01: the new file takes over the old one's number, @ label, role and place.
+        const next=data.files[0].url,order=refs(n).map(r=>r.url);
+        for(const map of [n.studioRefLabels,n.studioRefNumbers,n.studioRefRoles])if(map&&map[replace]!==undefined){map[next]=map[replace];delete map[replace];}
+        n.studioRefOrder=order.includes(replace)?order.map(u=>u===replace?next:u):order;
         n.studioRefs=(n.studioRefs||[]).filter(r=>r.url!==replace);n.studioExcludedRefs=[...(n.studioExcludedRefs||[]),replace];
       }
       n.studioRefs=[...(n.studioRefs||[]),...data.files];changed();
@@ -226,6 +232,10 @@
   function submissionError(n,text=prompt(n),sent=sentPrompt(n)){
     const s=spec(n);if(!s)return '模型参数尚未读取，请稍后重试。';
     if(s.supported===false)return s.note||'当前模型尚不支持生成。';
+    if(!mentionMode(n)&&n.type!=='llm'){
+      const missing=[...new Set([...sent.matchAll(/(参考\s*\d+)（素材缺失）/g)].map(m=>m[1]))];
+      if(missing.length)return `提示词中的${missing.join('、')}对应素材已移除，请撤销、重新关联素材或改写提示词后再生成。`;
+    }
     if(mentionMode(n)){
       if(sent.includes('（素材缺失）'))return '有 @ 引用的素材已移除，请重新关联素材。';
       const counts={Image:0,Video:0,Audio:0};for(const r of refs(n))counts[{image:'Image',video:'Video',audio:'Audio'}[r.kind]]++;
@@ -578,6 +588,6 @@
       }
     }catch{if(canvasId()===origin&&recovered===origin)recovered='';}
   },1500);
-  window.StudioStageOne={api,request,run,track,apply,changed,actions,canvasId,states,references:refs,getProviders:()=>apiProviders,getCapabilities:()=>capabilities,getJob:id=>jobs.get(id),isSupported:supported};
+  window.StudioStageOne={api,request,run,track,apply,changed,actions,canvasId,states,references:refs,submissionError,getProviders:()=>apiProviders,getCapabilities:()=>capabilities,getJob:id=>jobs.get(id),isSupported:supported};
   window.dispatchEvent(new Event('studio-stage-one-ready'));
 })();

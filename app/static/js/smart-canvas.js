@@ -2468,12 +2468,37 @@ function smartRunNeedsPrompt(sourceSettings=settings){
     if(sourceSettings.engine === 'comfy' && sourceSettings.comfyMode === 'enhance') return false;
     return true;
 }
+// F07: 0 is a real order and a missing order is null; anything else is NaN, which the request
+// builder rejects. Sorting never throws, so the editor still renders a broken schema.
+function rhImageOrder(field){
+    const raw = field?.imageOrder;
+    if(raw === undefined || raw === null || String(raw).trim() === '') return null;
+    return Number.isFinite(Number(raw)) ? Number(raw) : NaN;
+}
+function rhImageOrderRank(field){
+    const order = rhImageOrder(field);
+    return order === null || Number.isNaN(order) ? 9999 : order;
+}
+// Connected media must cover every field that takes it from upstream; otherwise a field
+// would silently fall back to the schema's sample file.
+function rhCheckMediaMapping(fields, media, upstream, label){
+    for(const field of fields){
+        if(['image','video','audio'].includes(rhFieldKind(field)) && Number.isNaN(rhImageOrder(field)))
+            throw new Error(`RH 素材序号无效（${label(field)}：${field.imageOrder}），请改成数字，未提交。`);
+    }
+    for(const kind of ['image','video','audio']){
+        const wanted = fields.filter(f => rhFieldKind(f) === kind && upstream(f)).length;
+        const connected = (media?.[kind] || []).filter(m => m?.url).length;
+        if(connected && connected < wanted)
+            throw new Error(`已连接 ${connected} 个${{image:'图片',video:'视频',audio:'音频'}[kind]}素材，但有 ${wanted} 个字段需要；缺少的字段会改用 RH 示例素材，已阻止提交。请补齐素材，或在字段设置里改为手动值。`);
+    }
+}
 function sortRunningHubFields(fields){
     return [...(fields || [])].sort((a, b) => {
         const ak = rhFieldKind(a), bk = rhFieldKind(b);
         if(ak === 'image' && bk === 'image'){
-            const ao = Number(a.imageOrder) || 9999;
-            const bo = Number(b.imageOrder) || 9999;
+            const ao = rhImageOrderRank(a);
+            const bo = rhImageOrderRank(b);
             if(ao !== bo) return ao - bo;
         }
         if(ak === 'image' && bk !== 'image') return -1;
@@ -3982,7 +4007,8 @@ async function rhBuildWorkflowRequestExtras(media, nodeInfoList, sourceSettings=
 }
 // RH-SMART-MANAGED-MEDIA: the same managed paths as the classic canvas. Local media is always
 // uploaded and referenced by its RH fileName; only a URL field keeps a public URL as is.
-const RH_MANAGED_MEDIA_PATH = /^\/(?:output\/|assets\/|input\/|api\/storage-files\/)/;
+// Any site-relative path (outputs, uploads, asset versions) is a local file RH cannot read.
+const RH_MANAGED_MEDIA_PATH = /^\//;
 function rhFieldTakesUrl(field){
     return /url/i.test(String(field?.fieldName || ''));
 }
@@ -3998,7 +4024,7 @@ async function rhUploadValueIfNeeded(value, sourceSettings=settings, field=null)
         const res = await fetch('/api/runninghub/upload-asset', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({url:text, useWallet:(sourceSettings || settings).rhPayment === 'wallet'})
+            body:JSON.stringify({url:text, useWallet:(sourceSettings || settings).rhPayment === 'wallet', kind:field ? rhFieldKind(field) : ''})
         });
         data = await res.json().catch(() => ({}));
         if(!res.ok || data.success === false) throw failed(apiErrorMessage(data, tr('smart.rhUploadFailed')));
@@ -4036,10 +4062,13 @@ async function rhBuildNodeInfoList(media, sourceSettings=settings, randomValues=
     const indexes = rhFieldIndexes(fields);
     const mode = rhCurrentKind(sourceSettings);
     const explicitParams = sourceSettings?.rhParams || {};
+    // Workflow inputs that are optional are pruned when empty, so only required ones count there.
+    rhCheckMediaMapping(fields, media, f => (explicitParams[rhParamKey(f.nodeId, f.fieldName)]?.sourceFromUpstream ?? f.sourceFromUpstream) !== false && (mode !== 'workflow' || f.required === true), rhRequiredLabel);
     for(const field of fields){
         const kind = rhFieldKind(field);
         const key = rhParamKey(field.nodeId, field.fieldName);
-        if(mode === 'workflow' && field.sourceFromUpstream === false && !['image','video','audio'].includes(kind)) continue;
+        // RH-NEW-01: kept fields are never sent, for apps as well as workflows; the editor shows them read-only.
+        if(rhKeepsOriginal(field)) continue;
         if(mode === 'workflow' && !Object.prototype.hasOwnProperty.call(explicitParams, key) && rhLooksLikeComplexDefault(field) && !['image','video','audio'].includes(kind) && rhFieldRole(field) !== 'prompt') continue;
         if(mode === 'workflow' && ['image','video','audio'].includes(kind)){
             const idx = indexes[key] || 0;
@@ -4053,10 +4082,14 @@ async function rhBuildNodeInfoList(media, sourceSettings=settings, randomValues=
     }
     return result;
 }
+function rhKeepsOriginal(field){
+    return !['image','video','audio'].includes(rhFieldKind(field)) && field?.sourceFromUpstream === false;
+}
 function renderRhSettingField(field){
     const key = rhParamKey(field.nodeId, field.fieldName);
     const kind = rhFieldRole(field);
     const label = field.label || field.fieldName || 'Field';
+    if(rhKeepsOriginal(field)) return `<div class="rh-keep-original" data-rh-keep="${escapeHtml(key)}"><b>${escapeHtml(label)}</b><span>保留工作流原设置（只读，不发送）</span></div>`;
     const value = rhParamValue(field, null);
     const options = rhExtractFieldOptions(field);
     if(kind === 'boolean'){
@@ -5422,7 +5455,7 @@ function syncRunButtonState(node=selectedNode()){
 let smartServerNodeBase = new Map();
 let smartMergeConflicts = [];
 // Node content edited on the canvas: when both sides changed it, the user chooses.
-const SMART_CONFLICT_FIELDS = {text:'提示词', title:'标题', promptSeparator:'分段符'};
+const SMART_CONFLICT_FIELDS = {text:'提示词', title:'标题', promptSeparator:'分段符', llmInstruction:'LLM 指令', llmSystemPrompt:'LLM 系统提示'};
 // This page's composer drafts and unsubmitted receipt: the local draft wins, with a notice.
 const SMART_DRAFT_KEYS = ['promptDraftHtml','promptDraftText','promptDraftTouched','studioPrompt','userInput','systemPrompt','audioPrompt','studioSubmission'];
 function smartStableJson(value){
@@ -13880,7 +13913,11 @@ function appendImagesToSmartNode(uploaded, targetId='', opts={}){
 }
 async function handleFiles(files, targetId='', opts={}){
     try {
-        const fileList = [...(files || [])].filter(isSupportedUploadFile).slice(0, SMART_UPLOAD_MAX);
+        const all = [...(files || [])];
+        const fileList = all.filter(isSupportedUploadFile).slice(0, SMART_UPLOAD_MAX);
+        // F02: skipped files are named instead of disappearing; scripts belong on the classic canvas.
+        const skipped = all.filter(file => !isSupportedUploadFile(file)).map(file => file.name);
+        if(skipped.length) toast(`智能画布只导入图片、视频和音频，已跳过：${skipped.join('、')}。文本或剧本请在经典画布中导入。`);
         if(!fileList.length) return;
         const uploaded = await uploadFiles(fileList);
         if(!uploaded.length) return;

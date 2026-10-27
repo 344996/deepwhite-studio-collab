@@ -2914,6 +2914,7 @@ class RunningHubWorkflowSubmitRequest(BaseModel):
 class RunningHubUploadAssetRequest(BaseModel):
     url: str = ""
     useWallet: bool = False
+    kind: str = ""
 
 class JimengHelpRequest(BaseModel):
     command: str = ""
@@ -2944,7 +2945,7 @@ class RunningHubWorkflowConfigField(BaseModel):
     min: Any = ""
     max: Any = ""
     step: Any = ""
-    imageOrder: int = 0
+    imageOrder: Any = None
     required: bool = False
 
 class RunningHubWorkflowConfig(BaseModel):
@@ -10164,7 +10165,7 @@ def runninghub_local_asset_path(url):
         clean = urllib.parse.unquote(text.split("?", 1)[0]).replace("\\", "/")
         rel = clean[len("/assets/output/"):]
         root = OUTPUT_OUTPUT_DIR
-    elif text.startswith(("/output/", "/assets/", "/api/storage-files/")):
+    elif text.startswith(("/output/", "/assets/", "/api/storage-files/", "/api/studio/assets/")):
         return output_file_from_url(text)
     else:
         return None
@@ -13101,10 +13102,18 @@ async def runninghub_upload_asset(payload: RunningHubUploadAssetRequest):
             content = response.content
             content_type = response.headers.get("content-type") or content_type
             filename = os.path.basename(urllib.parse.urlsplit(source_url).path) or filename
+        elif source_url.startswith("/"):
+            raise HTTPException(status_code=400, detail="本机素材文件不存在或无法读取，未上传。")
         else:
             raise HTTPException(status_code=400, detail=f"不支持的素材地址：{source_url}")
         if not content:
             raise HTTPException(status_code=400, detail="素材为空，无法上传到 RunningHub")
+        # A known media type must match the field; unlabelled downloads are left to RH.
+        expected = payload.kind if payload.kind in ("image", "video", "audio") else ""
+        actual = content_type.split(";", 1)[0].strip().lower()
+        if expected and actual.split("/", 1)[0] in ("image", "video", "audio") and not actual.startswith(expected + "/"):
+            label = {"image": "图片", "video": "视频", "audio": "音频"}[expected]
+            raise HTTPException(status_code=400, detail=f"素材类型不符：此字段需要{label}，文件是 {actual}，未上传。")
         upload_url = runninghub_endpoint_url(provider, "/task/openapi/upload")
         files = {"file": (filename, content, content_type)}
         data = {"apiKey": api_key, "fileType": "input"}
@@ -19134,6 +19143,17 @@ def remove_runninghub_workflow_from_provider(workflow_id: str):
 def runninghub_workflow_store_key(workflow_id: str) -> str:
     return str(workflow_id or "").strip()
 
+def runninghub_image_order(raw, fallback):
+    """F07: 0 is an order. A missing order stays None (it used to become 0 and outrank 1 and 2);
+    an unreadable one is kept as text so the request builder can reject it."""
+    value = next((v for v in (raw.get("imageOrder"), raw.get("image_order"), fallback.get("imageOrder")) if v not in (None, "")), None)
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return str(value)
+
 def runninghub_normalize_field(raw, fallback=None):
     fallback = fallback or {}
     if hasattr(raw, "dict"):
@@ -19179,7 +19199,7 @@ def runninghub_normalize_field(raw, fallback=None):
         "min": raw.get("min", fallback.get("min", "")),
         "max": raw.get("max", fallback.get("max", "")),
         "step": raw.get("step", fallback.get("step", "")),
-        "imageOrder": int(next((value for value in (raw.get("imageOrder"), raw.get("image_order"), fallback.get("imageOrder"), 0) if value not in (None, "")), 0)),
+        "imageOrder": runninghub_image_order(raw, fallback),
         "required": bool(raw.get("required", fallback.get("required", False))),
     }
 

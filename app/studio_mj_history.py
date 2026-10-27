@@ -25,8 +25,13 @@ def begin(request,params):
             'model':model,'kind':'chat' if request.action=='describe' else 'video' if request.action=='video' else 'image',
             'prompt':params.get('prompt',''),'params':params,'references':[],'count':1},
         'task_ids':[],'outputs':[],'text':'','children':[]}
+    if request.attempt_id:record['attempt_id']=request.attempt_id
     save(record)
     return record
+
+def find_attempt(attempt_id):
+    if not attempt_id:return None
+    return next((r for r in items() if r.get('attempt_id')==attempt_id),None)
 
 def update(record,result):
     record['status']={'pending':'running','modal':'modal'}.get(result['status'],result['status'])

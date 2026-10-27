@@ -23,6 +23,8 @@ import studio_comfy
 from studio_capabilities import profile, parameters
 
 TERMINAL={'succeeded','failed','uncertain'}
+# Suno music SKUs: the path decides billing, the body always says model=suno.
+SUNO_MUSIC=('suno','suno-music','suno-generation')
 WORKERS={}
 POLL_SECONDS=4
 
@@ -60,6 +62,36 @@ def save(job):
     job['updated_at']=time.time()
     p=directory()/f'{job["id"]}.json';tmp=p.with_suffix('.tmp')
     tmp.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8');os.replace(tmp,p)
+    # A finished job never sends its references again, so their working URLs are not kept.
+    if job['status'] in TERMINAL:private_refs_path(job['id']).unlink(missing_ok=True)
+
+
+def private_dir():
+    """REF-03: short-lived credentials (signed reference and upload URLs), kept apart from job files."""
+    p=directory()/'private';p.mkdir(parents=True,exist_ok=True);return p
+
+
+def private_refs_path(job_id):return private_dir()/f'{job_id}.refs.json'
+
+
+def split_private_refs(job_id,references):
+    """Job files keep a redacted URL; the caller's working URL waits privately until the job ends."""
+    from studio_legacy_tasks import redact_signed_url
+    private={}
+    for i,ref in enumerate(references):
+        url=str(ref.get('url') or '')
+        if url.startswith(('http://','https://')) and redact_signed_url(url)!=url:
+            private[str(i)]=url;ref['url']=redact_signed_url(url)
+    if private:
+        p=private_refs_path(job_id);tmp=p.with_suffix('.tmp')
+        tmp.write_text(json.dumps(private),encoding='utf-8');os.replace(tmp,p)
+    return references
+
+
+def working_refs(job):
+    p=private_refs_path(job['id'])
+    private=json.loads(p.read_text(encoding='utf-8')) if p.exists() else {}
+    return [{**r,'url':private.get(str(i),r['url'])} for i,r in enumerate(job['request']['references'])]
 
 
 def connection(provider_id,expected=None):
@@ -220,11 +252,15 @@ def checked(payload):
         refs=images
     if payload.kind=='audio' and (refs or payload.frame_mode):raise HTTPException(400,'音频生成暂不支持参考素材。')
     if payload.kind=='audio' and payload.model=='suno-sounds':
+        # F08: sound effects are their own catalogue entry (POST /music/generations/sounds).
+        # Older catalogues listed only a music model, which still enables them.
         saved=catalog.load_store().get(payload.provider_id,{})
         known={item['id'] for item in saved.get('models',[]) if item.get('kind')=='audio' and catalog.active(item)}
-        configured=next((m for m in ('suno','suno-music') if m in known),None)
-        if configured:catalog.resolve_model(payload.provider_id,configured,'audio',images,videos,audios,False if payload.frame_mode else payload.multimodal)
-        elif saved:raise HTTPException(400,'请先在模型目录中启用 Suno 音乐模型。')
+        if saved:
+            if core.get_api_provider(payload.provider_id).get('base_url','').rstrip('/')!=saved.get('base_url','').rstrip('/'):
+                raise HTTPException(400,'API 地址已修改，请重新同步模型后生成。')
+            if 'suno-sounds' not in known and not known.intersection(SUNO_MUSIC):
+                raise HTTPException(400,'请先在模型目录中启用 Suno 音效模型（suno-sounds）。')
         raw='suno-sounds'
     else:
         raw=catalog.resolve_model(payload.provider_id,payload.model,payload.kind,images,videos,audios,False if payload.frame_mode else payload.multimodal)
@@ -277,7 +313,7 @@ async def upload(client,base,headers,ref):
     path=Path(core.output_file_from_url(url));size=path.stat().st_size
     if size>50*1024*1024:raise HTTPException(400,'单个参考文件不能超过 50 MB。')
     cache_key=hashlib.sha256(f'{base}|{headers["Authorization"]}|{path}|{size}|{path.stat().st_mtime_ns}'.encode()).hexdigest()
-    cp=directory()/f'upload-{cache_key}.cache'
+    cp=private_dir()/f'upload-{cache_key}.cache'
     if cp.exists():
         cached=json.loads(cp.read_text());
         if cached['expires']>time.time():return cached['url']
@@ -318,7 +354,7 @@ def media_body(model,kind,prompt,params,refs,frame_mode=False):
 def audio_body(model,prompt,params):
     """Build only the explicitly documented DeepWhite speech/music/sound requests."""
     values={k:v for k,v in params.items() if k!='channel' and v not in ('',None)}
-    if model in ('suno','suno-music'):
+    if model in SUNO_MUSIC:
         body={'model':'suno','prompt':prompt};body.update(values)
         return '/music/generations',body
     if model=='suno-sounds':
@@ -428,7 +464,7 @@ async def execute(job_id):
                     job.update(status='uncertain',error='提交结果尚不确定，请先在 API 网站核对任务与账单，避免重复扣费。');save(job);return
                 if child['status']=='queued':
                     refs=[]
-                    for r in req['references']:refs.append({**r,'url':await upload(client,base,headers,r)})
+                    for r in working_refs(job):refs.append({**r,'url':await upload(client,base,headers,r)})
                     if req['kind']=='chat':
                         content=[{'type':'text','text':req['prompt']}]+[{'type':'image_url','image_url':{'url':r['url']}} for r in refs]
                         messages=([{'role':'system','content':req['system_prompt']}] if req['system_prompt'] else [])+[m for m in req['messages'] if m.get('role') in ('user','assistant')]+[{'role':'user','content':content if refs else req['prompt']}]
@@ -457,6 +493,11 @@ async def execute(job_id):
                             if isinstance(failed_body,dict) and safe_id(failed_body.get('id')):child['upstream_response_id']=safe_id(failed_body['id'])
                             response.raise_for_status()
                         data=response.json()
+                    except (httpx.ConnectError,httpx.ConnectTimeout):
+                        # The connection never opened, so the platform cannot have this request:
+                        # it is "not submitted", and continuing later sends it exactly once.
+                        child['status']='queued'
+                        job.update(status='paused',error='网络未连接，请求没有发出，未产生费用；恢复网络后点击“继续”即可发送。');save(job);return
                     except Exception:
                         if child['status']=='submitting':job['status']='uncertain'
                         raise
@@ -483,7 +524,7 @@ async def execute(job_id):
                     child.update(upstream_id=str(task_id),status='running');save(job)
                     native_parent_receipt(job)
                 if req['kind']=='audio':
-                    endpoint='/music/tasks/' if job['resolved_model'] in ('suno','suno-music','suno-sounds') else '/audio/generations/'
+                    endpoint='/music/tasks/' if job['resolved_model'] in (*SUNO_MUSIC,'suno-sounds') else '/audio/generations/'
                 else:
                     endpoint='/image/generations/' if req['kind']=='image' else '/videos/'
                 try:
@@ -526,7 +567,8 @@ def public(job):
     diagnosis=''
     if job['status']=='failed' and '400' in job.get('error','') and job['resolved_model']=='deepwhiteai-image-g-v2.5-lowprice' and len(job['request']['prompt'].strip())<5:
         diagnosis='这次提示词不足 5 个字符；此模型实际要求 5–5000 个字符。请补充描述后重新生成。'
-    visible={k:v for k,v in job.items() if k!='dreamina_account_binding'}
+    from studio_legacy_tasks import redact_signed
+    visible=redact_signed({k:v for k,v in job.items() if k!='dreamina_account_binding'})
     return {**visible,'diagnosis':diagnosis,'outputs':[o for child in job['children'] for o in child.get('outputs',[])],
             'text':'\n\n'.join(child['text'] for child in job['children'] if child.get('text')),
             'task_ids':[child['upstream_id'] for child in job['children'] if child.get('upstream_id')]}
@@ -539,6 +581,7 @@ async def submit(payload):
         if job['fingerprint']!=hashlib.sha256(payload.model_dump_json().encode()).hexdigest():raise HTTPException(409,'此提交编号已经使用，请查询原任务。')
         return public(job)
     req,raw,base=checked(payload)
+    req['references']=split_private_refs(payload.request_id,req['references'])
     job={'id':payload.request_id,'created_at':time.time(),'status':'queued','error':'','request':req,'resolved_model':raw,'base_url':base,
          'fingerprint':hashlib.sha256(payload.model_dump_json().encode()).hexdigest(),
          'children':[{'status':'queued'} for _ in range(payload.count if payload.kind=='image' else 1)]}
@@ -558,7 +601,7 @@ def install(app):
                 if entry['kind']=='audio':spec['catalog_enabled']=catalog.active(entry)
                 providers[pid][entry['id']]=spec
         for pid,saved in catalog.load_store().items():
-            if any(item.get('kind')=='audio' and item.get('id') in ('suno','suno-music') and catalog.active(item) for item in saved['models']):
+            if 'suno-sounds' not in providers.get(pid,{}) and any(item.get('kind')=='audio' and item.get('id') in SUNO_MUSIC and catalog.active(item) for item in saved['models']):
                 providers.setdefault(pid,{})['suno-sounds']=profile('suno-sounds','audio')
         providers[studio_comfy.PROVIDER]={studio_comfy.MODEL:studio_comfy.spec()}
         import studio_dreamina
@@ -575,7 +618,8 @@ def install(app):
             job=json.loads(path.read_text(encoding='utf-8'))
             if not canvas_id or job['request']['canvas_id']==canvas_id:jobs.append(public(job))
         from studio_mj_history import items as mj_items
-        jobs.extend(mj_items(canvas_id))
+        from studio_legacy_tasks import redact_signed
+        jobs.extend(redact_signed(record) for record in mj_items(canvas_id))
         return {'items':sorted(jobs,key=lambda j:j['created_at'],reverse=True)}
 
     @app.get('/api/studio/generations/{job_id}')

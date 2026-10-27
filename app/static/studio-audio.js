@@ -2,7 +2,7 @@
 (() => {
   const bridge=window.StudioStageOne;
   if(!bridge)return;
-  const css=document.createElement('link');css.rel='stylesheet';css.href='/static/studio-audio.css?v=2';document.head.append(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='/static/studio-audio.css?v=3';document.head.append(css);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const CHANNELS={speech:'语音',music:'音乐',sound:'音效'};
   let capabilities={};
@@ -20,12 +20,26 @@
   function setModel(node,providerId,model,channel){
     node.apiProvider=providerId;node.model=model;node.studioParams={...defaults(capabilities[providerId]?.[model]),channel};node.studioParamsModel=model;
   }
-  function create(point,channel='speech',source=null){
-    const selectedChannel=CHANNELS[channel]?channel:'speech';
+  // F09: a failed create always says why, in a notice that stays visible in every layout.
+  function notice(message){
+    window.setStatus?.(message);
+    let el=document.getElementById('studioAudioNotice');
+    if(!el){el=document.createElement('div');el.id='studioAudioNotice';el.className='studio-audio-notice';el.setAttribute('role','status');document.body.append(el);}
+    el.textContent=message;el.hidden=false;clearTimeout(el._timer);el._timer=setTimeout(()=>{el.hidden=true;},6000);
+  }
+  function unavailable(channel){
+    if(!deepProviders().length)return '没有可用的音频模型：音频生成目前只支持 DeepWhite API，请先在设置中添加并保存 DeepWhite 渠道。';
+    return `没有可用的${CHANNELS[channel]||'配音、音乐或音效'}模型：请在模型管理中同步并启用对应模型（例如音效 suno-sounds），再添加音频节点。`;
+  }
+  // Without an explicit channel, start in the last used one that still has a model, else the first that has one.
+  const firstChannel=()=>[...Object.keys(recent),...Object.keys(CHANNELS)].find(ch=>CHANNELS[ch]&&providers(ch).length)||'';
+  function create(point,channel='',source=null){
+    const selectedChannel=CHANNELS[channel]?channel:firstChannel();
+    if(!selectedChannel||!providers(selectedChannel).length){notice(unavailable(channel));return null;}
     const available=providers(selectedChannel),saved=recent[selectedChannel];
     const pid=available.some(p=>p.id===saved?.provider_id)?saved.provider_id:available[0]?.id||'';
     const model=models(pid,selectedChannel).some(item=>item.id===saved?.model)?saved.model:firstModel(pid,selectedChannel);
-    if(!model){window.setStatus?.('此频道没有已启用且已核对的 DeepWhite 音频模型。');return null;}
+    if(!model){notice(unavailable(selectedChannel));return null;}
     const p=point||window.defaultPoint?.(150,50)||{x:0,y:0};
     const node=window.addNode({id:window.uid('audio'),type:'audio',x:p.x,y:p.y,w:400,apiProvider:pid,model,studioTitle:CHANNELS[selectedChannel],studioParams:{...defaults(capabilities[pid][model]),channel:selectedChannel},studioParamsModel:model,audioPrompt:'',inputs:[],running:false});
     if(source)Object.assign(node,{apiProvider:source.provider_id,model:source.model,audioPrompt:source.prompt,studioParams:{...source.params},studioParamsModel:source.model});
@@ -56,6 +70,8 @@
     const spec=capabilities[node.apiProvider]?.[node.model];
     ui.innerHTML=`<label>生成频道<select data-channel aria-label="生成频道">${Object.entries(CHANNELS).map(([id,name])=>`<option value="${id}">${name}</option>`).join('')}</select></label><label>API 平台<select data-provider aria-label="API 平台">${providerOptions.join('')||'<option value="" disabled>当前频道没有可用平台</option>'}</select></label><label>生成模型<select data-model aria-label="生成模型">${modelOptions.join('')||'<option value="" disabled>当前频道没有可用模型</option>'}</select></label><label class="studio-audio-prompt">${channel==='speech'?'要朗读的文本':channel==='sound'?'音效描述':'音乐描述'}<textarea data-prompt maxlength="5000" placeholder="${channel==='speech'?'输入要转换成语音的文字':'描述希望生成的声音'}"></textarea></label><div class="studio-audio-fields"></div><small class="studio-audio-note">${esc(spec?.catalog_enabled===false?'此平台或模型当前已停用；原设置已保留。':!spec?'此模型当前不可用；原设置已保留。':spec.note||'请确认模型参数与平台账单；生成会提交一次 API 任务。')}</small><button type="button" class="studio-audio-run">生成${CHANNELS[channel]}</button><div class="studio-audio-job" aria-live="polite"></div><details class="studio-audio-snapshot"><summary>查看请求快照与引用素材</summary><pre></pre></details>`;
     const channelSelect=ui.querySelector('[data-channel]');channelSelect.value=channel;
+    // A channel without models cannot be chosen; it used to be selectable and then do nothing.
+    for(const option of channelSelect.options)if(option.value!==channel&&!providers(option.value).length){option.disabled=true;option.textContent+='（无可用模型）';}
     const providerSelect=ui.querySelector('[data-provider]');providerSelect.value=node.apiProvider;
     const modelSelect=ui.querySelector('[data-model]');modelSelect.value=node.model;
     const prompt=ui.querySelector('[data-prompt]');prompt.value=node.audioPrompt||'';

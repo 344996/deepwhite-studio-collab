@@ -45,7 +45,7 @@ def profile(mid,kind):
         elif m in ('mureka-v8-bgm','mureka-v9-bgm'):
             p.update(channel='music',prompt_min=0,prompt_max=2048)
             f.update(n=option('生成数量',[1,2,3],2),instrumental_id={'label':'伴奏模板 ID','type':'text','max_length':120})
-        elif m in ('suno','suno-music'):
+        elif m in ('suno','suno-music','suno-generation'):
             p.update(channel='music',prompt_min=1,prompt_max=5000)
             f.update(version=option('Suno 版本',['v3.5','v4','v4.5','v4.5+','v4.5-all','v5','v5.5'],'v5'),
                      custom=option('使用自定义歌词',[False,True],False),instrumental=option('纯音乐',[True,False],True),
