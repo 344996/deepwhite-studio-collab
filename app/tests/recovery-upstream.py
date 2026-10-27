@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==')
 LOCK = threading.Lock()
 STATE = {'posts': [], 'polls': [], 'uploads': [], 'media': [],
-         'mode': {'post': 'ok', 'poll': 'ok', 'upload': 'ok', 'media': 'ok', 'mj': 'ok'}}
+         'mode': {'post': 'ok', 'poll': 'ok', 'upload': 'ok', 'media': 'ok', 'mj': 'ok', 'rh': 'ok'}}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -57,6 +57,13 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.endswith('/files/upload'):
             if self.behave('upload', lambda: STATE['uploads'].append(len(body))):
                 self.reply({'data': {'url': 'https://cdn.recovery.invalid/upload/%d.png' % len(STATE['uploads']), 'expires_in': 3600}})
+            return
+        if self.path.endswith('/task/openapi/outputs'):
+            task = json.loads(body or b'{}').get('taskId', '')
+            return self.reply({'code': 0, 'msg': 'success', 'data': [{'fileUrl': 'https://cdn.recovery.invalid/media/%s.png' % task, 'fileType': 'png'}]})
+        if self.path.endswith('/task/openapi/ai-app/run'):
+            if self.behave('rh', lambda: STATE['posts'].append({'path': self.path, 'prompt': body.decode('utf-8', 'replace')})):
+                self.reply({'code': 0, 'msg': 'success', 'data': {'taskId': 'rh-%d' % len(STATE['posts'])}})
             return
         if '/midjourney/' in self.path:
             if self.behave('mj', lambda: STATE['posts'].append({'path': self.path})):

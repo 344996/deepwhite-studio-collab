@@ -299,12 +299,12 @@
   }
   function addMenu(anchor){const r=anchor?.getBoundingClientRect();openCreateMenu(r?r.right+10:innerWidth/2,r?r.top:innerHeight/2);menuPoint=defaultPoint(-180,-100);}  function search(){
     if(!canvas)return;const origin=canvas,d=el('dialog','v2-search-dialog'),h=el('header'),heading=el('strong','','查找节点'),close=button('关闭查找','x',()=>d.close()),input=el('input'),list=el('div','v2-search-results');
-    input.type='search';input.placeholder='搜索名称、提示词或模型';input.setAttribute('aria-label','搜索画布节点');h.append(heading,close);d.append(h,input,list);d.setAttribute('aria-label','查找画布节点');
-    const draw=()=>{list.replaceChildren();const q=input.value.trim().toLowerCase(),items=nodes.filter(n=>[title(n),n.studioPrompt,n.text,n.model].join(' ').toLowerCase().includes(q));
+    input.type='search';input.placeholder='搜索名称、提示词或模型';input.setAttribute('aria-label','搜索画布节点');const kind=el('select');kind.setAttribute('aria-label','按类型筛选');for(const [value,label] of [['','全部类型'],['prompt','文本'],['llm','大模型'],['image','图片素材'],['generator','图片生成'],['video','视频'],['audio','音频'],['runninghub','RH 工作流'],['output','结果']])kind.add(new Option(label,value));h.append(heading,close);d.append(h,input,kind,list);d.setAttribute('aria-label','查找画布节点');
+    const draw=()=>{list.replaceChildren();const q=input.value.trim().toLowerCase(),items=nodes.filter(n=>(!kind.value||n.type===kind.value)&&[title(n),n.studioPrompt,n.text,n.model].join(' ').toLowerCase().includes(q));
       if(!items.length)list.append(el('p','','没有找到匹配节点'));
       for(const n of items.slice(0,100)){const b=el('button','v2-search-result'),label=el('strong','',title(n)),meta=el('small','',n.model||n.type);b.type='button';b.append(label,meta);b.onclick=()=>{if(canvas!==origin||!nodes.includes(n)){d.close();return;}selected.clear();selected.add(n.id);refreshSelectionVisuals();focus([n.id],false);d.close();const card=nodesEl.querySelector(`[data-id="${CSS.escape(n.id)}"]`);card?.classList.add('v2-located');setTimeout(()=>card?.classList.remove('v2-located'),800);};list.append(b);}
     };
-    input.oninput=draw;escapeCloses(d);d.onclose=()=>d.remove();document.body.append(d);d.showModal();draw();input.focus();
+    input.oninput=draw;kind.onchange=draw;escapeCloses(d);d.onclose=()=>d.remove();document.body.append(d);d.showModal();draw();input.focus();
   }
   function help(){
     const d=el('dialog','v2-help-dialog');d.setAttribute('aria-label','画布快捷键');const head=el('header'),title=el('strong','','更顺手地创作');head.append(title,button('关闭快捷键','x',()=>d.close()));d.append(head);
@@ -335,6 +335,9 @@
     const fit=button('适应全部节点 · Shift+1','maximize',()=>focus(nodes.map(n=>n.id))),map=button('显示或隐藏导航地图','map',()=>{const m=document.getElementById('minimap');m.hidden=!m.hidden;map.setAttribute('aria-pressed',String(!m.hidden));});map.setAttribute('aria-pressed','true');
     wheelButton=button('滚轮模式','mouse',()=>setWheelMode(wheelMode==='pan'?'zoom':'pan'));wheelButton.id='studioV2Wheel';setWheelMode(wheelMode);
     bottom.append(zoomOut,zoomLabel,zoomIn,el('span','v2-separator'),fit,map,wheelButton,button('快捷键帮助','keyboard',help));document.body.append(bottom);
+    // A mouse click must not leave focus here: Space would then press the button again instead of
+    // panning the canvas. Keyboard activation (detail 0) keeps focus for keyboard users.
+    bottom.addEventListener('click',e=>{if(e.detail>0)e.target.closest('button')?.blur();});
     selectionActions=stop(el('div','v2-selection-actions'));selectionActions.id='studioV2Selection';selectionActions.hidden=true;selectionCount=el('span','v2-selection-count');
     const ungroupButton=button('解组','ungroup',ungroup);ungroupButton.dataset.ungroup='';selectionActions.append(selectionCount,button('定位选中节点','focus',()=>focus([...selected])),button('复制选中节点','copy-plus',duplicate),button('创作分组','group',group),ungroupButton);document.body.append(selectionActions);
     empty=stop(el('section','v2-board-empty'));empty.innerHTML='<span class="v2-empty-mark">✦</span><h1>让想法，在这里展开</h1><p>放入一段文字、一张图片，或从第一个生成节点开始。</p>';

@@ -25,6 +25,9 @@ def read_state():
 
 async def upstream(provider_id,method,suffix,data=None,action=''):
     state=read_state()
+    if state.get('offline'):
+        # What the real adapter raises when the connection never opens.
+        raise mj.NotSubmitted(503,'网络未连接，MJ 请求没有发出，未产生费用；恢复网络后可以重新生成。')
     if method=='POST':
         state['posts'].append({'suffix':suffix,'prompt':(data or {}).get('prompt','')});task='mj-fake-%d'%len(state['posts'])
     else:

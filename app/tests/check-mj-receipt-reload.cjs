@@ -75,6 +75,22 @@ async function main(){
    assert.equal(upstream().posts.length,2);
    assert.equal((await live(page2)).task,'mj-fake-2');
   });
+  const third=await makeCanvas('mj offline');
+  const page3=await h.newPage();await open(page3,third);
+  const statePath=path.join(h.runtime,'fake-mj-upstream.json');
+  await check('offline: the node says the request was not sent and can be generated again',async()=>{
+   const before=upstream().posts.length;
+   fs.writeFileSync(statePath,JSON.stringify({...upstream(),offline:true}));
+   await page3.evaluate(()=>{runGenerator('g1');});
+   await waitFor(page3,()=>{const n=nodes.find(x=>x.id==='g1');return n&&!n.running&&n.studioMjStatus&&n.studioMjStatus!=='submitting';});
+   const n=await live(page3);
+   assert.equal(n.status,'failed','status: '+JSON.stringify(n));assert.match(n.state,/没有发出/);
+   assert.equal(upstream().posts.length,before);
+   fs.writeFileSync(statePath,JSON.stringify({...upstream(),offline:false}));
+   await page3.evaluate(()=>{runGenerator('g1');});
+   for(let i=0;i<40&&upstream().posts.length===before;i++)await delay(100);
+   assert.equal(upstream().posts.length,before+1);
+  });
   assert.deepEqual(h.errors,[]);assert.deepEqual(h.external,[]);
  }catch(e){console.error(h.log().slice(-2000));throw e;}
  finally{await h.stop();}

@@ -160,8 +160,16 @@ async def upstream(provider_id, method, suffix, data=None, action=''):
             result=normalize(response.json(), action)
             # Never reflect upstream credentials even if an upstream error echoes its request.
             return json.loads(json.dumps(result,ensure_ascii=False).replace(key,'[redacted]'))
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        # Only a submit that never connected is "not sent"; a failed query keeps the task.
+        if method!='POST':raise HTTPException(502,'MJ 网络响应异常。若已提交，请查询任务记录，避免重复提交。')
+        raise NotSubmitted(503,'网络未连接，MJ 请求没有发出，未产生费用；恢复网络后可以重新生成。')
     except (httpx.HTTPError, ValueError):
         raise HTTPException(502,'MJ 网络响应异常。若已提交，请查询任务记录，避免重复提交。')
+
+
+class NotSubmitted(HTTPException):
+    """The connection never opened, so the platform cannot have the request."""
 
 
 def registry_path(): return Path(core.DATA_DIR)/'studio_mj_tasks.json'
@@ -274,6 +282,9 @@ async def submit(request):
             record['registry_error']='任务查询索引保存失败，原任务编号已保存在历史记录。'
             save(record)
         return await archive_result(result,record)
+    except NotSubmitted as exc:
+        save_result(record,{'status':'failed','error':exc.detail})
+        raise
     except Exception:
         save_result(record,{'status':'uncertain','error':'提交结果待核对，请先查看平台记录，勿重复提交。'})
         raise

@@ -1428,9 +1428,15 @@ def mutate_static_runninghub_provider(mutator):
     changed = mutator(provider)
     if changed is False:
         return False
-    with open(STATIC_RUNNINGHUB_API_PROVIDERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(raw, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    # Only a mirror of the user's data folder, which is already saved. An installed copy may
+    # live in a read-only folder (Program Files); that must not fail the user's save.
+    try:
+        with open(STATIC_RUNNINGHUB_API_PROVIDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(raw, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+    except OSError as exc:
+        print(f"RunningHub 模板未更新（程序目录不可写，用户数据已保存）: {exc}")
+        return False
     return True
 
 def sync_runninghub_provider_workflows_to_static_template(provider):
@@ -10287,12 +10293,25 @@ def runninghub_safe_media_error(detail, api_key=""):
     text = re.sub(r'Bearer\s+[A-Za-z0-9._~-]+', 'Bearer [已隐藏]', text, flags=re.I)
     return text[:800] or "RunningHub 上传失败"
 
+_LOG_SECRET_KEY = re.compile(r"^(authorization|api[-_]?key|apikey|x-api-key|access[-_]?token|refresh[-_]?token|token|secret|password)$", re.I)
+
+def log_safe(value):
+    """F04: logged upstream replies keep their shape but lose credentials and signed links."""
+    import studio_legacy_tasks as ledger
+    def mask(item):
+        if isinstance(item, dict):
+            return {key: "[已隐藏]" if _LOG_SECRET_KEY.match(str(key)) else mask(inner) for key, inner in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [mask(inner) for inner in item]
+        return item
+    return ledger.redact_signed(mask(value))
+
 def log_runninghub_error(stage, raw=None, **extra):
     try:
         payload = {"stage": stage, **{k: v for k, v in extra.items() if v not in (None, "")}}
         if raw is not None:
             payload["raw"] = raw
-        print(f"RunningHub error: {json.dumps(payload, ensure_ascii=False)[:4000]}")
+        print(f"RunningHub error: {json.dumps(log_safe(payload), ensure_ascii=False)[:4000]}")
     except Exception:
         print(f"RunningHub error: {stage}")
 
@@ -11553,7 +11572,7 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
                 if fallback_image:
                     return fallback_image, raw
                 try:
-                    print(f"RS 响应中没有图片，原始返回（截断）：{json.dumps(raw, ensure_ascii=False)[:800]}")
+                    print(f"RS 响应中没有图片，原始返回（截断）：{json.dumps(log_safe(raw), ensure_ascii=False)[:800]}")
                 except Exception:
                     pass
                 raise HTTPException(status_code=502, detail=responses_no_image_detail(raw) or exc.detail)

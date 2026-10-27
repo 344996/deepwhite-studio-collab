@@ -13,7 +13,11 @@
   let saved = null, editing = null, frame = 0, intent = {time: -1e9, target: null};
   // Only focus the person just caused (a press or Tab) zooms; focus restored by the app does not.
   const userCaused = el => performance.now() - intent.time < 800 && (intent.target === 'keyboard' || nodeOf(intent.target) === nodeOf(el));
-  document.addEventListener('pointerdown', event => { intent = {time: performance.now(), target: event.target}; }, true);
+  // The view never moves under a held press (that would break drag-selecting text); a zoom
+  // caused by a press waits for its release.
+  let pressed = false;
+  document.addEventListener('pointerdown', event => { intent = {time: performance.now(), target: event.target}; pressed = true; }, true);
+  for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, () => { pressed = false; }, true);
   document.addEventListener('keydown', event => { if (event.key === 'Tab') intent = {time: performance.now(), target: 'keyboard'}; }, true);
   const same = (a, b) => a && b && Math.abs(a.x - b.x) < .5 && Math.abs(a.y - b.y) < .5 && Math.abs(a.scale - b.scale) < 1e-4;
 
@@ -66,7 +70,8 @@
     if (!editable(el)) return;
     if (editing && nodeOf(el) === editing.node) return;
     if (!userCaused(el)) return;
-    begin(el);
+    if (!pressed) { begin(el); return; }
+    window.addEventListener('pointerup', () => { if (document.activeElement === el) begin(el); }, {once: true});
   });
   document.addEventListener('focusout', event => {
     if (!editing) return;

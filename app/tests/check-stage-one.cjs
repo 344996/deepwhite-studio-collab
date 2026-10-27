@@ -61,7 +61,7 @@ async function openArrange(){await page.locator('#studioArrangeToggle0929').clic
  await page.getByLabel('文本任务',{exact:true}).selectOption('rewrite');await page.getByLabel('文本提示词',{exact:true}).fill('请把这段文字改得更简洁。');
  await page.locator('.llm-run').first().click();await page.waitForFunction(()=>nodes.find(n=>n.type==='llm')?.outputText==='这是改写后的结果。');assert(submitted.at(-1).system_prompt.includes('改写'));assert.equal(submitted.at(-1).kind,'chat');
  await page.getByRole('button',{name:'将结果放入文本节点',exact:true}).click();assert(await page.evaluate(()=>nodes.some(n=>n.type==='prompt'&&n.text==='这是改写后的结果。')));
- await page.getByRole('button',{name:'任务记录',exact:true}).click();await page.getByRole('button',{name:'下载文本',exact:true}).waitFor();await page.getByRole('button',{name:'关闭',exact:true}).click();
+ await page.getByRole('button',{name:'任务记录',exact:true}).click();await page.getByRole('button',{name:'下载文本',exact:true}).waitFor();await page.getByRole('button',{name:'关闭生成记录',exact:true}).click();
  await page.screenshot({path:path.join(out,'stage-one-text.png')});
  checks.push('文本生成/改写/自定义入口；文本结果复制、下载、复用为节点');
  // Regression: the live lowprice model rejects 1–4 characters, despite stale public docs.

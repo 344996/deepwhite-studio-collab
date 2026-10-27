@@ -170,7 +170,7 @@
         saveCanvas();if(!await track(node,result,context))return;
       }
       node.runStatus='done';node.runError='';
-    }catch(e){failure(node,e,received);}
+    }catch(e){failure(node,e,received);if(!received&&node.studioMjAttempt)await settleUnsent(node);}
     finally{node.running=false;polling.delete(node.id);rerender();}
   }
   function failure(node,e,received=true){
@@ -211,6 +211,14 @@
       rerender();
     }catch{}
     finally{reconciling.delete(attempt);}
+  }
+  // A submit that failed before any reply: only the server knows whether the platform could
+  // have it. When it says the request was never sent, the node may be generated again.
+  async function settleUnsent(node){
+    try{
+      const found=await api('/api/studio/mj/attempts/'+encodeURIComponent(node.studioMjAttempt));
+      if(found.found&&found.status==='failed'&&!found.task_id){node.studioMjStatus='failed';node.runStatus='failed';node.studioMjState=node.runError=found.error||'请求没有发出，未产生费用，可以重新生成。';}
+    }catch{}
   }
   const reconcileAll=()=>{for(const node of (typeof nodes!=='undefined'?nodes:[]))if(node?.studioMjStatus==='submitting'&&node.studioMjAttempt&&!node.studioMjTask&&!node.studioMjHistory)reconcile(node);};
   window.studioAddMj=point=>{

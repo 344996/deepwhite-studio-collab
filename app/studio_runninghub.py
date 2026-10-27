@@ -7,6 +7,7 @@ import re
 import time
 from pathlib import Path
 from typing import Any
+import httpx
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 import main as core
@@ -119,6 +120,10 @@ async def submit(request):
         if not task_id:raise ValueError('Missing task id')
         record.update(task_id=task_id,status='queued')
     except HTTPException as error:
+        if isinstance(error.__cause__,(httpx.ConnectError,httpx.ConnectTimeout)) and not record.get('children'):
+            # The connection never opened: RH cannot have this request, so it may be sent again.
+            record.update(status='not_submitted',error='网络未连接，请求没有发出，未产生费用；恢复网络后可以重新生成。',error_phase='submit',error_code='network')
+            return record
         rejected=400<=error.status_code<500 and not record.get('children')
         reason=safe_reason(error.detail,(api_key,))
         message='RH 拒绝提交' if rejected else '提交结果待核实；请到 RH 查询，勿重复提交'
