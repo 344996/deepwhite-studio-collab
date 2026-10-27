@@ -52,5 +52,11 @@
     "description": "在获批任务被暂时中断后继续查询/恢复该任务。先 get_generation 确认状态；此工具不能代替审批。Resume an already approved generation only.",
     "inputSchema": {"type": "object", "properties": {"job_id": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[A-Za-z0-9_-]+$"}}, "required": ["job_id"], "additionalProperties": false},
     "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+  },
+  {
+    "name": "verify_client",
+    "description": "连接验证：用户在深白片场“外接智能体”页面复制给你的验证命令里带有验证码，调用本工具确认你已连上深白片场。只读，返回最近画布的名称和节点数，不修改画布、不生成。",
+    "inputSchema": {"type": "object", "properties": {"code": {"type": "string", "pattern": "^DW-[0-9A-F]{6}$"}}, "required": ["code"], "additionalProperties": false},
+    "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
   }
 ]

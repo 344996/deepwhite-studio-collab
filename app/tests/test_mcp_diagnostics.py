@@ -61,7 +61,7 @@ class DiagnosticsTests(unittest.TestCase):
                 patch.object(bridge, "_request_json", return_value={"result": {"items": []}}) as request:
             report = bridge.preflight("http://127.0.0.1:3848")
         self.assertTrue(report["ok"])
-        self.assertEqual(report["tool_count"], 17)
+        self.assertEqual(report["tool_count"], 18)  # + verify_client (U11)
         self.assertEqual(request.call_args.kwargs["payload"], {"name": "list_canvases", "arguments": {}})
         encoded = json.dumps(report)
         self.assertNotIn("fixture-control-secret", encoded)

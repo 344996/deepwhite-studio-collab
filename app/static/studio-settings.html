@@ -15,6 +15,8 @@
     <button data-tab="general" aria-selected="false">基础设置</button>
     <button data-tab="api" aria-selected="true">账户与 API</button>
     <button data-tab="models" aria-selected="false">模型</button>
+    <button data-tab="runninghub" aria-selected="false">RunningHub</button>
+    <button data-tab="libtv" aria-selected="false">LibTV</button>
     <button data-tab="control" aria-selected="false">外接智能体 / MCP</button>
     <button data-tab="comfy" aria-selected="false">ComfyUI</button>
     <button data-tab="storage" aria-selected="false">存储与更新</button>
@@ -37,14 +39,37 @@
         <section id="modelManager" class="picker">
           <div class="row"><h2>我的模型</h2><span id="modelCount"></span></div>
           <p>同步后自动分类并启用。同一模型的生成方式已合并，画布会根据参考素材自动选择。</p>
-          <div class="row"><input id="modelSearch" placeholder="搜索模型或厂商" aria-label="搜索模型"><select id="modelFilter" aria-label="筛选模型类别"><option value="">全部类别</option><option value="chat">文本</option><option value="image">图片</option><option value="video">视频</option><option value="audio">音频</option></select><label class="check"><input id="showRemoved" type="checkbox">显示已移除</label></div>
-          <div class="row"><button type="button" id="enableVisible">启用当前列表</button><button type="button" id="disableVisible">停用当前列表</button><small>启停、移除立即保存，再次同步会保留你的选择。</small></div>
+          <div class="row"><input id="modelSearch" placeholder="搜索模型或厂商" aria-label="搜索模型"><select id="modelFilter" aria-label="筛选模型类别"><option value="">全部类别</option><option value="chat">文本</option><option value="image">图片</option><option value="video">视频</option><option value="audio">音频</option></select><select id="modelVendor" aria-label="筛选厂商"><option value="">全部厂商</option></select><label class="check"><input id="showRemoved" type="checkbox">显示已移除</label></div>
+          <div class="row"><button type="button" id="enableVisible">启用当前筛选</button><button type="button" id="disableVisible">停用当前筛选</button><small>只作用于当前筛选出的模型；启停、移除立即保存，再次同步会保留你的选择。</small></div>
           <div id="modelRows"></div><div id="pickerResult" class="notice" role="status" aria-live="polite" hidden></div>
           <p class="muted">音频节点仅提供已适配协议的配音、音乐和音效模型。同步成功不代表所有型号都能生成；3D、检测等辅助工具暂不进入画布菜单。</p>
         </section>
         <details><summary>高级接口选项</summary><label>图片请求方式<select id="imageMode"><option value="openai">OpenAI 标准</option><option value="openai-json">OpenAI JSON</option><option value="openai-video-proxy">OpenAI 中转</option><option value="openai-responses">Responses 接口</option><option value="tudou-async">土豆 GPT-Image-2 异步</option></select></label><p>沿用原项目的接口选项，具体模型需要匹配平台协议。<a href="/static/api-settings.html?v=0.11.0-studio.5" target="_blank" rel="noopener">打开原版高级设置</a></p></details>
         <footer><span id="saveState" role="status" aria-live="polite"></span><button type="submit" id="saveProvider" class="accent">保存连接设置</button></footer>
       </form>
+    </section>
+    <section id="runninghubPanel" hidden aria-labelledby="rhPanelTitle">
+      <h2 id="rhPanelTitle">RunningHub</h2>
+      <p class="muted">画布里的 RH 节点读取这里的同一份密钥。修改默认设置只影响之后新建的 RH 节点，已有节点和已提交任务保持原样。</p>
+      <form id="rhForm">
+        <label>会员积分 API Key<input id="rhKey" type="password" autocomplete="off" spellcheck="false"></label><small id="rhKeyState"></small>
+        <label class="check"><input id="rhClearKey" type="checkbox">清除已保存的会员积分 Key</label>
+        <label>钱包余额 API Key（可选）<input id="rhWalletKey" type="password" autocomplete="off" spellcheck="false"></label><small id="rhWalletState"></small>
+        <label class="check"><input id="rhClearWallet" type="checkbox">清除已保存的钱包 Key</label>
+        <fieldset><legend>新建 RH 节点的默认设置</legend>
+          <label class="check"><input type="radio" name="rhPayment" value="free">会员积分</label><label class="check"><input type="radio" name="rhPayment" value="wallet">钱包余额</label>
+          <label>实例类型<select id="rhInstance"><option value="">标准</option><option value="plus">plus</option></select></label>
+        </fieldset>
+        <div class="row"><button type="submit" class="primary">保存</button><button type="button" id="rhTest">测试连接（不扣积分）</button></div>
+      </form>
+      <ol id="rhStages" class="rh-stages" aria-label="连接检查"></ol>
+      <div id="rhResult" class="notice" role="status" aria-live="polite" hidden></div>
+      <p class="muted">选择 RH 应用或工作流、填写本次参数，仍在画布的 RH 节点里完成。</p>
+    </section>
+    <section id="libtvPanel" hidden aria-labelledby="libtvPanelTitle">
+      <h2 id="libtvPanelTitle">LibTV</h2>
+      <p><strong>状态：未接入。</strong>LibTV 的接入方式（官方 API、账号授权或本机桥接）尚未确认，目前不能从画布调用 LibTV 生成，也不会显示为“已连接”。</p>
+      <p class="muted">确认官方协议后，这里会提供密钥或账号连接、连接测试和可用动作说明。RunningHub 与即梦 CLI 不受影响，请在各自的设置中使用。</p>
     </section>
     <section id="generalPanel" hidden>
       <div class="intro"><h1>基础设置</h1><p>选择适合自己的创作环境。外观设置立即生效，本地画布无需登录即可编辑。</p></div>
@@ -66,8 +91,8 @@
             <label class="check control-toggle"><input id="controlEnabled" type="checkbox">启用 MCP 访问</label>
           </li>
           <li id="controlStepCodex" class="control-setup-step">
-            <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">2</span><h3>连接客户端并安装 Skills</h3><span id="controlCodexBadge" class="control-step-status">待检查</span></div>
-            <div class="client-panel-head"><p>每个客户端连接一次，所有画布通用；连接后在 Agent 里说「导入画布」即可导入制作包。连接或安装 Skills 后重启该客户端。</p><button id="clientRefresh" type="button" class="control-quiet-button">刷新</button></div>
+            <div class="control-step-heading"><span class="control-step-number" aria-hidden="true">2</span><h3>一键连接智能体</h3><span id="controlCodexBadge" class="control-step-status">待检查</span></div>
+            <div class="client-panel-head"><p>每个客户端连接一次，所有画布通用。连接后按提示重启客户端，再把“验证命令”发给它：它真正读到画布后，这里才显示“已验证”。</p><button id="clientRefresh" type="button" class="control-quiet-button">刷新</button></div>
             <div id="clientGrid" class="client-grid" aria-live="polite"></div>
             <p id="clientSummary" class="muted"></p>
             <div id="clientResult" class="notice" role="status" aria-live="polite" hidden></div>
@@ -123,6 +148,7 @@
     </section>
   </main>
   <script src="/static/studio-settings.js?v=0.11.0-studio.5"></script>
+<script src="/static/studio-rh-settings.js?v=1"></script>
   <script src="/static/studio-provider-capabilities.js?v=0.11.0-studio.5"></script>
 <script src="/static/studio-local-engine.js?v=0.11.0-studio.5"></script>
 <script src="/static/studio-storage.js?v=0.11.0-studio.5"></script>

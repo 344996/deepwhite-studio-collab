@@ -1,6 +1,12 @@
 (() => {
   const css=document.createElement('link');css.rel='stylesheet';css.href='/static/studio-runninghub.css';document.head.append(css);
   const inflight=new Set(),waiting=new Map();
+  // U07: defaults from Settings → RunningHub apply to RH nodes created from now on only.
+  let rhDefaults={default_payment:'free',default_instance:''};
+  const loadRhDefaults=()=>fetch('/api/studio/settings/runninghub').then(r=>r.ok?r.json():null).then(v=>{if(v)rhDefaults=v;}).catch(()=>{});
+  loadRhDefaults();window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data?.type==='providers-changed')loadRhDefaults();});
+  const addRhOld=addRhNode;
+  addRhNode=point=>{const node=addRhOld(point);if(node){node.rhPayment=rhDefaults.default_payment==='wallet'?'wallet':'free';node.instanceType=rhDefaults.default_instance==='plus'?'plus':'';render();scheduleSave();}return node;};
   // Keep each saved node's imported definition stable when its library entry changes.
   const selectOld=applyRhEntrySelection,refOld=rhSelectedEntryRef;
   applyRhEntrySelection=(node,ref)=>{

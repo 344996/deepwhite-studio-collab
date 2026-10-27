@@ -162,8 +162,12 @@
     else{const source=liveSource();if(source){pickerOwner.select=selectedSource=source;}else closePicker();}
     if(pickerOwner){const trigger=liveTrigger();if(trigger&&trigger!==anchor){anchor?.setAttribute('aria-expanded','false');anchor=trigger;}anchor?.setAttribute('aria-expanded','true');}
   }
-  const css=document.createElement('link');css.rel='stylesheet';css.href='/static/studio-model-picker.css?v=3';document.head.append(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='/static/studio-model-picker.css?v=4';document.head.append(css);
   const names={chat:'文本模型',image:'图片模型',video:'视频模型'};
+  // U04: "常用" per kind, keyed by channel + model and kept on the server.
+  let favorites={};
+  fetch('/api/studio/model-favorites').then(r=>r.ok?r.json():{}).then(v=>{favorites=v||{};}).catch(()=>{});
+  const saveFavorites=kind=>fetch('/api/studio/model-favorites/'+kind,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({keys:favorites[kind]||[]})}).catch(()=>{});
   function openPicker(button,items,current,choose,kind,owner){
     if(!ownsPicker(owner))return;
     pickerOwner=owner;selectedSource=owner.select;anchor=button;panel.replaceChildren();
@@ -196,13 +200,20 @@
     else if(enabledChannels.length){channel.value=enabledChannels[0].id;}
     const channelRow=document.createElement('label');channelRow.className='studio-picker-channel-row';const channelTitle=document.createElement('span');channelTitle.textContent='调用渠道';channelRow.append(channelTitle,channel);channelRow.hidden=!classicPicker;unavailable.hidden=!classicPicker;
     const manage=document.createElement('button');manage.type='button';manage.className='studio-picker-manage';manage.textContent='管理已启用模型';manage.onclick=()=>{panel.hidePopover();document.getElementById('studioSettingsButton')?.click();};
+    const favKey=m=>m.provider_id+'|'+m.id,favs=new Set(favorites[kind]||[]);
+    // Open on 常用 when there are some; otherwise show everything with a tip.
+    let scope=favs.size?'fav':'all';
+    const scopes=document.createElement('div');scopes.className='studio-picker-scope';scopes.setAttribute('role','group');scopes.setAttribute('aria-label','模型范围');
+    for(const [value,text] of [['fav','常用'],['all','全部模型']]){const b=document.createElement('button');b.type='button';b.dataset.scope=value;b.textContent=text;b.onclick=()=>{scope=value;renderItems();};scopes.append(b);}
+    const tip=document.createElement('small');tip.className='studio-picker-tip';
     function renderItems(){
-      list.replaceChildren();categories.replaceChildren();unavailable.hidden=!classicPicker||!unavailable.textContent||channel.value!==chosenProvider;
+      list.replaceChildren();categories.replaceChildren();scopes.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.scope===scope)));tip.textContent=favs.size?'':'还没有常用模型：点模型右侧的 ☆ 加入常用，下次打开会直接显示。';tip.hidden=!tip.textContent;unavailable.hidden=!classicPicker||!unavailable.textContent||channel.value!==chosenProvider;
       const selectedChannel=channel.value;
-      const matches=items.filter(m=>(!classicPicker||m.provider_id===selectedChannel)&&(!vendor.value||vendor.value===m.vendor)&&`${m.name} ${m.vendor}`.toLowerCase().includes(search.value.toLowerCase()));
+      const matches=items.filter(m=>(scope==='fav'?favs.has(favKey(m)):(!classicPicker||m.provider_id===selectedChannel))&&(!vendor.value||vendor.value===m.vendor)&&`${m.name} ${m.vendor}`.toLowerCase().includes(search.value.toLowerCase()));
       const groups=[...new Set(matches.map(m=>m.series||'其他系列'))];if(!groups.includes(selectedSeries))selectedSeries=groups[0];
-      if(!classicPicker)for(const group of groups){const option=document.createElement('button');option.type='button';option.className='studio-series-option';option.dataset.series=group;option.setAttribute('aria-pressed',String(selectedSeries===group));option.textContent=group+' ›';option.onclick=()=>{selectedSeries=group;renderItems();};categories.append(option);}
-      const filtered=classicPicker?matches:matches.filter(m=>(m.series||'其他系列')===selectedSeries);
+      const flat=classicPicker||scope==='fav';categories.hidden=flat;
+      if(!flat)for(const group of groups){const option=document.createElement('button');option.type='button';option.className='studio-series-option';option.dataset.series=group;option.setAttribute('aria-pressed',String(selectedSeries===group));option.textContent=group+' ›';option.onclick=()=>{selectedSeries=group;renderItems();};categories.append(option);}
+      const filtered=flat?matches:matches.filter(m=>(m.series||'其他系列')===selectedSeries);
       for(const item of filtered){
         const row=document.createElement('button');row.type='button';row.className='studio-picker-option';row.dataset.model=item.id;row.setAttribute('role','option');row.setAttribute('aria-selected',String(item.id===current));
         const icon=modelIcon(item);
@@ -215,12 +226,18 @@
           closePicker(owner);const applied=choose(item.id,item.provider_id,owner);
           if(applied!==false&&ownsPicker(owner))rememberChannel(kind,item.provider_id);
           if(ownsPicker(owner)){const trigger=liveTrigger(owner);trigger?.setAttribute('aria-expanded','false');trigger?.focus({preventScroll:true});}
-        };list.append(row);
+        };
+        const key=favKey(item),star=document.createElement('button');star.type='button';star.className='studio-picker-star';
+        star.setAttribute('aria-pressed',String(favs.has(key)));star.setAttribute('aria-label',(favs.has(key)?'移出常用：':'加入常用：')+item.name);star.textContent=favs.has(key)?'★':'☆';
+        star.onclick=event=>{event.stopPropagation();favs.has(key)?favs.delete(key):favs.add(key);favorites[kind]=[...favs];saveFavorites(kind);renderItems();};
+        const wrap=document.createElement('div');wrap.className='studio-picker-row';wrap.append(row,star);list.append(wrap);
       }
-      if(!filtered.length){const empty=document.createElement('p');empty.textContent=items.length?(classicPicker?'当前渠道没有匹配的模型':'没有匹配的模型'):'尚无已启用模型，请到设置同步模型。';list.append(empty);}
+      // A favourite whose model is disabled or gone stays visible and says so.
+      if(scope==='fav')for(const key of favs)if(!items.some(m=>favKey(m)===key)){const gone=document.createElement('div');gone.className='studio-picker-row studio-picker-gone';gone.textContent=key.split('|').slice(1).join('|')+'（已停用或当前不可用）';list.append(gone);}
+      if(!filtered.length&&!(scope==='fav'&&favs.size)){const empty=document.createElement('p');empty.textContent=scope==='fav'?'还没有常用模型。切到“全部模型”，点 ☆ 加入常用。':items.length?(classicPicker?'当前渠道没有匹配的模型':'没有匹配的模型'):'尚无已启用模型，请到设置同步模型。';list.append(empty);}
     }
     if(!classicPicker)hint.textContent=kind==='chat'?'选择要使用的语言模型':'根据参考素材自动匹配生成方式';
-    search.oninput=renderItems;vendor.onchange=renderItems;channel.onchange=renderItems;panel.append(title,hint,channelRow,unavailable,filters,classicPicker?list:columns,manage);renderItems();
+    search.oninput=renderItems;vendor.onchange=renderItems;channel.onchange=renderItems;panel.append(title,hint,channelRow,unavailable,scopes,tip,filters,classicPicker?list:columns,manage);renderItems();
     const examples=(previewCatalog?.models||[]).filter(model=>model.kind===kind);
     if(examples.length&&previewCatalog.connected===false){
       const preview=document.createElement('details');preview.className='studio-picker-preview';preview.open=!items.some(item=>item.provider_id!=='deepwhite-local-comfy');

@@ -34,6 +34,12 @@ import studio_runninghub
 studio_runninghub.install(app)
 import studio_rh_workflows
 studio_rh_workflows.install(app)
+import studio_smart_retire
+studio_smart_retire.install(app)
+import studio_favorites
+studio_favorites.install(app)
+import studio_rh_settings
+studio_rh_settings.install(app)
 from studio_settings import install as install_settings
 install_settings(app)
 from studio_pricing import install as install_pricing

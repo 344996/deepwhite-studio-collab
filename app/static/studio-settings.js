@@ -28,20 +28,26 @@
   }
   function accept(provider){providers=providers.filter(p=>p.id!==provider.id).map(p=>provider.primary?{...p,primary:false}:p);providers.unshift(provider);current=provider;}
   const entries=()=>catalogs[current?.id]?.models?.length?catalogs[current.id].models:current?.base_url?.includes('api.deepwhiteai.com')?(preview.models||[]):[];
-  function visible(){const q=$('modelSearch').value.toLowerCase(),kind=$('modelFilter').value;return entries().filter(m=>kinds[m.kind]&&($('showRemoved').checked||!m.removed)&&(!kind||m.kind===kind)&&`${m.name} ${m.vendor}`.toLowerCase().includes(q));}
+  // U05: vendor is its own filter (unknown vendors are "未分类"); bulk actions use exactly this list.
+  const vendorOf=m=>!m.vendor||m.vendor==='API'?'未分类':m.vendor;
+  function visible(){const q=$('modelSearch').value.toLowerCase(),kind=$('modelFilter').value,vendor=$('modelVendor').value;return entries().filter(m=>kinds[m.kind]&&($('showRemoved').checked||!m.removed)&&(!kind||m.kind===kind)&&(!vendor||vendorOf(m)===vendor)&&`${m.name} ${m.vendor}`.toLowerCase().includes(q));}
   function renderModels(){
-    $('modelRows').replaceChildren();const all=entries().filter(m=>kinds[m.kind]);$('modelCount').textContent=all.some(m=>m.preview)?'模型示例 · 尚未连接':`${all.filter(m=>m.enabled&&!m.removed&&m.available).length} 个已启用 / ${all.length} 个模型`;
+    $('modelRows').replaceChildren();const all=entries().filter(m=>kinds[m.kind]);
+    const vendorSelect=$('modelVendor'),chosen=vendorSelect.value,vendors=[...new Set(all.map(vendorOf))].sort((a,b)=>(a==='未分类')-(b==='未分类')||a.localeCompare(b,'zh'));
+    vendorSelect.replaceChildren(new Option('全部厂商',''),...vendors.map(v=>new Option(v,v)));vendorSelect.value=vendors.includes(chosen)?chosen:'';$('modelCount').textContent=all.some(m=>m.preview)?'模型示例 · 尚未连接':`${all.filter(m=>m.enabled&&!m.removed&&m.available).length} 个已启用 / ${all.length} 个模型`;
     for(const model of visible()){
       const row=document.createElement('div');row.className='model-row';row.dataset.modelId=model.id;
       const label=document.createElement('label');label.className='check';const check=document.createElement('input');check.type='checkbox';check.checked=model.enabled&&!model.removed;check.disabled=loading||model.removed||!model.available;check.setAttribute('aria-label',`启用 ${model.name}`);check.onchange=()=>preferences([{id:model.id,enabled:check.checked,removed:false}]);
-      const name=document.createElement('span');name.textContent=model.name;const detail=document.createElement('small');detail.textContent=`${kinds[model.kind]} · ${model.vendor} · ${model.preview?'登录或连接 API 后自动配置':model.available?(model.capabilities||[]).join(' / '):'上游暂不可用'}`;
+      const name=document.createElement('span');name.textContent=model.name;const detail=document.createElement('small');detail.textContent=`${kinds[model.kind]} · ${vendorOf(model)} · ${model.preview?'登录或连接 API 后自动配置':model.available?(model.capabilities||[]).join(' / '):'上游暂不可用'}`;
       const text=document.createElement('span');text.className='model-description';text.append(name,detail);label.append(check,text);
       const remove=document.createElement('button');remove.type='button';remove.textContent=model.preview?'未连接':model.removed?'恢复':'移除';remove.disabled=loading||!!model.preview;remove.setAttribute('aria-label',`${remove.textContent} ${model.name}`);remove.onclick=()=>preferences([{id:model.id,enabled:model.removed?true:model.enabled,removed:!model.removed}]);row.append(label,remove);$('modelRows').append(row);
     }
-    if(!visible().length)$('modelRows').textContent=all.length?'没有匹配的模型。':'保存有效的 API 连接后，会自动读取并配置模型。';
+    const shown=visible().length;$('enableVisible').textContent=`启用当前筛选（${shown}）`;$('disableVisible').textContent=`停用当前筛选（${shown}）`;
+    $('enableVisible').disabled=$('disableVisible').disabled=loading||!shown;
+    if(!shown)$('modelRows').textContent=all.length?'没有匹配的模型。':'保存有效的 API 连接后，会自动读取并配置模型。';
   }
   async function preferences(changes){if(loading||!changes.length)return;try{lock(true);const data=await api(`/api/studio/model-catalog/${encodeURIComponent(current.id)}`,'PATCH',{models:changes});catalogs[current.id]={...catalogs[current.id],models:data.models};accept(data.provider);notice('pickerResult','已保存，画布模型列表已更新。');broadcast();}catch(e){notice('pickerResult',e.message,true);}finally{lock(false);}}
-  $('modelSearch').oninput=renderModels;$('modelFilter').onchange=renderModels;$('showRemoved').onchange=renderModels;
+  $('modelSearch').oninput=renderModels;$('modelFilter').onchange=renderModels;$('modelVendor').onchange=renderModels;$('showRemoved').onchange=renderModels;
   $('enableVisible').onclick=()=>preferences(visible().filter(m=>m.available&&!m.removed).map(m=>({id:m.id,enabled:true,removed:false})));
   $('disableVisible').onclick=()=>preferences(visible().filter(m=>!m.removed&&!m.preview).map(m=>({id:m.id,enabled:false,removed:false})));
   $('testConnection').onclick=async()=>{if(loading)return;try{const p=formPayload();if(p.clear_key)throw Error('已选择清除密钥，请先取消再测试。');lock(true);notice('apiResult','正在检查连接…');const data=await api('/api/studio/settings/test','POST',{base_url:p.base_url,api_key:p.api_key||'',provider_id:p.id});notice('apiResult',data.message);window.dispatchEvent(new CustomEvent('studio-provider-probed'));}catch(e){notice('apiResult',e.message,true);}finally{lock(false);}};
@@ -62,9 +68,19 @@
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();$('closeSettings').click();}});
   window.addEventListener('beforeunload',e=>{if(dirty||storageDirty||loading){e.preventDefault();e.returnValue='';}});
   const accountCard=document.createElement('section');accountCard.className='settings-feature-card';accountCard.id='settingsAccountConnection';accountCard.setAttribute('aria-live','polite');$('apiForm').before(accountCard);
-  async function refreshAccountCard(){let account;try{account=await api('/api/studio/account');}catch{}accountCard.replaceChildren();const title=document.createElement('h2');title.textContent=account?'已登录 · '+account.username:'登录后自动连接官方 API';const detail=document.createElement('p');detail.textContent=account?.generation?.message||'使用 API 网站的同一账户登录，自动准备此账户的生成授权和模型。也可以在下方添加自己的 API 平台。';const action=document.createElement('button');action.type='button';action.textContent=account?'重新连接 / 刷新模型':'登录 / 注册';action.onclick=account?reconnect:()=>{if(parent!==window&&parent.StudioAccount)parent.StudioAccount.open();else{location.href='/?studio-account=1';}};accountCard.append(title,detail,action);}
+  // U01: logged in but not authorised for generation is a visible, fixable state, tried once per session.
+  let accountError='';
+  async function refreshAccountCard(){let account;try{account=await api('/api/studio/account');}catch{}accountCard.replaceChildren();
+    const generation=account?.generation,ready=generation?.status==='ready';
+    const title=document.createElement('h2');title.textContent=!account?'登录后自动连接官方 API':ready?'已登录 · '+account.username+' · 可直接生成，无需填写 API Key':'已登录 · '+account.username+' · 生成授权未完成';
+    const detail=document.createElement('p');detail.textContent=accountError||generation?.message||'使用 API 网站的同一账户登录，自动准备此账户的生成授权和模型。也可以在下方添加自己的 API 平台。';
+    accountCard.dataset.tone=account&&!ready?'warn':'';
+    const action=document.createElement('button');action.type='button';action.textContent=!account?'登录 / 注册':ready?'刷新模型':'重新授权';if(account&&!ready)action.className='primary';
+    action.onclick=account?reconnect:()=>{if(parent!==window&&parent.StudioAccount)parent.StudioAccount.open();else{location.href='/?studio-account=1';}};accountCard.append(title,detail,action);
+    let tried=false;try{tried=sessionStorage.getItem('studio.account.autoProvision')==='1';}catch{}
+    if(account&&!ready&&generation?.retryable!==false&&!tried&&!loading){try{sessionStorage.setItem('studio.account.autoProvision','1');}catch{}reconnect();}}
   async function loadProviders(preferred,{background=false}={}){const revision=formRevision,selected=current?.id;const[data,catalog]=await Promise.all([api('/api/providers'),api('/api/studio/model-catalog')]);if(background&&(dirty||storageDirty||loading||revision!==formRevision||selected!==current?.id))return;providers=data.providers;catalogs=catalog.providers;preview=catalog.preview||{};current=providers.find(p=>p.id===preferred)||providers.find(p=>p.id.startsWith('deepwhite-account-')&&p.has_key)||providers.find(p=>p.protocol==='openai'&&p.base_url?.includes('api.deepwhiteai.com')&&!p.id.startsWith('deepwhite-account-'));if(!current){current=fresh();if(providers.some(p=>p.id===current.id))current.id+='-'+crypto.randomUUID().slice(0,8);providers.unshift(current);}render();}
-  async function reconnect(){if(loading)return;lock(true);notice('apiResult','正在连接账户生成授权并同步模型…');try{const result=await api('/api/studio/account/provision','POST');await loadProviders(result.generation.provider_id);notice('apiResult',result.generation.message,result.generation.status!=='ready');broadcast();await refreshAccountCard();}catch(error){notice('apiResult',error.message,true);}finally{lock(false);}}
+  async function reconnect(){if(loading)return;lock(true);accountError='';notice('apiResult','正在连接账户生成授权并同步模型…');try{const result=await api('/api/studio/account/provision','POST');await loadProviders(result.generation.provider_id);notice('apiResult',result.generation.message,result.generation.status!=='ready');broadcast();}catch(error){accountError='授权未完成：'+error.message;notice('apiResult',error.message,true);}finally{lock(false);}await refreshAccountCard();}
   try{const channel=new BroadcastChannel('studio-api');channel.onmessage=async()=>{await refreshAccountCard();if(!dirty&&!storageDirty&&!loading)await loadProviders(undefined,{background:true}).catch(()=>{});};}catch{}
   async function init(){
     try{await loadProviders();$('apiForm').inert=false;}catch(e){notice('loadError',e.message+' 刷新页面可重试。',true);$('apiForm').hidden=true;}

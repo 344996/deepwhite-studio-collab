@@ -13144,6 +13144,12 @@ async def runninghub_upload_asset(payload: RunningHubUploadAssetRequest):
     if response.status_code >= 400:
         raise HTTPException(status_code=response.status_code, detail=runninghub_safe_media_error(raw, api_key))
     if isinstance(raw, dict) and raw.get("code") in (0, "0") and isinstance(raw.get("data"), dict) and raw["data"].get("fileName"):
+        try:
+            # REF-03: later ledger entries can say which file and version this RH name stands for.
+            import studio_runninghub
+            studio_runninghub.remember_upload(raw["data"]["fileName"], str(payload.url or ""), content)
+        except Exception as exc:
+            print(f"RunningHub 上传记录未保存（不影响本次上传）: {exc}")
         return {"success": True, "data": {"fileName": raw["data"]["fileName"], "fileType": raw["data"].get("fileType") or content_type}}
     raise HTTPException(status_code=400, detail=runninghub_safe_media_error(raw, api_key))
 

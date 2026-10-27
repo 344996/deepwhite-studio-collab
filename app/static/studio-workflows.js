@@ -86,7 +86,7 @@
   modal.setAttribute('aria-label', '工作流工作台');
   modal.innerHTML = `<header><div><small>深白片场 / 工作流</small><h2>工作流工作台</h2></div><button type="button" data-close aria-label="关闭工作流工作台">×</button></header>
     <div class="sw-body"><aside class="sw-sidebar"><div class="sw-side-title"><strong>我的工作流</strong><button type="button" data-import-open aria-label="导入工作流">＋</button></div>
-    <input type="search" data-search aria-label="搜索工作流" placeholder="搜索工作流名称"><select data-provider-filter aria-label="来源筛选"><option value="all">全部已接入来源</option><option value="comfy">ComfyUI</option></select><div data-list></div><button type="button" data-refresh>刷新列表</button><p class="sw-tip">预览不写库。显式保存创建版本，画布旧节点保持原版本。</p></aside>
+    <input type="search" data-search aria-label="搜索工作流" placeholder="搜索工作流名称"><select data-provider-filter aria-label="来源筛选"><option value="all">全部已接入来源</option><option value="comfy">ComfyUI</option></select><select data-scope-filter aria-label="收藏筛选"><option value="all">全部工作流</option><option value="fav">只看收藏</option></select><div data-list></div><button type="button" data-refresh>刷新列表</button><p class="sw-tip">预览不写库。显式保存创建版本，画布旧节点保持原版本。</p></aside>
     <main><div class="sw-workflow-header"><div><small>ComfyUI 工作流</small><h3 data-heading>选择或导入工作流</h3><p data-version></p></div><button type="button" data-save class="primary" disabled>保存新版本</button></div>
     <nav class="sw-stages" aria-label="配置阶段"><button type="button" data-stage="connection"><span>1</span>连接来源</button><button type="button" data-stage="configure"><span>2</span>导入与配置</button><button type="button" data-stage="preview"><span>3</span>节点预览</button></nav>
     <div class="sw-work-area"><section class="sw-editor-panel"><div data-connection hidden></div><div data-editor></div><div data-history hidden></div></section>
@@ -224,14 +224,25 @@
     });
     library = next; renderList();
   }
+  // UX03: favourites are listed first and can be shown alone; kept on the server like model favourites.
+  let favorites = new Set();
+  fetch('/api/studio/model-favorites').then(r => r.ok ? r.json() : {}).then(v => { favorites = new Set(v.workflow || []); renderList(); }).catch(() => {});
+  const favKey = item => (item.provider || 'comfy') + '|' + item.key;
+  function toggleFavorite(item) {
+    const key = favKey(item); favorites.has(key) ? favorites.delete(key) : favorites.add(key);
+    fetch('/api/studio/model-favorites/workflow', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({keys: [...favorites]})}).catch(() => {});
+    renderList();
+  }
   function renderList() {
     const host = $('[data-list]');
-    const q = $('[data-search]').value.trim().toLowerCase(), filter = $('[data-provider-filter]').value;
+    const q = $('[data-search]').value.trim().toLowerCase(), filter = $('[data-provider-filter]').value, scope = $('[data-scope-filter]').value;
     host.replaceChildren();
     for (const message of libraryErrors) { const warning = document.createElement('p'); warning.className = 'sw-tip'; warning.setAttribute('role','alert'); warning.textContent = message; host.append(warning); }
     const items = [...library,
       ...Object.values(drafts).filter(d => !d.id).map(d => ({key:d.key,name:d.name,provider:d.provider || 'comfy',revision:0,fields:d.fields,dirty:true}))];
-    for (const item of items.filter(item => String(item.name).toLowerCase().includes(q) && (filter === 'all' || item.provider === filter))) {
+    const shown = items.filter(item => String(item.name).toLowerCase().includes(q) && (filter === 'all' || item.provider === filter) && (scope !== 'fav' || favorites.has(favKey(item))));
+    shown.sort((a, b) => favorites.has(favKey(b)) - favorites.has(favKey(a)));
+    for (const item of shown) {
       const button = document.createElement('button');
       button.type = 'button'; button.className = 'sw-item'; button.dataset.workflowId = item.key;
       button.setAttribute('aria-current', String(selected?.key === item.key));
@@ -240,12 +251,17 @@
       meta.textContent = (item.revision ? 'v' + item.revision : '未保存') + (drafts[item.key]?.dirty ? ' · 草稿' : '') + ' · ' + (item.fields?.length || 0) + ' 个参数';
       button.append(title,meta);
       button.onclick = () => chooseAction(() => openWorkflow(item.key));
-      host.append(button);
+      const star = document.createElement('button'), starred = favorites.has(favKey(item));
+      star.type = 'button'; star.className = 'sw-star'; star.textContent = starred ? '★' : '☆'; star.setAttribute('aria-pressed', String(starred));
+      star.setAttribute('aria-label', (starred ? '取消收藏：' : '收藏：') + item.name); star.onclick = () => toggleFavorite(item);
+      const row = document.createElement('div'); row.className = 'sw-item-row'; row.append(button, star);
+      host.append(row);
     }
-    if (!host.children.length) host.textContent = q ? '没有匹配的工作流。' : '暂无工作流。导入 JSON 后先预览，再保存。';
+    if (!host.children.length) host.textContent = scope === 'fav' ? '还没有收藏的工作流：点工作流右侧的 ☆ 收藏。' : q ? '没有匹配的工作流。' : '暂无工作流。导入 JSON 后先预览，再保存。';
   }
   $('[data-search]').oninput = renderList;
   $('[data-provider-filter]').onchange = renderList;
+  $('[data-scope-filter]').onchange = renderList;
   $('[data-refresh]').onclick = () => refresh().catch(e => flash(e.message));
   async function ensureInfo(force = false) {
     if (force) info = null;

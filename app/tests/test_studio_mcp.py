@@ -136,7 +136,7 @@ class StudioMCPTests(unittest.TestCase):
             "list_canvases", "get_canvas", "list_models", "list_assets", "apply_nodes",
             "undo_edit", "generate_node", "get_generation", "resume_generation",
             "list_projects", "get_node_schema", "create_canvas", "edit_canvas",
-            "studio_status", "list_canvas_packages", "import_canvas_package", "submit_feedback"})
+            "studio_status", "list_canvas_packages", "import_canvas_package", "submit_feedback", "verify_client"})
         self.assertTrue(next(t for t in listed if t["name"] == "apply_nodes")["annotations"]["idempotentHint"])
 
     def test_tools_call_posts_local_control_and_redacts_secrets(self):
@@ -233,7 +233,7 @@ class StudioMCPTests(unittest.TestCase):
         self.assertEqual(replies[0]['error']['code'], -32601)
         self.assertIn('initialize', replies[0]['error']['message'])
         self.assertEqual(replies[1]['result']['protocolVersion'], '2025-06-18')
-        self.assertEqual(len(replies[2]['result']['tools']), 17)
+        self.assertEqual(len(replies[2]['result']['tools']), 18)  # + verify_client (U11)
 
     def test_invalid_request_ids_and_nonfinite_json_do_not_poison_session(self):
         bad_id = json.dumps({'jsonrpc': '2.0', 'id': {'private': 'fixture-secret'}, 'method': 'ping'})

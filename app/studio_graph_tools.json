@@ -33,7 +33,7 @@
   },
   {
     "name": "create_canvas",
-    "description": "在现有项目中新建画布（kind: classic 普通画布，默认；smart 智能画布），不生成内容。expected_revision 来自 list_projects。相同 operation_id 和内容可重试，永不重复创建。",
+    "description": "在现有项目中新建普通画布（智能画布已停止新建），不生成内容。expected_revision 来自 list_projects。相同 operation_id 和内容可重试，永不重复创建。",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -61,8 +61,7 @@
         "kind": {
           "type": "string",
           "enum": [
-            "classic",
-            "smart"
+            "classic"
           ]
         }
       },

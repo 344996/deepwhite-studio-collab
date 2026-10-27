@@ -115,7 +115,7 @@
     cover.innerHTML = '<div class="v2-cover-art" aria-hidden="true"><span></span><span></span><span></span></div><p class="home-cover-excerpt" hidden></p><small>灵感，从这里继续</small>';
     cover.dataset.kind = c.kind === 'smart' ? 'smart' : 'classic';
     if (c.pinned) { const label = document.createElement('span'); label.className = 'v2-home-pinned'; label.textContent = '已置顶'; card.querySelector('.ws-card-top').prepend(label); }
-    card.setAttribute('aria-label', `${c.title}，${c.kind === 'smart' ? '智能画布' : '普通画布'}`); return card;
+    card.setAttribute('aria-label', `${c.title}，${c.kind === 'smart' ? '旧版智能画布' : '普通画布'}`); return card;
   };
   renderBoard = function() {
     observer.disconnect(); queue.length = 0; updateBoardHeader();
@@ -160,14 +160,13 @@
     });
     items[0]?.focus();
   };
-  // Keep the original classic/smart POST and menu actions, with an accessible modal.
+  // Keep the original POST and menu actions, with an accessible modal.
   const nativeOpenCreate = openCreateCard, nativeCloseCreate = closeCreateCard; let createDialog, createTrigger;
   closeCreateCard = function(...args) { nativeCloseCreate(...args); if (createDialog) { createDialog.close(); createDialog.remove(); createDialog = null; createTrigger?.focus(); } };
   openCreateCard = function(...args) {
     createTrigger = document.activeElement; nativeOpenCreate(...args);
-    const smart = document.createElement('button'); smart.type = 'button'; smart.className = 'ws-create-toggle-btn'; smart.dataset.kind = 'smart'; smart.textContent = L('智能画布', 'Smart');
-    smart.onclick = () => { createKind = 'smart'; createCardEl.querySelectorAll('[data-kind]').forEach(button => button.classList.toggle('active', button === smart)); };
-    createCardEl.querySelector('.ws-create-toggle').append(smart);
+    // U10: smart canvases are retired; new canvases are always classic.
+    createKind = 'classic';
     const d = document.createElement('dialog'); d.id = 'homeCreateDialog'; d.setAttribute('aria-label', '新建画布'); createDialog = d; document.body.append(d); d.append(createCardEl);
     d.addEventListener('cancel', event => { event.preventDefault(); closeCreateCard(); }); d.onclick = event => { if (event.target === d) closeCreateCard(); };
     d.showModal(); createCardEl.querySelector('input').focus();

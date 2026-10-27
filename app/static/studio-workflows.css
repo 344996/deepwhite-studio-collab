@@ -67,3 +67,4 @@
 
 
 .sw-footer-status{min-width:0;flex:1;display:grid;gap:3px}.studio-workflow-modal [data-storage-warning]{display:block;color:var(--dw-danger)}
+.sw-item-row{position:relative}.sw-item-row>.sw-item{padding-right:40px;width:100%}.sw-star{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted,#a8b0aa);font-size:15px;cursor:pointer}.sw-star[aria-pressed="true"]{color:var(--dw-accent,#e3bd83)}

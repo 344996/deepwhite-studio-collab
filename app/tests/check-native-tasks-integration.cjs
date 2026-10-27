@@ -22,13 +22,8 @@ async function newest(id,accept){return until(async()=>(await attempts(id)).at(-
 async function persisted(c,nodeId,predicate){return until(async()=>(await api('/api/canvases/'+c.id)).canvas.nodes.find(n=>n.id===nodeId),predicate,'saved '+nodeId);}
 async function canvasFixture(kind,title,nodes,connections=[]){const c=(await api('/api/canvases','POST',{title,kind})).canvas;await api('/api/canvases/'+c.id,'PUT',{...c,nodes,connections,viewport:{x:30,y:30,scale:.8},base_updated_at:c.updated_at});return c;}
 function videoPosts(state){return state.requests.filter(r=>r.method==='POST'&&r.host==='native-fixture.invalid'&&r.path.includes('video'));}
-async function makeVideo(){const p=await browser.newPage();try{const bytes=await p.evaluate(async()=>{
-  // Headless capture only emits frames for an attached canvas whose pixels change.
-  const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;document.body.append(canvas);const context=canvas.getContext('2d');let frame=0;
-  context.fillStyle='#2b4440';context.fillRect(0,0,320,180);const stream=canvas.captureStream(12),recorder=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8'}),chunks=[];
-  recorder.ondataavailable=e=>chunks.push(e.data);const stopped=new Promise(r=>recorder.onstop=r),tick=setInterval(()=>{context.fillStyle=frame++%2?'#2b4440':'#3c5550';context.fillRect(0,0,320,180);},60);
-  recorder.start(200);await new Promise(r=>setTimeout(r,1200));recorder.stop();clearInterval(tick);await stopped;stream.getTracks().forEach(t=>t.stop());canvas.remove();return [...new Uint8Array(await new Blob(chunks).arrayBuffer())];
-});assert(bytes.length>1000,'fixture video recording is empty ('+bytes.length+' bytes)');fs.writeFileSync(videoFile,Buffer.from(bytes));}finally{await p.close();}}
+// A recorded, checked 320x180 VP8 clip: recording live in headless Edge sometimes yields an empty file.
+async function makeVideo(){fs.copyFileSync(path.join(__dirname,'fixtures','native-fixture.webm'),videoFile);}
 async function queryTaskButton(){
   // Only an actual visible task action is allowed; no direct helper invocation.
   const buttons=page.locator('[data-native-action="resume"]');

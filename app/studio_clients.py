@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import shutil
 import stat
 import tempfile
@@ -97,10 +98,17 @@ CLIENTS = {
                   "config": lambda: _home() / ".workbuddy" / "mcp.json", "skills": lambda: _home() / ".workbuddy" / "skills"},
     "hermes": {"name": "Hermes", "format": "hermes", "marker": _hermes_dir,
                "config": lambda: _hermes_dir() / "config.yaml", "skills": lambda: _hermes_dir() / "skills"},
-    "doubao": {"name": "豆包", "format": "manual", "marker": _doubao_dir, "config": None, "skills": None,
-               "manual_hint": "豆包没有可自动写入的配置文件：在豆包客户端“设置 → MCP 服务 → 添加（JSON）”粘贴下方配置。",
+    "doubao": {"name": "豆包工作", "format": "manual", "marker": _doubao_dir, "config": None, "skills": None,
+               "manual_hint": "豆包工作没有可自动写入的配置文件：在客户端“设置 → MCP 服务 → 添加（JSON）”粘贴下方配置，再点“复制验证命令”核对。",
                "skills_hint": "在豆包客户端的技能（Skills）管理中上传下载的 Skill 压缩包。"},
+    # Install location and config file are not known yet: no detection, honest manual setup.
+    "deepseek_harness": {"name": "DeepSeek Harness", "format": "manual", "marker": lambda: Path(""), "detect": False,
+                         "config": None, "skills": None,
+                         "manual_hint": "暂不支持自动检测 DeepSeek Harness 的安装位置和配置文件：请在它的 MCP 设置中添加下方配置，再点“复制验证命令”核对。"},
 }
+
+# U11: the connection page shows exactly these five; other entries stay usable through the API.
+VISIBLE = ("codex", "claude_code", "workbuddy", "doubao", "deepseek_harness")
 
 
 # ---------------------------------------------------------------- file helpers
@@ -471,14 +479,69 @@ def skills_path(client_id):
     return str(spec["skills"]()) if spec["skills"] else ""
 
 
+# U11: "configured" and "verified" are different facts. Each client gets a one-time code; only an
+# agent that really reaches this studio through MCP can report it back (verify_client).
+def _verification_path():
+    import main as core  # late: this module is imported by main's startup chain
+    return Path(core.DATA_DIR) / "studio_client_verification.json"
+
+
+def _verifications():
+    try:
+        value = json.loads(_verification_path().read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_verifications(value):
+    path = _verification_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def verification(client_id):
+    with LOCK:
+        store = _verifications()
+        row = store.get(client_id)
+        if not isinstance(row, dict) or not re.fullmatch(r"DW-[0-9A-F]{6}", str(row.get("code", ""))):
+            row = {"code": "DW-" + secrets.token_hex(3).upper(), "verified_at": 0}
+            store[client_id] = row
+            _save_verifications(store)
+    code = row["code"]
+    return {"code": code, "verified_at": row.get("verified_at") or 0,
+            "command": f"请调用 deepwhite-studio 的 verify_client 工具，参数 code 为 \"{code}\"；只读取，不要修改画布或发起生成。然后告诉我返回的画布名和节点数。"}
+
+
+def reset_verification(client_id):
+    with LOCK:
+        store = _verifications()
+        store.pop(client_id, None)
+        _save_verifications(store)
+
+
+def mark_verified(code):
+    with LOCK:
+        store = _verifications()
+        for client_id, row in store.items():
+            if isinstance(row, dict) and row.get("code") == code and client_id in CLIENTS:
+                row["verified_at"] = int(time.time())
+                _save_verifications(store)
+                return client_id
+    return None
+
+
 def describe(client_id, configuration):
     spec = CLIENTS[client_id]
-    detected = spec["marker"]().exists()
+    detected = spec["marker"]().exists() if spec.get("detect", True) else False
     return {"id": client_id, "name": spec["name"], "detected": detected,
             "mcp": mcp_state(client_id, configuration), "skills": skill_rows(client_id),
             "skills_path": skills_path(client_id),
             "skills_hint": spec.get("skills_hint", ""), "restart_hint": spec.get("restart_hint", "连接或安装 Skills 后请重启该客户端。"),
-            "manual": manual_config(client_id, configuration)}
+            "manual": manual_config(client_id, configuration), "detectable": spec.get("detect", True),
+            "verification": verification(client_id)}
 
 
 def _unreadable(client_id, configuration, exc):
@@ -496,7 +559,7 @@ def _unreadable(client_id, configuration, exc):
 
 def listing(configuration):
     items = []
-    for client_id in CLIENTS:
+    for client_id in VISIBLE:
         try:
             items.append(describe(client_id, configuration))
         except Exception as exc:  # noqa: BLE001 - isolate per client
