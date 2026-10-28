@@ -32,6 +32,15 @@ async function main(){
   await check('reloading does not retry again in the same session once it worked',async()=>{
    const before=provisions;await page.reload();await delay(1200);assert.equal(provisions,before);
   });
+  await check('without sessionStorage the automatic retry still happens only once',async()=>{
+   const blocked=await h.newPage();let calls=0;
+   await blocked.addInitScript(()=>{Object.defineProperty(window,'sessionStorage',{get(){throw new DOMException('blocked','SecurityError');}});});
+   await blocked.route('**/api/studio/account',route=>route.fulfill({json:{username:'tester',generation:{status:'action_required',message:'未完成',retryable:true}}}));
+   await blocked.route('**/api/studio/account/provision',route=>{calls++;return route.fulfill({status:409,json:{detail:'仍然失败（模拟）'}});});
+   await blocked.goto(h.base+'/static/studio-settings.html');await delay(2500);
+   assert.equal(calls,1,'automatic authorisation repeated '+calls+' times');
+   await blocked.close();
+  });
   assert.deepEqual(h.external,[]);
  }catch(e){console.error(h.log().slice(-2000));throw e;}
  finally{await h.stop();}

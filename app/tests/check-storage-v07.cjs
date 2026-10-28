@@ -8,7 +8,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
  const fixture=await(await page.request.get(base+'/test/storage-fixture')).json();
  const original=await(await page.request.get(base+fixture.asset_url)).body();
  await page.goto(base+'/settings');
- await page.locator('[data-tab=general]').click();
+ await page.locator('[data-tab=storage]').click();
  await page.locator('#studioStorageProject option').first().waitFor({state:'attached'});
  await page.locator('#studioStorageDefault').fill(fixture.default_root);
  await page.locator('#studioStorageSaveDefault').click();
@@ -20,7 +20,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
  const current=await(await page.request.get(base+'/api/studio/storage')).json();
  assert.equal(current.projects.find(p=>p.project_id==='default').path,fixture.destination);
  assert.deepEqual(await(await page.request.get(base+fixture.asset_url)).body(),original);
- await page.reload();await page.locator('[data-tab=general]').click();
+ await page.reload();await page.locator('[data-tab=storage]').click();
  await page.waitForFunction(p=>document.querySelector('#studioStoragePath')?.value===p,fixture.destination);
  fs.mkdirSync('test-output/channels-storage-v0.7',{recursive:true});
  await page.screenshot({path:'test-output/channels-storage-v0.7/storage.png'});

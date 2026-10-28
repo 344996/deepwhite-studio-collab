@@ -1,4 +1,7 @@
 """Test-only server: fake RunningHub upstream that records every paid submit; no real traffic."""
+import os
+# Old smart canvases are seeded here only to stand in for existing user data (U10).
+os.environ.setdefault('DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES', '1')
 import base64
 import json
 import os

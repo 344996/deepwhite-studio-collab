@@ -70,7 +70,6 @@
       const quickstart = document.createElement('nav'); quickstart.className = 'workspace-quickstart'; quickstart.setAttribute('aria-label', '快速开始');
       for (const [label, icon, action, kind, description] of [
         ['经典画布', 'layout-dashboard', () => create('classic'), 'classic', '编排与连接灵感'],
-        ['智能画布', 'workflow', () => create('smart'), 'smart', '以画面延展创作'],
         ['本地资产', 'folder-open', assets, '', '让素材随时就绪'],
         ['选择 API 服务', 'sliders-horizontal', () => settings.click(), '', '连接创作工具']
       ]) {

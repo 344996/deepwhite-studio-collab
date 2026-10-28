@@ -70,7 +70,7 @@ async function fixture(kind){
   await page.locator('.studio-history-button').click();await page.locator('.studio-history-v3 article').first().waitFor();
   assert.equal(await page.locator('.studio-history-v3 article').count(),2);
   assert((await page.locator('[data-job-id="failed-job"] .studio-history-error').textContent()).includes('5–2000'));
-  assert((await page.locator('[data-job-id="failed-job"] .studio-history-bill').textContent()).includes('未知'));
+  /* an unknown fee says so and is never shown as 0 (wording since 1bb75c4) */assert(/待对账.*不是 0 元/.test(await page.locator('[data-job-id="failed-job"] .studio-history-bill').textContent()));
   await page.locator('[data-history-status]').selectOption('failed');assert.equal(await page.locator('.studio-history-v3 article:visible').count(),1);
   await page.locator('[data-history-status]').selectOption('');await page.locator('[data-history-search]').fill('月光');assert.equal(await page.locator('.studio-history-v3 article:visible').count(),1);
   await page.locator('[data-history-search]').fill('');await page.screenshot({path:path.join(evidence,'generation-history.png')});

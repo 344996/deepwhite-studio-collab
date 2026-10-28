@@ -226,11 +226,16 @@
   }
   // UX03: favourites are listed first and can be shown alone; kept on the server like model favourites.
   let favorites = new Set();
-  fetch('/api/studio/model-favorites').then(r => r.ok ? r.json() : {}).then(v => { favorites = new Set(v.workflow || []); renderList(); }).catch(() => {});
+  const loadFavorites = () => fetch('/api/studio/model-favorites').then(r => r.ok ? r.json() : {}).then(v => { favorites = new Set(v.workflow || []); renderList(); }).catch(() => {});
+  loadFavorites();
   const favKey = item => (item.provider || 'comfy') + '|' + item.key;
+  // Saves run in order; one the server refused is undone on screen by reading the saved list back.
+  let saves = Promise.resolve();
   function toggleFavorite(item) {
     const key = favKey(item); favorites.has(key) ? favorites.delete(key) : favorites.add(key);
-    fetch('/api/studio/model-favorites/workflow', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({keys: [...favorites]})}).catch(() => {});
+    const keys = [...favorites];
+    saves = saves.then(() => fetch('/api/studio/model-favorites/workflow', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({keys})}))
+      .then(response => { if (!response.ok) throw Error(); }).catch(() => { flash('收藏没有保存，请稍后重试。'); return loadFavorites(); });
     renderList();
   }
   function renderList() {

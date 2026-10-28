@@ -1,4 +1,7 @@
 """Test-only server: public catalogue fixture, no external API requests."""
+import os
+# Old smart canvases are seeded here only to stand in for existing user data (U10).
+os.environ.setdefault('DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES', '1')
 import sys
 import json
 import os

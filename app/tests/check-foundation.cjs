@@ -22,7 +22,7 @@ async function request(route,method='GET',data){const response=await fetch(base+
     assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,rel))).digest('hex'),hash,rel);
   }
   checks.push('除已记录的生图参数传递修正外，工具、依赖及工作流与源文件校验一致');
-  child=spawn(path.join(root,'python/python.exe'),[path.join(root,'studio_server.py')],{cwd:root,windowsHide:true,env:{...process.env,DEEPWHITE_STUDIO_PORT:'3859',DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,PYTHONUTF8:'1',PYTHONUNBUFFERED:'1'}});
+  child=spawn(path.join(root,'python/python.exe'),[path.join(root,'studio_server.py')],{cwd:root,windowsHide:true,env:{...process.env,DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES:'1',DEEPWHITE_STUDIO_PORT:'3859',DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,PYTHONUTF8:'1',PYTHONUNBUFFERED:'1'}});
   child.stdout.on('data',d=>log+=d);child.stderr.on('data',d=>log+=d);
   let ready=false;
   for(let i=0;i<100;i++){try{const h=await request('/api/studio/health');assert.equal(h.installation,root);ready=true;break;}catch{await sleep(200);}}

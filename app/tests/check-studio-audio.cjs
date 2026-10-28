@@ -1,10 +1,10 @@
-const { chromium } = require('data/local-path');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 
 (async()=>{
- const browser=await chromium.launch({headless:true,executablePath:'data/local-path'});
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE||undefined});
  try{
   const page=await browser.newPage();
   page.setDefaultTimeout(5000);

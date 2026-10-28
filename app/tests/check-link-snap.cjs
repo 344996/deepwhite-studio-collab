@@ -36,6 +36,6 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
  await p.evaluate(()=>{addNode({id:'ref-image',type:'image',url:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/%3E',name:'参考图',x:30,y:700});connections.push({from:'ref-image',to:'snap-target'});refreshGeneratorInputViews();});
  assert.equal(await p.locator('[data-id="snap-target"] .studio-reference-strip img').count(),1);
  await p.evaluate(()=>{connections=[];refreshGeneratorInputViews();});assert.equal(await p.locator('[data-id="snap-target"] .studio-reference-strip img').count(),0);
- const targetBox=await p.locator('[data-id="snap-target"]').boundingBox(),outBox=await p.locator('[data-id="snap-target"] .port.out').boundingBox();assert(outBox.x>targetBox.x+targetBox.width);
+ const targetBox=await p.locator('[data-id="snap-target"]').boundingBox(),outBox=await p.locator('[data-id="snap-target"] .port.out').boundingBox();/* the visible + handle (port centre) sits outside the card */assert(outBox.x+outBox.width/2>targetBox.x+targetBox.width,JSON.stringify({targetBox,outBox}));
  assert.deepEqual(errors,[]);console.log('PASS: full-card snap preview, reverse linking, duplicate protection, Escape and invalid target at 85% zoom');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(child)child.kill();});

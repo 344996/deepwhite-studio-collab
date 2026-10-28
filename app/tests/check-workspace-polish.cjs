@@ -131,7 +131,7 @@ async function reachable(locator, label, minimum = 36) {
     assert.equal(await page.locator('.ws-card').count(), 3);
     await page.waitForFunction(() => document.querySelectorAll('.home-canvas-cover img').length === 3 &&
       [...document.querySelectorAll('.home-canvas-cover img')].every(image => image.complete && image.naturalWidth > 0));
-    assert.equal(await page.locator('.workspace-quickstart [data-workspace-create]').count(), 2);
+    assert.deepEqual(await page.locator('.workspace-quickstart [data-workspace-create]').evaluateAll(items => items.map(item => item.dataset.workspaceCreate)), ['classic'], 'U10: no smart canvas quick start');
     assert.deepEqual(writes, [], 'viewing cards does not change saved documents');
     assert.equal((await api('/api/canvases/' + records[0].id)).canvas.nodes[0].text, records[0].prompt);
   });
@@ -141,7 +141,7 @@ async function reachable(locator, label, minimum = 36) {
       await page.setViewportSize({width, height:1000});
       await noOverflow(page, 'home grid ' + width);
       await reachable(page.locator('#newCanvasBtn'), 'primary create ' + width);
-      for (const kind of ['classic', 'smart']) await reachable(page.locator('[data-workspace-create="' + kind + '"]'), kind + ' quick create ' + width);
+      for (const kind of ['classic']) await reachable(page.locator('[data-workspace-create="' + kind + '"]'), kind + ' quick create ' + width); // U10: no smart quick create
       await reachable(page.locator('.v2-home-search'), 'project search ' + width, 30);
       const clippedCopy = await page.locator('.workspace-quick-copy, .workspace-quick-copy small').evaluateAll(items => items
         .filter(el => el.scrollWidth > el.clientWidth + 1).map(el => ({text:el.textContent, width:el.clientWidth, content:el.scrollWidth})));
@@ -283,8 +283,8 @@ async function reachable(locator, label, minimum = 36) {
     await page.setViewportSize({width:1440, height:1000});
   });
 
-  await check('quick actions create classic and smart canvases with correct project and persistent titles', async () => {
-    for (const kind of ['classic', 'smart']) {
+  await check('quick actions create classic canvases (U10: smart is retired) with correct project and persistent titles', async () => {
+    for (const kind of ['classic']) {
       const trigger = page.locator('[data-workspace-create="' + kind + '"]');
       await trigger.click();
       const dialog = page.locator('#homeCreateDialog');
@@ -425,9 +425,9 @@ async function reachable(locator, label, minimum = 36) {
 
   await check('no browser exceptions, external traffic, generation or unintended writes', async () => {
     assert.deepEqual(errors, []); assert.deepEqual(external, []); assert.deepEqual(paid, []); assert.deepEqual(unexpectedWrites, []);
-    assert.equal(writes.filter(value => value.path === '/api/canvases' && value.method === 'POST').length, 2, 'two explicit fixture creations');
+    assert.equal(writes.filter(value => value.path === '/api/canvases' && value.method === 'POST').length, 1, 'one explicit classic creation (U10)');
     assert.equal(writes.filter(value => value.path === '/api/canvases/' + trashed.id + '/restore' && value.method === 'POST').length, 1, 'one explicit fixture restore');
-    assert.equal(writes.length, 3, 'browser writes contain only the expected create and restore operations');
+    assert.equal(writes.length, 2, 'browser writes contain only the expected create and restore operations');
   });
   fs.writeFileSync(path.join(evidence, 'results.json'), JSON.stringify({passed:true, checks, errors, external, paid, writes, unexpectedWrites, synthetic:true}, null, 2));
   console.log(JSON.stringify({passed:checks.length, evidence}));

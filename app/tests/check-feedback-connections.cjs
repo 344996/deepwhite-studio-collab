@@ -24,7 +24,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    if(path.endsWith('/logout')){loggedOut++;authenticated=false;return r.fulfill({json:{message:'已退出模拟账号'}});}
    return r.fulfill({status:404,json:{detail:'unexpected mock request'}});
   });
-  await page.goto(base+'/settings');await page.locator('[data-tab=general]').click();
+  await page.goto(base+'/settings');await page.locator('[data-tab=storage]').click();
   await page.waitForFunction(()=>document.querySelector('#studioStorageDefault').value==='D:\\Old');
   await page.locator('[data-pick=studioStorageDefault]').click();
   while(!pick)await page.waitForTimeout(20);

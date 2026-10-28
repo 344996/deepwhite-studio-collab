@@ -3,7 +3,7 @@
 .theme-dark { --page:#0b1020; --grid:rgba(148,163,184,.16); --panel:rgba(17,24,39,.9); --card:rgba(15,23,42,.96); --card-solid:#111827; --soft:#1e293b; --soft-2:#263449; --line:#334155; --line-2:#64748b; --text:#f8fafc; --muted:#cbd5e1; --faint:#94a3b8; --shadow:rgba(0,0,0,.28); --strong:#f8fafc; --strong-text:#0f172a; }
 * { box-sizing:border-box; }
 body { margin:0; height:100vh; overflow:hidden; background:var(--page); color:var(--text); font-family:'Inter',-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
-.shell { position:relative; height:100vh; overflow:hidden; }
+.shell { position:relative; height:100vh; overflow:hidden; overflow:clip; } /* clip: focus or scrollIntoView must never scroll the whole UI */
 html[data-studio-scale="off"].studio-scale-managed .topbar,
 html[data-studio-scale="off"].studio-scale-managed .library,
 html[data-studio-scale="off"].studio-scale-managed .workflow-transfer-panel,

@@ -75,5 +75,34 @@ class TraceTests(unittest.TestCase):
         self.assertEqual(media, [{'node': '403', 'field': 'image', 'uploaded_as': 'api/uploaded-elsewhere.png', 'source': '', 'version_id': '', 'sha256': ''}])
 
 
+class TraceIndexTests(unittest.TestCase):
+    def setUp(self):
+        import studio_runninghub
+        self.rh = studio_runninghub
+        self.rh.upload_index_path().unlink(missing_ok=True)
+
+    def test_parallel_uploads_all_stay_traced(self):
+        import threading
+        threads = [threading.Thread(target=self.rh.remember_upload, args=(f'api/p{i}.png', f'/output/p{i}.png', PNG + bytes([i])))
+                   for i in range(24)]
+        for thread in threads: thread.start()
+        for thread in threads: thread.join()
+        index = json.loads(self.rh.upload_index_path().read_text(encoding='utf-8'))
+        self.assertEqual(len(index), 24, 'a parallel upload overwrote another one')
+
+    def test_model_requests_are_traced_by_field_path(self):
+        self.rh.remember_upload('api/m1.png', '/output/m1.png', PNG)
+        snapshot = self.rh.submission_snapshot({'model': 'rh/some-model', 'params': {'image_urls': ['api/m1.png'], 'prompt': '雨夜'}})
+        self.assertEqual([(m['field'], m['uploaded_as'], m['source']) for m in snapshot['media']],
+                         [('params.image_urls[0]', 'api/m1.png', '/output/m1.png')])
+
+    def test_a_damaged_index_is_ignored(self):
+        self.rh.upload_index_path().write_text(json.dumps({'api/x.png': 'not-a-dict', 'api/y.png': {'at': 1}}), encoding='utf-8')
+        self.rh.remember_upload('api/z.png', '/output/z.png', PNG)
+        index = json.loads(self.rh.upload_index_path().read_text(encoding='utf-8'))
+        self.assertEqual(sorted(index), ['api/y.png', 'api/z.png'])
+        self.assertEqual(len(self.rh.submission_snapshot({'nodeInfoList': [{'nodeId': '1', 'fieldName': 'image', 'fieldValue': 'api/x.png'}]})['media']), 1)
+
+
 if __name__ == '__main__':
     unittest.main()

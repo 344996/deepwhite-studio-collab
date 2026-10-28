@@ -43,8 +43,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   assert.equal(submitted.length,2);const video=submitted[1];
   assert.equal(video.canvas_id,'storagefixture');assert.equal(video.node_id,await page.locator('.video-node').getAttribute('data-id'));
   assert.equal(video.provider_id,'dreamina-cli');assert.equal(video.model,'dreamina-video-seedance-2.5');assert.equal(video.references[0].kind,'video');assert.equal(video.references[0].mention,'@视频1');assert.equal(video.multimodal,true);assert.equal(video.frame_mode,false);
-  // The browser sends the user's original @素材 text; the backend compiles Seedance protocol markers.
-  assert(video.prompt.includes('@视频1'),video.prompt);assert(!video.prompt.includes('@Video 1'));
+  // The browser compiles bound @素材 labels into Seedance markers in reference order (the server accepts both forms).
+  assert(video.prompt.includes('@Video 1'),video.prompt);assert(!video.prompt.includes('@视频1'),video.prompt);
   assert.deepEqual(errors,[]);
   console.log('PASS classic canvas image/video Dreamina generation payloads, @video multimodal references, and paused resume without resubmission; all Dreamina endpoints mocked');
  }finally{await browser.close();}

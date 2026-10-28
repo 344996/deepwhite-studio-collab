@@ -12,11 +12,14 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
  await p.goto(base+'/static/canvas.html?id='+c.id);await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id);await pause(400);
  await p.evaluate(()=>{nodes=[];connections=[];viewport={x:0,y:0,scale:0.85};applyViewport();addNode({id:'snap-source',type:'prompt',x:60,y:160,w:300,h:200,text:'参考提示词'});const n=addGeneratorNode({x:570,y:160});n.id='snap-target';render();});
 
+ // The canvas theme select sits in the 更多工具 panel of the workspace layout.
+ const more=p.locator('#workspaceMoreTools');await more.waitFor({state:'attached'});if(!(await more.evaluate(d=>d.open)))await more.locator('summary').click();
  const choose=p.getByLabel('画布主题',{exact:true});
  await choose.selectOption('light');const light=await p.locator('#nodes .node').first().evaluate(e=>getComputedStyle(e).backgroundImage);
  await p.evaluate(()=>saveCanvas());await choose.selectOption('milk');assert(await p.locator('html').evaluate(e=>e.classList.contains('studio-milk')));
  await p.reload();await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id);assert.equal(await choose.inputValue(),'milk');
  assert(await p.locator('html').evaluate(e=>e.classList.contains('studio-milk')));
+ await more.waitFor({state:'attached'});if(!(await more.evaluate(d=>d.open)))await more.locator('summary').click();
  await choose.selectOption('dark');assert(await p.locator('html').evaluate(e=>e.classList.contains('theme-dark')&&!e.classList.contains('studio-milk')));
  await choose.selectOption('light');assert.equal(await p.locator('#nodes .node').first().evaluate(e=>getComputedStyle(e).backgroundImage),light);
  await choose.selectOption('milk');
@@ -24,6 +27,7 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
  const cascade=p.locator('.studio-image-footer .gen-cascade-btn').first();await cascade.waitFor();const size=await cascade.boundingBox();assert(size.width<50&&size.height<50);assert.equal(await cascade.evaluate(e=>getComputedStyle(e).whiteSpace),'nowrap');
  await p.screenshot({path:path.join(root,'test-output/milk-theme-live.png')});await choose.selectOption('graphite');assert(await p.locator('html').evaluate(e=>e.classList.contains('studio-graphite')&&!e.classList.contains('studio-milk')));
  await p.reload();await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id);assert.equal(await choose.inputValue(),'graphite');
+ await more.waitFor({state:'attached'});if(!(await more.evaluate(d=>d.open)))await more.locator('summary').click();
  await choose.selectOption('milk');assert(await p.locator('html').evaluate(e=>e.classList.contains('studio-milk')&&!e.classList.contains('studio-graphite')));
  await choose.selectOption('dark');assert(await p.locator('html').evaluate(e=>e.classList.contains('theme-dark')&&!e.classList.contains('studio-graphite')));
  assert.deepEqual(errors,[]);console.log('PASS: four themes, material persistence, light/dark restoration');

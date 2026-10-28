@@ -36,6 +36,8 @@
     status.dataset.state=disabled?'disabled':!available?'error':connected?'connected':'pending';
     status.lastElementChild.textContent=disabled?(connected?'已停用 · 账号仍登录':'已停用'):!available?'程序不可用':connected?'已连接': '未授权';
     $('#dreaminaAccount').value=connected?(s.account||'即梦账号已连接'):'未连接';
+    // A first login is not a "re-authorisation": name the action after the current state.
+    $('#dreaminaConnect').textContent=connected?'重新授权 / 换号':'开始授权登录';
     $('#dreaminaAccountName').textContent=connected?(s.account||'已连接，即梦账号'):'尚未连接';
     $('#dreaminaCredit').textContent=connected&&Number.isFinite(Number(s.credit))&&s.credit!==null?`${s.credit} 即梦积分`:'积分状态待连接';
     $('#dreaminaEnabled').checked=!!s.enabled;

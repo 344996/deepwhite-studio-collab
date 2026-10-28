@@ -15,12 +15,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   assert.equal(await node.locator('.studio-image-settings-popup [aria-label="生成张数"]').count(),0);
   await node.locator('.studio-model-trigger').click();
   assert.equal(await page.locator('#studioModelPicker [aria-label="调用平台"]').count(),0);
+  // The channel is chosen in the picker's 调用渠道 list, then the model.
+  await page.locator('#studioModelPicker .studio-picker-channel-row select').selectOption('mcp-fixture');
   await page.locator('#studioModelPicker .studio-picker-option').first().click();
-  await page.locator('#studioModelPicker .studio-picker-channels:not([hidden]) button').first().click();
   assert.equal(await page.evaluate(()=>nodes[0].apiProvider),'mcp-fixture');
   fs.mkdirSync('test-output/feedback-0926',{recursive:true});await page.screenshot({path:'test-output/feedback-0926/canvas-ui.png'});
   await page.getByRole('button',{name:'测试账户',exact:true}).click();
-  assert.equal(await page.locator('.dw-account-wallet>strong').textContent(),'¥123.45');assert.equal(await page.locator('.dw-account-identity img').count(),1);
+  assert.equal(await page.locator('.dw-account-wallet:not([data-generation-status])>strong').textContent(),'¥123.45');assert.equal(await page.locator('.dw-account-identity img').count(),1);
   await page.screenshot({path:'test-output/feedback-0926/account-ui.png'});await page.locator('.dw-library header button').click();
   const settings=await context.newPage();settings.on('pageerror',e=>errors.push(e.message));await settings.goto('http://127.0.0.1:3874/settings');
   await settings.locator('.studio-connection-cards').waitFor();await settings.locator('.studio-connection-cards button').filter({hasText:'本地 ComfyUI'}).click();

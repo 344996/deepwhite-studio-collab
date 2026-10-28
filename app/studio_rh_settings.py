@@ -87,13 +87,64 @@ def save(payload):
         if updates:
             core.update_env_values(updates)
             core.reload_env_globals()
-    return {**status(), 'message': '已保存。画布中的 RH 节点使用同一份密钥；默认设置只影响之后新建的 RH 节点。'}
+    state = status()
+    message = '已保存。画布中的 RH 节点使用同一份密钥；默认设置只影响之后新建的 RH 节点。'
+    if state['default_payment'] == 'wallet' and not state['has_wallet_key']:
+        message += '注意：默认扣费方式是钱包余额，但还没有保存钱包 Key，新建的 RH 节点在提交时会被拦下。'
+    return {**state, 'message': message}
+
+
+def _reach(meta):
+    errors = ' '.join(str(item) for item in meta.get('errors') or []).lower()
+    return 'timeout' if 'timed out' in errors or 'timeout' in errors else 'unreachable'
+
+
+async def check():
+    """Probe each saved key on its own: a missing key, a refused key (401/403) and an unreachable or
+    timed-out service are different answers. Only the model catalogue is read; nothing is submitted."""
+    state = status()
+    keys = (('member', '会员积分 Key', core.provider_env_key_value('runninghub')),
+            ('wallet', '钱包 Key', core.runninghub_wallet_key_value()))
+    if not any(value for _, _, value in keys):
+        return {'ok': False, 'missing': True, 'checks': [],
+                'message': '尚未保存 RunningHub Key：请先填写会员积分 Key（使用钱包余额时再填钱包 Key），保存后再测试。'}
+    checks = []
+    for key_id, label, value in keys:
+        if not value:
+            checks.append({'key': key_id, 'label': label, 'saved': False})
+            continue
+        payload = await core.runninghub_models_payload({'id': 'runninghub', 'name': 'RunningHub', 'protocol': 'runninghub',
+                                                        'base_url': state['base_url'], 'api_key': value, 'wallet_api_key': value})
+        meta = payload.get('raw') or {}
+        stages = core.runninghub_connection_stages(meta)
+        if not stages['service']:
+            stages['reach'] = _reach(meta)
+        checks.append({'key': key_id, 'label': label, 'saved': True, 'stages': stages})
+    saved = [item for item in checks if item['saved']]
+    failed = [item for item in saved if item['stages']['auth'] == 'failed']
+    unreached = [item for item in saved if not item['stages']['service']]
+    if failed:
+        message = '、'.join(item['label'] for item in failed) + ' 鉴权未通过（HTTP ' + '/'.join(
+            str(item['stages']['auth_status']) for item in failed) + '）：Key 无效、已过期或没有权限。'
+    elif unreached:
+        message = ('连接 RunningHub 超时' if any(item['stages'].get('reach') == 'timeout' for item in unreached)
+                   else '无法连接 RunningHub') + '：请检查网络或代理后重试。'
+    elif all(item['stages']['auth'] == 'ok' for item in saved):
+        message = '鉴权通过：' + '、'.join(item['label'] for item in saved) + '。具体应用或工作流的运行权限要在提交时才能确认。'
+    else:
+        message = '未能核实鉴权：RunningHub 没有给出明确结果，请稍后重试。'
+    return {'ok': bool(saved) and all(item['stages']['auth'] == 'ok' for item in saved), 'missing': False,
+            'checks': checks, 'message': message}
 
 
 def install(app):
     @app.get('/api/studio/settings/runninghub')
     async def get_settings():
         return status()
+
+    @app.post('/api/studio/settings/runninghub/test')
+    async def test_settings():
+        return await check()
 
     @app.put('/api/studio/settings/runninghub')
     async def put_settings(payload: RunningHubSettings):

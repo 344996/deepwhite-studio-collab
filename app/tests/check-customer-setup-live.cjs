@@ -77,7 +77,7 @@ function parseConfig(){
   });
   await page.goto(base+'/settings');
   await page.locator('[data-tab=control]').click();
-  await page.waitForFunction(()=>document.getElementById('controlCodexBadge').textContent==='尚未配置');
+  await page.waitForFunction(()=>document.getElementById('controlCodexLegacyBadge').textContent==='尚未配置');
   assert.equal(await page.locator('#controlEnabled').isChecked(),false);
   assert.equal(await page.locator('#controlInstallCodex').isDisabled(),true);
   assert.equal(await page.locator('#controlClientConfig').isHidden(),true);
@@ -89,6 +89,8 @@ function parseConfig(){
   checks.push('实际设置页面按需读取；未启用时禁止安装，启用访问不会自动写入 Codex 配置');
 
   const installedResponse=page.waitForResponse(response=>response.url()===base+'/api/studio/control/codex'&&response.request().method()==='POST');
+  // The Codex install button lives in the folded "Codex 详细状态" section.
+  if(!(await page.locator('#controlAdvanced').evaluate(d=>d.open)))await page.locator('#controlAdvanced > summary').click();
   await page.locator('#controlInstallCodex').click();
   const response=await installedResponse,installed=await response.json();
   assert.equal(response.status(),200,JSON.stringify(installed));
@@ -118,7 +120,7 @@ function parseConfig(){
   await page.screenshot({path:path.join(output,'actual-settings-connected.png'),fullPage:true});
   checks.push('真实后端启动 MCP 桥接进程并完成本机只读检查；界面仍要求客户在 Codex 发送提示词确认');
 
-  await page.locator('#controlAdvanced>summary').click();
+  if(!(await page.locator('#controlAdvanced').evaluate(d=>d.open)))await page.locator('#controlAdvanced>summary').click();
   assert.equal(await page.locator('#controlCodexPath').innerText(),installed.config_path);
   assert.equal(await page.locator('#controlUndoCodex').isDisabled(),false);
   page.once('dialog',dialog=>dialog.accept());

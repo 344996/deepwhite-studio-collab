@@ -25,7 +25,8 @@ async function api(route,method='GET',data){const r=await fetch(base+route,{meth
    }
    if(url.pathname==='/api/canvas-image-tasks/task_local_prompt')return route.fulfill({json:{status:'succeeded',result:{images:[fixtureImage]}}});
    if(url.pathname==='/api/studio/mj/submit'){
-     const body=req.postDataJSON();submitted.push(body);const result=body.action==='describe'?{status:'succeeded',text:'四段模拟图片描述'}:body.action==='inpaint'?{status:'modal',task_id:'task_modal_fixture'}:{status:'succeeded',task_id:'task_fixture_'+submitted.length,images:['data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX9sAAAAASUVORK5CYII=']};
+     // The real server files every MJ submission in the generation list (studio_mj_history); do the same here.
+     const body=req.postDataJSON();submitted.push(body);mockJobs.set('mj_'+submitted.length,{id:'mj_'+submitted.length,request:{canvas_id:body.canvas_id,node_id:body.node_id,provider_id:body.provider_id,model:'midjourney-'+body.action,kind:'image',prompt:body.params?.prompt||'',params:body.params||{}},status:'succeeded',created_at:Date.now()/1000,updated_at:Date.now()/1000,children:[],task_ids:['task_fixture_'+submitted.length],outputs:[{url:fixtureImage,kind:'image'}]});const result=body.action==='describe'?{status:'succeeded',text:'四段模拟图片描述'}:body.action==='inpaint'?{status:'modal',task_id:'task_modal_fixture'}:{status:'succeeded',task_id:'task_fixture_'+submitted.length,images:['data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX9sAAAAASUVORK5CYII=']};
      if(body.action==='imagine'){waitForImagine=true;return route.fulfill({json:{status:'running',task_id:'task_fixture_1'}});}
      return route.fulfill({json:result});
    }
@@ -48,9 +49,11 @@ async function api(route,method='GET',data){const r=await fetch(base+route,{meth
  assert(generated[0].prompt.includes('图片本地提示词'));assert(generated[0].prompt.includes('连接补充：暖色灯光'));
  await page.locator('.video-node .gen-run-row .gen-btn').click();await page.waitForFunction(()=>nodes.find(n=>n.type==='video')?.runStatus==='done');
  assert.equal(generated[1].prompt,'视频本地提示词：镜头缓缓推进');assert.equal(generated[1].multimodal,true);
- await page.getByLabel('参考方式',{exact:true}).selectOption('frames');
+ // 参考方式 lives in the node's 生成参数 popover; a render closes it, so open it as a user would.
+ const referenceMode=async value=>{const pop=page.locator('.video-node .studio-universal-params');if(!(await pop.evaluate(e=>e.matches(':popover-open'))))await page.locator('.video-node .studio-image-settings').click();await page.getByLabel('参考方式',{exact:true}).selectOption(value);};
+ await referenceMode('frames');
  assert.equal(await page.evaluate(()=>nodes.find(n=>n.type==='video').multimodal),false);await page.evaluate(()=>render());assert.equal(await page.evaluate(()=>nodes.find(n=>n.type==='video').multimodal),false);
- await page.getByLabel('参考方式',{exact:true}).selectOption('multi');
+ await referenceMode('multi');await page.keyboard.press('Escape');
  await page.evaluate(()=>{for(const n of nodes)if(n.type==='generator'||n.type==='video')n.h=160;render();});
  assert(await page.locator('.video-node>.node-body').evaluate(el=>el.scrollHeight<=el.clientHeight+2));
  await page.screenshot({path:path.join(out,'node-prompts-and-seedance.png')});
@@ -63,17 +66,17 @@ async function api(route,method='GET',data){const r=await fetch(base+route,{meth
  await page.waitForFunction(previous=>document.querySelector('.studio-regular-price b')?.textContent!==previous,price1);
  const price3=await page.locator('.studio-regular-price b').innerText();assert(Math.abs(Number(price3.match(/[\d.]+/)[0])-Number(price1.match(/[\d.]+/)[0])*3)<.003);
  await page.locator('.studio-model-trigger').click();await page.locator('#studioModelPicker:popover-open').waitFor();
- await page.locator('[data-series="Nano Banana"]').click();assert(await page.locator('#studioModelPicker [data-model="deepwhiteai-image-nb-pro"]').isVisible());
+ /* the classic picker is one flat list (no series column): search for the series */await page.getByLabel('搜索画布模型',{exact:true}).fill('Nano Banana');assert(await page.locator('#studioModelPicker [data-model="deepwhiteai-image-nb-pro"]').isVisible());
  assert.equal(await page.locator('#studioModelPicker [data-model="midjourney-upscale"]').count(),0);
  await page.screenshot({path:path.join(out,'commerce-two-level.png')});
- await page.locator('[data-series="Midjourney"]').click();await page.locator('[data-model="midjourney-imagine"]').click();
- await page.locator('.studio-mj-panel [data-mj-field="speed"]').selectOption('relax');await page.locator('.studio-mj-panel .studio-price b').filter({hasText:'预计'}).waitFor();
- const relax=await page.locator('.studio-mj-panel .studio-price b').innerText();await page.locator('[data-mj-field="speed"]').selectOption('turbo');
- await page.waitForFunction(p=>document.querySelector('.studio-mj-panel .studio-price b')?.textContent!==p,relax);
+ await page.getByLabel('搜索画布模型',{exact:true}).fill('Midjourney');await page.locator('[data-model="midjourney-imagine"]').click();/* the MJ options sit in the node's 生成参数 popover */await page.locator('.generator-node .studio-image-settings').click();
+ await page.locator('.studio-mj-panel [data-mj-field="speed"]').selectOption('relax');await page.locator('.generator-node .studio-regular-price b').filter({hasText:'预计'}).waitFor();
+ const relax=await page.locator('.generator-node .studio-regular-price b').innerText();await page.locator('[data-mj-field="speed"]').selectOption('turbo');
+ await page.waitForFunction(p=>document.querySelector('.generator-node .studio-regular-price b')?.textContent!==p,relax);
  await page.getByLabel('图片提示词',{exact:true}).fill('模拟 MJ 文生图');await page.evaluate(()=>{nodes[0].count=1;});
  await page.locator('.generator-body > .gen-run-row .gen-btn').click();
- await page.locator('.studio-mj-state').filter({hasText:'任务处理中'}).waitFor();
- await page.locator('.studio-mj-panel .studio-price b').waitFor();await pause(400);
+ /* the MJ status line is in the (closed) 生成参数 popover; check the state it shows */await page.waitForFunction(()=>/任务处理中/.test(document.querySelector('.generator-node')&&nodes.find(n=>n.type==='generator')?.studioMjState||''));
+ await page.locator('.generator-node .studio-regular-price b').waitFor();await pause(400);
  await page.evaluate(()=>{
    const el=document.querySelector('.generator-node'),input=el.querySelector('.studio-prompt-input');input.focus();input.setSelectionRange(2,4);
    window.mjStable={el,input,panel:el.querySelector('.studio-mj-panel'),rect:JSON.stringify(el.getBoundingClientRect().toJSON()),board:document.querySelector('#board').style.transform};
@@ -82,8 +85,8 @@ async function api(route,method='GET',data){const r=await fetch(base+route,{meth
  assert(await page.evaluate(()=>{const s=window.mjStable;return s.el===document.querySelector('.generator-node')&&s.panel.isConnected&&document.activeElement===s.input&&s.input.selectionStart===2&&s.input.selectionEnd===4&&s.rect===JSON.stringify(s.el.getBoundingClientRect().toJSON())&&s.board===document.querySelector('#board').style.transform;}),'MJ polling must preserve panel, focus, selection, size and viewport');
  checks.push('MJ 连续等待查询不重建节点，面板尺寸、视角、输入焦点和选区保持稳定');
  await page.waitForFunction(()=>nodes[0].studioMjState==='已完成');assert.equal(submitted[0].params.version,'8.2');assert.equal(submitted[0].canvas_id,canvasId);assert.equal(submitted[0].action,'imagine');assert.equal(submitted[0].params.speed,'turbo');assert.equal(submitted[0].params.prompt,'模拟 MJ 文生图');
- assert(await page.locator('.generator-node').evaluate(el=>el.offsetWidth>=620));assert(await page.locator('.generator-node>.node-body').evaluate(el=>el.scrollHeight<=el.clientHeight+2));
- assert.equal(await page.locator('.studio-mj-pager').count(),0);assert.equal(await page.locator('.output-img-wrap:visible').count(),2);await page.getByRole('button',{name:'生成记录',exact:true}).click();await page.locator('.studio-history-body').getByText('模拟 MJ 文生图',{exact:true}).waitFor();await page.locator('.studio-history header button').click();
+ {const size=await page.locator('.generator-node').evaluate(el=>({width:el.offsetWidth,collapsed:el.classList.contains('studio-collapsed'),body:[el.querySelector('.node-body').scrollHeight,el.querySelector('.node-body').clientHeight]}));assert(size.width>=600,JSON.stringify(size));/* in-node editing width since 534b99d */assert(size.body[0]<=size.body[1]+2,JSON.stringify(size));}
+ assert.equal(await page.locator('.studio-mj-pager').count(),0);assert.equal(await page.locator('.output-img-wrap:visible').count(),2);await page.getByRole('button',{name:'任务记录',exact:true}).click();await page.locator('.studio-history-body .studio-history-prompt',{hasText:'模拟 MJ 文生图'}).waitFor();await page.locator('.studio-history:visible header .studio-history-close').click();
  checks.push('MJ 默认 8.2；多图同节点同时展示、节点无翻页按钮；历史画布中的 MJ 记录也显示在生成记录');
  checks.push('正式生图节点显示价格，数量和 MJ 速度改变估价；模型系列 → 版本两级选择；MJ 文生图调用专用接口');
  await page.evaluate(()=>{nodes=[];connections=[];studioAddMj({x:220,y:80});});

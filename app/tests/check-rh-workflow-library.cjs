@@ -1,5 +1,5 @@
 /* Real classic/smart pages and local RH library; all generation traffic mocked. */
-const {chromium}=require('data/local-path');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),net=require('node:net'),{spawn}=require('node:child_process');
 const root=path.resolve(__dirname,'..'),runtime=fs.mkdtempSync(path.join(os.tmpdir(),'dw-rh-workbench-'));
 let child,browser,base,log='',passed=0;const errors=[],submitted=[];
@@ -20,7 +20,7 @@ async function api(url,body,method='POST'){
  child=spawn(path.join(root,'python/python.exe'),[path.join(root,'tests/comfy-workflows-browser-server.py')],{cwd:root,windowsHide:true,env:{...process.env,DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,DEEPWHITE_STUDIO_PORT:String(port),PYTHONUTF8:'1'},stdio:['ignore','pipe','pipe']});
  child.stdout.on('data',x=>log+=x);child.stderr.on('data',x=>log+=x);
  let ready=false;for(let i=0;i<100;i++){try{await api('/api/studio/health');ready=true;break;}catch{await pause(200);}}assert(ready,log);
- browser=await chromium.launch({executablePath:'data/local-path',headless:true});
+ browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||undefined,headless:true});
  const context=await browser.newContext({viewport:{width:1500,height:900}});
  await context.route('**/*',async route=>{
   const req=route.request(),url=new URL(req.url());if(url.origin!==base)return route.abort();
@@ -55,9 +55,9 @@ async function api(url,body,method='POST'){
  const changed=structuredClone(definition);changed.entry.fields[1].fieldValue=25;changed.entry.workflowJson['1'].inputs.steps=25;
  record=await api('/api/studio/runninghub/workflows/'+record.id,{name:'RH 新版本',expected_revision:1,definition:changed},'PUT');assert.equal(record.revision,2);
  const outgoing=await page.evaluate(async id=>{const n=nodes.find(n=>n.id===id),media=rhMediaSources(n),fields=await rhBuildNodeInfoList(n,media);return {fields,extras:await rhBuildWorkflowRequestExtras(n,media,fields),revision:n.studioRhWorkflow.revision};},nodeId);
- assert.equal(outgoing.revision,1);assert.equal(outgoing.extras.workflow['1'].inputs.steps,0);assert.equal(outgoing.fields.find(f=>f.fieldName==='seed').fieldValue,'18446744073709551615');pass('new library version cannot rewrite saved node or pinned full graph');
+ assert.equal(outgoing.revision,1);assert.equal(outgoing.extras.workflow['1'].inputs.steps,0);/* RH-NEW-01: the seed keeps the workflow's own value, so it is not sent as an override; the pinned graph carries it exactly */assert.equal(outgoing.fields.find(f=>f.fieldName==='seed'),undefined);assert.equal(outgoing.extras.workflow['1'].inputs.seed,'18446744073709551615');pass('new library version cannot rewrite saved node or pinned full graph');
  await page.evaluate(id=>runRhNode(id),nodeId);assert.equal(submitted.length,1);assert.equal(submitted[0].payload.workflow['1'].inputs.steps,0);
- assert.equal(submitted[0].payload.nodeInfoList.find(f=>f.fieldName==='seed').fieldValue,'18446744073709551615');pass('native durable RH submit receives pinned graph and exact parameters');
+ assert.equal(submitted[0].payload.nodeInfoList.find(f=>f.fieldName==='seed'),undefined);assert.equal(submitted[0].payload.workflow['1'].inputs.seed,'18446744073709551615');pass('native durable RH submit receives pinned graph and exact parameters');
  await page.evaluate(id=>StudioSave.ensureCurrent({canvasId:String(canvas.id),nodeId:id}),nodeId);
  await page.reload();await page.waitForFunction(()=>typeof nodes!=='undefined'&&nodes.some(n=>n.studioRhWorkflow));
  assert.equal(await page.evaluate(()=>nodes.find(n=>n.studioRhWorkflow).studioRhWorkflow.revision),1);assert.equal(submitted.length,1);pass('reload keeps original version and does not repeat submission');
