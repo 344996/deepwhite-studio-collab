@@ -75,7 +75,7 @@ async function main(){
   checks.push('retry saves UUID and original request before one POST; reload retains handwriting and never resubmits');
   const beforeInvalid=submitted.length,putBefore=puts.length;
   for(const text of ['短','x'.repeat(5001)]){
-   const error=await page.evaluate(async text=>{const n=nodes.find(n=>n.id==='save-node');n.studioPrompt=text;try{await runGenerator(n.id,{cascade:true});return '';}catch(e){return e.message;}},text);assert(error.includes('5–5000'));
+   const error=await page.evaluate(async text=>{const n=nodes.find(n=>n.id==='save-node');n.studioPrompt=text;try{await runGenerator(n.id,{cascade:true});return '';}catch(e){return e.message;}},text);assert(text.length<5?error.includes('至少需要 5 字'):error.includes('上限 5000 字'),error);
   }
   const missing=await page.evaluate(async()=>{const n=addVideoNode({x:800,y:100});n.apiProvider='deepwhite';n.model='seedance-2.0-fast';n.studioPrompt='根据 @图片1 运动，没有关联素材';clearTimeout(saveTimer);saveTimer=null;try{await StudioStageOne.run(n,{cascade:true});return '';}catch(e){return e.message;}});assert(missing.includes('素材'));
   const actualLLM=await page.evaluate(async()=>{const n=addLLMNode({x:800,y:500});n.llmProvider='deepwhite';render();n.userInput='有效的节点输入';clearTimeout(saveTimer);saveTimer=null;try{await callCanvasLLM(n,'');return '';}catch(e){return e.message;}});assert(actualLLM.includes('提示词'),actualLLM);

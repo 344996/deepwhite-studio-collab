@@ -35,6 +35,7 @@ TOOLS = {
 TOOLS.update(graph.TOOLS)
 TOOLS.update(packages.TOOLS)
 TOOLS.add('submit_feedback')
+TOOLS.add('verify_client')
 TOOL_SCHEMAS = {tool['name']: tool['inputSchema'] for tool in load_tools()}
 
 
@@ -549,6 +550,8 @@ def install(app):
                               'restart_hint', '请重启该客户端。')}
             else:
                 result = studio_clients.connect(client_id, configuration, remove=action == 'disconnect')
+                # A rewritten connection must be verified again.
+                studio_clients.reset_verification(client_id)
         except studio_clients.ClientError as exc:
             raise HTTPException(exc.status_code, str(exc)) from None
         except OSError:
@@ -665,6 +668,17 @@ def install(app):
         if name == 'submit_feedback':
             import studio_feedback
             return {'result': await studio_feedback.submit(args, source='mcp')}
+        if name == 'verify_client':
+            # U11: read-only proof that this client reaches the studio; the page shows "已验证".
+            import studio_clients
+            client_id = studio_clients.mark_verified(args.get('code', ''))
+            if not client_id:
+                raise HTTPException(404, '验证码无效或已更换，请在画布设置的“外接智能体”页面重新复制验证命令。')
+            live = sorted((x for x in core.list_canvases() if not x.get('deleted_at')), key=lambda x: x.get('updated_at') or 0, reverse=True)
+            canvas = core.load_canvas(live[0]['id']) if live else None
+            return {'result': {'verified': True, 'client': studio_clients.CLIENTS[client_id]['name'],
+                               'canvas': {'title': canvas.get('title', ''), 'node_count': len(canvas.get('nodes', []))} if canvas else None,
+                               'message': '连接已验证：只读取了画布名和节点数，没有修改或生成。'}}
         if name == 'list_canvases':
             return {'result': {'items': [{**x, 'kind': core.normalize_canvas_kind(x.get('kind'))}
                 for x in core.list_canvases() if not x.get('deleted_at') and

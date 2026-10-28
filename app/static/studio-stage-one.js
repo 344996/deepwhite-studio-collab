@@ -229,7 +229,8 @@
   }
   document.addEventListener('pointerdown',e=>{if(mentionTarget&&!mentionMenu.contains(e.target)&&e.target!==mentionTarget.input)closeMentions();},true);
   document.addEventListener('wheel',e=>{if(mentionTarget&&!mentionMenu.contains(e.target))closeMentions();},true);
-  function submissionError(n,text=prompt(n),sent=sentPrompt(n)){
+  // U09: length is checked when generating (withLength), never shown as a permanent line.
+  function submissionError(n,text=prompt(n),sent=sentPrompt(n),withLength=true){
     const s=spec(n);if(!s)return '模型参数尚未读取，请稍后重试。';
     if(s.supported===false)return s.note||'当前模型尚不支持生成。';
     if(!mentionMode(n)&&n.type!=='llm'){
@@ -245,12 +246,15 @@
       }
     }
     const length=Array.from(String(text||'').trim()).length;
-    return length<s.prompt_min||length>s.prompt_max?`提示词 ${length} 字 · 要求 ${s.prompt_min}–${s.prompt_max} 字${length<s.prompt_min?'，请补充描述':''}`:'';
+    if(!withLength)return '';
+    if(!length&&s.prompt_min>0)return '请先填写提示词。';
+    if(length<s.prompt_min)return `至少需要 ${s.prompt_min} 字，当前 ${length} 字；请补充描述。`;
+    return length>s.prompt_max?`当前 ${length} 字，超过此模型上限 ${s.prompt_max} 字；请删减后再生成，已输入的内容会保留。`:'';
   }
   function promptGuidance(n,wrap){
     const input=wrap.querySelector('.studio-prompt-input'),button=wrap.querySelector('.gen-btn'),s=spec(n);if(!input||!s)return;
     const count=document.createElement('small');count.className='studio-prompt-count';count.setAttribute('aria-live','polite');input.after(count);
-    const validate=()=>{const error=submissionError(n),invalid=!!error;
+    const validate=()=>{const error=submissionError(n,undefined,undefined,false)||n.studioInputError||'',invalid=!!error;
       count.textContent=error;count.hidden=!invalid;
       // The compact composer hides ordinary hints; errors must remain visible.
       count.style.setProperty('display',invalid?'block':'none','important');count.classList.toggle('studio-prompt-invalid',invalid);

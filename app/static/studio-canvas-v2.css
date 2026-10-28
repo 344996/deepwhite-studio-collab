@@ -155,3 +155,4 @@ html.studio-v2-canvas #nodes :is(.video-card,.output-img-wrap)>.studio-capture-f
 html.studio-v2-canvas #nodes .output-img-wrap>.studio-media-actions{top:6px;bottom:auto;left:6px;max-width:calc(100% - 48px);padding:0}
 html.studio-v2-canvas #nodes .output-img-wrap>.studio-media-actions button,html.studio-v2-canvas #nodes .output-img-wrap>.studio-capture-frame{height:26px;padding:4px 8px;line-height:16px;box-sizing:border-box}
 html.studio-v2-canvas #nodes .output-img-wrap>.canvas-video-play{top:calc(50% - 16px)}
+.v2-search-dialog select{width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--dw-line-strong);border-radius:8px;background:var(--dw-bg);color:inherit;font:inherit}

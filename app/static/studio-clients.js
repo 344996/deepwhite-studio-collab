@@ -1,4 +1,4 @@
-/* External agent clients: connect MCP and install Skills per client (Settings → 外接智能体). */
+/* External agent clients (Settings → 外接智能体): connect MCP, copy a verification command, show verified state. */
 (() => {
   'use strict';
   const grid = document.getElementById('clientGrid');
@@ -6,7 +6,7 @@
   const $ = id => document.getElementById(id);
   const manualSelect = $('clientManualSelect'), manualText = $('clientManualText');
   let data = null, busy = '';
-  const ICONS = {codex: 'Cx', claude_code: 'CC', claude_desktop: 'Cl', workbuddy: 'WB', hermes: 'H', doubao: '豆'};
+  const ICONS = {codex: 'Cx', claude_code: 'CC', workbuddy: 'WB', doubao: '豆', deepseek_harness: 'DS'};
 
   function el(tag, text, cls) {
     const node = document.createElement(tag);
@@ -27,23 +27,18 @@
     return value;
   }
 
+  // U11: written configuration and a real round trip are different facts.
   function status(client) {
-    const state = client.mcp.state;
-    if (!client.detected && state !== 'connected') return ['未检测到', 'off'];
-    if (state === 'manual') return ['需在客户端里添加', 'warn'];
-    return ({connected: ['已连接', 'ok'], different: ['需要更新', 'warn'], blocked: ['需处理', 'warn']})[state] || ['未连接', 'idle'];
+    const state = client.mcp.state, verified = client.verification?.verified_at;
+    if (verified && (state === 'connected' || state === 'manual')) return ['已验证', 'ok'];
+    if (state === 'connected') return ['已写入配置 · 待验证', 'warn'];
+    if (state === 'blocked') return ['需处理', 'warn'];
+    if (state === 'different') return ['需要更新', 'warn'];
+    if (client.detectable === false) return ['不支持自动检测', 'idle'];
+    if (!client.detected) return ['未检测到', 'off'];
+    if (state === 'manual') return ['需在客户端里添加', 'idle'];
+    return ['已安装 · 未连接', 'idle'];
   }
-  function skillBadge(client, skill) {
-    if (!client.detected) return ['未检测到客户端', 'off'];
-    if (skill.state === 'manual') return ['需手动上传', 'idle'];
-    if (skill.state === 'latest') return ['最新 v' + skill.installed, 'ok'];
-    if (skill.state === 'upgrade') return ['v' + skill.installed + ' → v' + skill.latest, 'warn'];
-    if (skill.state === 'foreign') return ['同名文件夹 · v' + skill.latest, 'warn'];
-    if (skill.state === 'damaged') return ['文件缺失 · 需修复', 'warn'];
-    if (skill.state === 'modified') return ['已被修改 · v' + skill.installed, 'warn'];
-    return ['未安装 · v' + skill.latest, 'idle'];
-  }
-  const NEEDS_INSTALL = ['upgrade', 'missing', 'foreign', 'damaged', 'modified'];
   function button(label, cls, onClick, attention = false) {
     const node = el('button', label, 'client-button ' + (cls || ''));
     node.type = 'button';
@@ -67,11 +62,9 @@
       busy = ''; render();
     }
   }
-  function download(skill) {
-    const link = document.createElement('a');
-    link.href = '/api/studio/clients/skills/' + encodeURIComponent(skill.id) + '.zip';
-    link.download = skill.id + '.zip';
-    document.body.append(link); link.click(); link.remove();
+  async function copy(text, message) {
+    try { await navigator.clipboard.writeText(text); say(message); }
+    catch { say('无法访问剪贴板，请手动选择文字复制。', true); }
   }
 
   function card(client) {
@@ -87,42 +80,25 @@
     head.append(icon, title);
     node.append(head);
 
-    const list = el('ul', undefined, 'client-skills');
-    for (const skill of client.skills) {
-      const [text, skillTone] = skillBadge(client, skill);
-      const row = el('li');
-      row.append(el('span', skill.name, 'client-skill-name'), el('span', text, 'client-skill-badge'));
-      row.lastChild.dataset.tone = skillTone;
-      row.title = skill.description;
-      list.append(row);
-    }
-    node.append(list);
-
     const actions = el('div', undefined, 'client-actions');
     const mcp = client.mcp.state;
     if (mcp === 'manual') {
-      actions.append(button('复制连接配置', '', () => { manualSelect.value = client.id; showManual(); copyManual(); }));
+      actions.append(button('复制连接配置', '', () => copy(client.manual.text, '已复制连接配置。粘贴到客户端的 MCP 设置后重启客户端。')));
     } else if (mcp === 'connected') {
-      actions.append(button(busy === client.id + ':disconnect' ? '正在断开…' : '断开客户端', '', () => act(client, 'disconnect')));
+      actions.append(button(busy === client.id + ':disconnect' ? '正在断开…' : '断开', '', () => act(client, 'disconnect')));
     } else if (client.detected || mcp === 'different') {
-      actions.append(button(busy === client.id + ':connect' ? '正在连接…' : mcp === 'different' ? '更新连接' : '连接客户端',
-        mcp === 'different' ? 'accent' : '', () => act(client, 'connect'), mcp === 'different'));
+      actions.append(button(busy === client.id + ':connect' ? '正在连接…' : mcp === 'different' ? '更新连接' : '一键连接',
+        'accent', () => act(client, 'connect'), mcp === 'different'));
     }
-    const manualSkills = client.skills.some(skill => skill.state === 'manual');
-    const needs = client.skills.filter(skill => NEEDS_INSTALL.includes(skill.state));
-    if (manualSkills) {
-      actions.append(button('下载 Skills', '', () => client.skills.forEach(download)));
-    } else if (client.detected && needs.length) {
-      const upgrade = needs.some(skill => skill.state === 'upgrade');
-      const repair = !upgrade && needs.some(skill => skill.state === 'damaged' || skill.state === 'modified');
-      actions.append(button(busy === client.id + ':install_skills' ? '正在安装…' : upgrade ? '升级 Skills' : repair ? '修复 Skills' : '安装 Skills',
-        upgrade || repair ? 'danger' : '', () => act(client, 'install_skills'), upgrade || repair));
+    const verification = client.verification;
+    if (verification && (mcp === 'connected' || mcp === 'manual')) {
+      actions.append(button('复制验证命令', '', () => copy(verification.command, '已复制验证命令。发给 ' + client.name + '，它读取画布后这里会显示“已验证”。')));
     }
     if (actions.childElementCount) node.append(actions);
-    const hint = mcp === 'blocked' ? client.mcp.message : manualSkills && client.detected ? client.skills_hint : '';
+    const hint = mcp === 'blocked' || mcp === 'manual' ? client.mcp.message
+      : mcp === 'connected' && !verification?.verified_at ? '配置已写入，尚未确认能连上。' + (client.restart_hint || '') + ' 然后发送验证命令。'
+      : verification?.verified_at ? '最近一次验证：' + new Date(verification.verified_at * 1000).toLocaleString() : '';
     if (hint) node.append(el('p', hint, 'client-hint'));
-    // Show where Skills go before anything is installed there.
-    if (client.skills_path && client.detected && !manualSkills) node.append(el('p', 'Skills 位置：' + client.skills_path, 'client-hint client-path'));
     return node;
   }
 
@@ -163,5 +139,10 @@
   $('clientRefresh').addEventListener('click', () => { say(''); load(); });
   const tab = document.querySelector('[data-tab="control"]');
   tab?.addEventListener('click', () => load());
+  // The verification arrives from the agent, not from this page: look again while one is pending.
+  setInterval(() => {
+    if (document.hidden || busy || !grid.offsetParent) return;
+    if (data?.items.some(item => ['connected', 'manual'].includes(item.mcp.state) && !item.verification?.verified_at)) load();
+  }, 4000);
   load();
 })();

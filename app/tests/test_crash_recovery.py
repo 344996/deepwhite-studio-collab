@@ -216,7 +216,62 @@ class CrashRecovery(unittest.TestCase):
         self.assertEqual(done['task_ids'], [task])
         self.assertEqual(len(self.posts('N3')), 1)
 
+    # -- RunningHub ledger ---------------------------------------------------------------------
+    def rh_request(self, marker):
+        return {'request_id': str(uuid.uuid4()), 'canvas_id': 'c-rec', 'node_id': 'rh-node', 'kind': 'app',
+                'payload': {'webappId': '1234567890', 'nodeInfoList': [{'nodeId': '1', 'fieldName': 'text', 'fieldValue': marker}],
+                            'useWallet': False, 'instanceType': ''}}
+
+    def test_rh_killed_during_submit_is_uncertain_and_never_resubmitted(self):
+        self.mode(rh='hang')
+        request = self.rh_request('R1-雨夜')
+        with self.assertRaises(httpx.HTTPError):
+            httpx.post(f'http://127.0.0.1:{self.port}/api/studio/runninghub/tasks', json=request, timeout=3)
+        self.wait(lambda: self.posts('R1-'), 'the RH POST to reach the platform')
+        self.restart()
+        self.mode(rh='ok')
+        job = self.api('GET', f'/api/studio/runninghub/tasks/{request["request_id"]}', status=200).json()
+        self.assertEqual(job['status'], 'uncertain', job)
+        again = self.api('POST', '/api/studio/runninghub/tasks', request, 200).json()
+        self.assertEqual(again['status'], 'uncertain')
+        self.assertEqual(len(self.posts('R1-')), 1)
+
+    def test_rh_offline_is_not_submitted_and_a_new_request_sends_once(self):
+        offline = Path(self.runtime.name) / 'recovery-offline'
+        request = self.rh_request('R2-雨夜')
+        offline.write_text('1')
+        try:
+            job = self.api('POST', '/api/studio/runninghub/tasks', request, 200).json()
+        finally:
+            offline.unlink()
+        self.assertEqual(job['status'], 'not_submitted', job)
+        self.assertIn('没有发出', job['error'])
+        self.assertEqual(self.posts('R2-'), [])
+        retry = {**request, 'request_id': str(uuid.uuid4())}
+        self.assertEqual(self.api('POST', '/api/studio/runninghub/tasks', retry, 200).json()['status'], 'queued')
+        self.assertEqual(len(self.posts('R2-')), 1)
+
     # -- MJ ----------------------------------------------------------------------------------
+    def test_mj_offline_is_recorded_as_not_sent_and_a_new_attempt_sends_once(self):
+        offline = Path(self.runtime.name) / 'recovery-offline'
+        before = len(self.posts('/midjourney/'))
+        attempt = 'mj-attempt-' + uuid.uuid4().hex[:10]
+        body = {'provider_id': 'dw', 'action': 'imagine', 'params': {'prompt': '雨夜的老城修表铺 M2'}, 'attempt_id': attempt}
+        offline.write_text('1')
+        try:
+            response = self.api('POST', '/api/studio/mj/submit', body)
+        finally:
+            offline.unlink()
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertIn('没有发出', response.json()['detail'])
+        found = self.api('GET', f'/api/studio/mj/attempts/{attempt}', status=200).json()
+        self.assertEqual((found['status'], found['task_id']), ('failed', ''))
+        self.assertIn('没有发出', found['error'])
+        self.assertEqual(len(self.posts('/midjourney/')), before)
+        retry = {**body, 'attempt_id': attempt + '-2'}
+        self.assertEqual(self.api('POST', '/api/studio/mj/submit', retry).status_code, 200)
+        self.assertEqual(len(self.posts('/midjourney/')), before + 1)
+
     def test_mj_killed_during_submit_is_found_by_attempt_and_never_resubmitted(self):
         self.mode(mj='hang')
         attempt = 'mj-attempt-' + uuid.uuid4().hex[:10]

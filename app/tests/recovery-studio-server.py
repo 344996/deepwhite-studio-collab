@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import httpx
 
 UPSTREAM = 'http://127.0.0.1:%s' % os.environ['RECOVERY_UPSTREAM_PORT']
-FORWARD = {'api.deepwhiteai.com', 'cdn.recovery.invalid'}
+FORWARD = {'api.deepwhiteai.com', 'cdn.recovery.invalid', 'rh.recovery.invalid'}
 OFFLINE = Path(os.environ['DEEPWHITE_STUDIO_RUNTIME_DIR']) / 'recovery-offline'
 _Real = httpx.AsyncClient
 
@@ -54,6 +54,8 @@ _key = main.provider_env_key_value
 main.provider_env_key_value = lambda pid: 'fixture-key' if pid == 'dw' else _key(pid)
 # The MJ path needs its actions in a synced catalogue; the generic path resolves from it too.
 catalog.save_store({'dw': {'base_url': BASE, 'models': catalog.build_catalog(['deepwhiteai-image-g-v2.5-lowprice', 'midjourney-imagine'])}})
+RH = {'id': 'runninghub', 'name': 'RunningHub fixture', 'base_url': 'https://rh.recovery.invalid', 'api_key': 'fixture-rh-key', 'enabled': True, 'rh_apps': [], 'rh_workflows': []}
+main.runninghub_provider = lambda: dict(RH)
 storage = Path(main.storage_kind_dir('generated'))
 storage.mkdir(parents=True, exist_ok=True)
 (storage / 'recovery-ref.png').write_bytes(PNG)

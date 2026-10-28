@@ -1,12 +1,14 @@
 """Durable RH application/workflow requests; retries query the original request only."""
 import asyncio
 import json
+import os
 import hashlib
 import inspect
 import re
 import time
 from pathlib import Path
 from typing import Any
+import httpx
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 import main as core
@@ -73,6 +75,45 @@ def find_model_child_request(request_id):
     from studio_legacy_tasks import find_image_request
     return find_image_request(request_id)
 
+# REF-03: the same trace as general generations. Each RH upload remembers which local file and asset
+# version it came from; the ledger then records what every media field really sends, before the POST.
+SUBMISSION_VERSION=1
+MEDIA_VALUE=re.compile(r'^(api/|https?://)\S+\.(png|jpe?g|webp|gif|bmp|mp4|mov|webm|m4v|mp3|wav|m4a|aac|flac|ogg)$',re.I)
+
+
+def upload_index_path():
+    return Path(core.DATA_DIR)/'studio_rh_uploads.json'
+
+
+def remember_upload(file_name,source,content):
+    from studio_legacy_tasks import redact_signed_url
+    match=re.search(r'/api/studio/assets/([a-f0-9]{32})/file',str(source or ''))
+    entry={'source':str(source) if str(source).startswith('/') else redact_signed_url(str(source)),
+           'version_id':match.group(1) if match else '','sha256':hashlib.sha256(content).hexdigest(),'at':int(time.time())}
+    path=upload_index_path()
+    try:index=json.loads(path.read_text(encoding='utf-8'))
+    except (OSError,ValueError):index={}
+    index[str(file_name)]=entry
+    # Keep the newest entries only; a trace of last year's uploads is not needed to run.
+    index=dict(sorted(index.items(),key=lambda item:item[1].get('at',0))[-5000:])
+    temporary=path.with_suffix('.tmp');temporary.write_text(json.dumps(index,ensure_ascii=False),encoding='utf-8');os.replace(temporary,path)
+
+
+def submission_snapshot(payload):
+    try:index=json.loads(upload_index_path().read_text(encoding='utf-8'))
+    except (OSError,ValueError):index={}
+    media=[]
+    for item in payload.get('nodeInfoList') or []:
+        value=str(item.get('fieldValue') or '')
+        if value in index or MEDIA_VALUE.match(value):
+            known=index.get(value,{})
+            media.append({'node':str(item.get('nodeId','')),'field':str(item.get('fieldName','')),'uploaded_as':value,
+                          'source':known.get('source',''),'version_id':known.get('version_id',''),'sha256':known.get('sha256','')})
+    return {'recorded':'local_before_send','request_version':SUBMISSION_VERSION,'media':media,
+            'body_sha256':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
+            'note':'本地发送前记录，用于核对；不能证明平台实际收到完全相同的字节。'}
+
+
 async def submit(request):
     body=ModelPayload(**request.payload) if request.kind=='model' else core.RunningHubSubmitRequest(**request.payload) if request.kind=='app' else core.RunningHubWorkflowSubmitRequest(**request.payload)
     normalized=body.model_dump(exclude={'request_id','canvas_id','node_id'}) if request.kind=='model' else body.model_dump()
@@ -93,6 +134,7 @@ async def submit(request):
         except HTTPException as error:
             if error.status_code!=404:raise
         record={'id':request.request_id,'request':request.model_dump(),'provider_id':'runninghub','base_url':str(provider.get('base_url','')).rstrip('/'),'status':'submitting','task_id':'','outputs':[],'error':'','created_at':time.time()}
+        if request.kind!='model':record['submission']=submission_snapshot(normalized)
         if request.kind=='model':
             record['children']=[{'request_id':model_child_request_id(request.request_id,index),'index':index,'task_id':'','status':'planned','outputs':[],'error':''} for index in range(body.count)]
             record['submission_complete']=False
@@ -119,6 +161,10 @@ async def submit(request):
         if not task_id:raise ValueError('Missing task id')
         record.update(task_id=task_id,status='queued')
     except HTTPException as error:
+        if isinstance(error.__cause__,(httpx.ConnectError,httpx.ConnectTimeout)) and not record.get('children'):
+            # The connection never opened: RH cannot have this request, so it may be sent again.
+            record.update(status='not_submitted',error='网络未连接，请求没有发出，未产生费用；恢复网络后可以重新生成。',error_phase='submit',error_code='network')
+            return record
         rejected=400<=error.status_code<500 and not record.get('children')
         reason=safe_reason(error.detail,(api_key,))
         message='RH 拒绝提交' if rejected else '提交结果待核实；请到 RH 查询，勿重复提交'

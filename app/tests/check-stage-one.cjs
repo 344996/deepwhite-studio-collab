@@ -49,26 +49,26 @@ async function openArrange(){await page.locator('#studioArrangeToggle0929').clic
  assert.equal(submitted[0].references.length,2);assert(submitted[0].prompt.includes('保持主体一致'));assert.equal(submitted[0].params.resolution,'1k');
  checks.push('上传、替换、移除、排序与粘贴参考素材；本地提示词和连接文本合并；参数仅显示模型允许值');
  page.once('dialog',d=>d.accept('产品主视觉'));await page.locator('.generator-node .node-title').dblclick();assert.equal(await page.locator('.generator-node .node-title').innerText(),'产品主视觉');
- await page.evaluate(async()=>await saveCanvas());const count=submitted.length;await page.reload();await page.getByLabel('图片提示词',{exact:true}).waitFor();await pause(1800);assert.equal(submitted.length,count);assert.equal(await page.locator('.generator-node .node-title').innerText(),'产品主视觉');assert.equal(await page.locator('.studio-ref-item').count(),2);
+ await page.evaluate(async()=>await saveCanvas());const count=submitted.length;await page.reload();/* U03: a node with a result opens its editor once selected */await page.locator('.generator-node .node-title').click();await page.getByLabel('图片提示词',{exact:true}).waitFor();await pause(1800);assert.equal(submitted.length,count);assert.equal(await page.locator('.generator-node .node-title').innerText(),'产品主视觉');assert.equal(await page.locator('.studio-ref-item').count(),2);
  await page.getByRole('button',{name:'任务记录',exact:true}).click();await page.locator('.studio-history article').waitFor();assert((await page.locator('.studio-history article').innerText()).includes('保持主体一致'));assert.equal(await page.locator('.studio-history a[download]').count(),1);
  await page.getByRole('button',{name:'复用这次设置',exact:true}).click();assert.equal(await page.locator('.generator-node').count(),2);assert.equal(submitted.length,count);
  checks.push('重命名和素材随画布保存；刷新不重复提交；记录显示输入和任务编号，可下载结果或复用设置');
  await page.evaluate(()=>{const n=nodes.find(n=>n.type==='generator');nodes=nodes.filter(x=>x===n||x.type==='output');connections=[];n.x=60;n.y=80;render();});
  pauseNext=true;await page.locator('.generator-node .gen-btn').click();await page.waitForFunction(()=>nodes.find(n=>n.type==='generator')?.studioJobState==='paused');await page.evaluate(async()=>await saveCanvas());const beforeResume=submitted.length;
- await page.reload();await page.getByLabel('图片提示词',{exact:true}).waitFor();await page.locator('.studio-basics button').filter({hasText:'继续查询'}).click();await page.waitForFunction(()=>nodes.find(n=>n.type==='generator')?.studioJobState==='succeeded');assert.equal(submitted.length,beforeResume);assert.equal(resumes,1);
+ await page.reload();/* U03: a node with a result opens its editor once selected */await page.locator('.generator-node .node-title').click();await page.getByLabel('图片提示词',{exact:true}).waitFor();await page.locator('.studio-basics button').filter({hasText:'继续查询'}).click();await page.waitForFunction(()=>nodes.find(n=>n.type==='generator')?.studioJobState==='succeeded');assert.equal(submitted.length,beforeResume);assert.equal(resumes,1);
  checks.push('中断记录刷新后可继续查询，未再次提交生成');
  await page.evaluate(()=>{nodes=[];connections=[];const n=addLLMNode({x:100,y:80});n.llmProvider='deepwhite';render();});
  await page.getByLabel('文本任务',{exact:true}).selectOption('rewrite');await page.getByLabel('文本提示词',{exact:true}).fill('请把这段文字改得更简洁。');
  await page.locator('.llm-run').first().click();await page.waitForFunction(()=>nodes.find(n=>n.type==='llm')?.outputText==='这是改写后的结果。');assert(submitted.at(-1).system_prompt.includes('改写'));assert.equal(submitted.at(-1).kind,'chat');
  await page.getByRole('button',{name:'将结果放入文本节点',exact:true}).click();assert(await page.evaluate(()=>nodes.some(n=>n.type==='prompt'&&n.text==='这是改写后的结果。')));
- await page.getByRole('button',{name:'任务记录',exact:true}).click();await page.getByRole('button',{name:'下载文本',exact:true}).waitFor();await page.getByRole('button',{name:'关闭',exact:true}).click();
+ await page.getByRole('button',{name:'任务记录',exact:true}).click();await page.getByRole('button',{name:'下载文本',exact:true}).waitFor();await page.getByRole('button',{name:'关闭生成记录',exact:true}).click();
  await page.screenshot({path:path.join(out,'stage-one-text.png')});
  checks.push('文本生成/改写/自定义入口；文本结果复制、下载、复用为节点');
  // Regression: the live lowprice model rejects 1–4 characters, despite stale public docs.
  await page.evaluate(()=>{nodes=[];connections=[];const n=addGeneratorNode({x:80,y:60});n.model='deepwhiteai-image-g-v2.5-lowprice';render();});
- await page.getByLabel('图片提示词',{exact:true}).fill('一只猫');assert(await page.locator('.generator-node .gen-btn').isDisabled());assert((await page.locator('.studio-prompt-count').innerText()).includes('5–5000'));
+ await page.getByLabel('图片提示词',{exact:true}).fill('一只猫');/* U09 */assert(!(await page.locator('.studio-prompt-count').isVisible()));await page.locator('.generator-node .gen-btn').click();await page.waitForTimeout(300);assert((await page.locator('.studio-prompt-count').innerText()).includes('至少需要 5 字'));
  assert(await page.locator('.studio-prompt-count').isVisible());assert.equal(await page.getByLabel('图片提示词',{exact:true}).getAttribute('aria-invalid'),'true');const shortCount=submitted.length;
- await page.getByLabel('图片提示词',{exact:true}).fill('长'.repeat(5001));assert(await page.locator('.generator-node .gen-btn').isDisabled());assert(await page.locator('.studio-prompt-count').isVisible());assert((await page.locator('.studio-prompt-count').innerText()).includes('5001'));assert.equal(submitted.length,shortCount);
+ await page.getByLabel('图片提示词',{exact:true}).fill('长'.repeat(5001));/* U09: no permanent length line; generating reports it in place. */assert(!(await page.locator('.studio-prompt-count').isVisible()));await page.locator('.generator-node .gen-btn').click();await page.waitForTimeout(300);assert(await page.locator('.studio-prompt-count').isVisible());assert((await page.locator('.studio-prompt-count').innerText()).includes('5001'));assert.equal(submitted.length,shortCount);
  await page.getByLabel('图片提示词',{exact:true}).fill('一只白色猫');assert(await page.locator('.generator-node .gen-btn').isEnabled());assert.equal(await page.getByLabel('图片提示词',{exact:true}).getAttribute('aria-invalid'),null);assert.equal(await page.locator('.studio-prompt-count').isVisible(),false);assert.equal(submitted.length,shortCount);
  await page.locator('.generator-node .gen-btn').click();await page.waitForFunction(()=>nodes[0].runStatus==='done');
  checks.push('G2.5 低价版不足 5 字或超过 5000 字时阻止提交并显示原因；有效 5 字清除错误且可提交');
@@ -104,7 +104,7 @@ async function openArrange(){await page.locator('#studioArrangeToggle0929').clic
  await page.keyboard.press('Delete');assert.equal(await page.evaluate(()=>nodes.length),2);
  await page.keyboard.press('Escape');
  // Selecting a header must release the previous editor's focus; text editing remains safe.
- await page.getByLabel('图片提示词',{exact:true}).focus();await page.keyboard.press('Delete');assert.equal(await page.evaluate(()=>nodes.length),2);
+ await page.locator('.generator-node .node-title').click();/* U03: open the result node first */await page.getByLabel('图片提示词',{exact:true}).focus();await page.keyboard.press('Delete');assert.equal(await page.evaluate(()=>nodes.length),2);
  await page.locator('.generator-node .node-head').click();await page.keyboard.press('Delete');assert.equal(await page.evaluate(()=>nodes.some(n=>n.type==='generator')),false);
  await page.keyboard.press('Control+z');assert.equal(await page.evaluate(()=>nodes.some(n=>n.type==='generator')),true);
  await page.evaluate(()=>{nodes=[];connections=[];selected.clear();const n=addVideoNode({x:80,y:50});n.model='seedance-2.0-fast';render();});

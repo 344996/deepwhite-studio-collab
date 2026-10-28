@@ -1,0 +1,4 @@
+/* U03: a collapsed result node keeps its media, title and status line. */
+.node.studio-collapsed .studio-node-composer > :not(.studio-basics){display:none!important}
+.node.studio-collapsed .studio-node-composer .studio-basics > :not(.studio-job-state){display:none!important}
+.node.studio-collapsed .studio-node-composer::after{content:'点击节点查看提示词和参数';display:block;padding:6px 10px 8px;font-size:11px;opacity:.6}

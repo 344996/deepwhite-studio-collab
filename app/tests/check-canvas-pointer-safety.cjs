@@ -8,7 +8,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function api(url,method='GET',body){const r=await fetch(base+url,{method,headers:{'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});assert(r.ok,await r.clone().text());return r.json();}
 function fixture(c){return {...c,viewport:{x:100,y:90,scale:.75},nodes:[
  {id:'p',type:'prompt',x:80,y:90,w:280,h:230,studioTitle:'手写文本',text:'拖动不能破坏编辑、选区或手写内容。',legacyMeta:{marker:'p'}},
- {id:'i',type:'image',x:440,y:90,w:280,h:260,name:'本地图',url:'/static/studio-mark.svg',legacyMeta:{marker:'i'}},
+ {id:'i',type:'image',x:440,y:430,w:280,h:260,name:'本地图',url:'/static/studio-mark.svg',legacyMeta:{marker:'i'}},
  {id:'g',type:'generator',x:820,y:90,w:440,studioTitle:'离线生成',model:'deepwhiteai-image-g-v2.5-lowprice',apiProvider:'deepwhite',studioPrompt:'离线验证不会提交生成。',legacyMeta:{marker:'g'}},
  ],connections:[{id:'wire',from:'p',to:'g'}]};}
 async function state(){return page.evaluate(()=>({id:canvas.id,nodes:JSON.parse(JSON.stringify(nodes)),connections:JSON.parse(JSON.stringify(connections)),viewport:{...viewport},selected:[...selected]}));}

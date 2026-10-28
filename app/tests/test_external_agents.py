@@ -147,13 +147,13 @@ class SmartCanvasTests(Base):
         self.call("undo_edit", {"canvas_id": self.cid, "operation_id": undo_op, "expected_revision": done["revision"]})
         self.assertEqual(next(n for n in core.load_canvas(self.cid)["nodes"] if n["id"] == "loop")["x"], 400)
 
-    def test_create_smart_canvas(self):
-        created = self.call("create_canvas", {"project_id": self.project["id"], "title": "智能分镜", "kind": "smart",
-                                              "expected_revision": self.call("list_projects")["revision"],
-                                              "operation_id": uuid.uuid4().hex})
-        self.assertEqual(created["kind"], "smart")
-        self.assertTrue(created["url"].startswith("/static/smart-canvas.html?id="))
-        self.assertEqual(core.load_canvas(created["canvas_id"])["kind"], "smart")
+    def test_smart_canvases_can_no_longer_be_created(self):
+        # U10 (handover 2026-10-26): smart canvases are retired; agents create classic ones only.
+        before = len(core.list_canvases())
+        self.call("create_canvas", {"project_id": self.project["id"], "title": "智能分镜", "kind": "smart",
+                                    "expected_revision": self.call("list_projects")["revision"],
+                                    "operation_id": uuid.uuid4().hex}, 400)
+        self.assertEqual(len(core.list_canvases()), before)
 
     def test_generation_tools_stay_ordinary_only(self):
         self.call("apply_nodes", {"canvas_id": self.cid, "operation_id": uuid.uuid4().hex,
@@ -202,6 +202,7 @@ class ClientTests(Base):
         self.root = home
         for folder in (".codex", ".claude", ".workbuddy", "Local/hermes", "Roaming/Claude"):
             (home / folder).mkdir(parents=True, exist_ok=True)
+        studio_clients._verification_path().unlink(missing_ok=True)
 
     def act(self, client_id, action, status=200, origin=ORIGIN):
         response = self.client.post(f"/api/studio/clients/{client_id}", json={"action": action},
@@ -211,6 +212,36 @@ class ClientTests(Base):
 
     def listing(self):
         return {item["id"]: item for item in self.client.get("/api/studio/clients").json()["items"]}
+
+    def test_page_lists_exactly_the_five_agents_with_a_verification_command(self):
+        # U11 (handover 2026-10-26): Codex, Claude Code, WorkBuddy, 豆包工作, DeepSeek Harness only.
+        items = self.client.get("/api/studio/clients").json()["items"]
+        self.assertEqual([(i["id"], i["name"]) for i in items], [
+            ("codex", "Codex"), ("claude_code", "Claude Code"), ("workbuddy", "WorkBuddy"),
+            ("doubao", "豆包工作"), ("deepseek_harness", "DeepSeek Harness")])
+        for item in items:
+            self.assertRegex(item["verification"]["code"], r"^DW-[0-9A-F]{6}$")
+            self.assertIn(item["verification"]["code"], item["verification"]["command"])
+            self.assertEqual(item["verification"]["verified_at"], 0)
+            self.assertNotIn("Key", item["verification"]["command"])
+        harness = items[-1]
+        self.assertEqual((harness["detected"], harness["detectable"], harness["mcp"]["state"]), (False, False, "manual"))
+        self.assertIn("mcpServers", harness["manual"]["text"])
+
+    def test_only_the_real_agent_call_marks_a_client_verified_and_reconnect_resets_it(self):
+        self.act("claude_code", "connect")
+        listed = self.listing()["claude_code"]
+        self.assertEqual(listed["mcp"]["state"], "connected")
+        self.assertEqual(listed["verification"]["verified_at"], 0, "written config must not count as verified")
+        canvas = core.new_canvas("验证用画布", project=self.project["id"])
+        result = self.call("verify_client", {"code": listed["verification"]["code"]})
+        self.assertEqual((result["verified"], result["client"]), (True, "Claude Code"))
+        self.assertEqual(result["canvas"], {"title": "验证用画布", "node_count": len(core.load_canvas(canvas["id"])["nodes"])})
+        self.assertGreater(self.listing()["claude_code"]["verification"]["verified_at"], 0)
+        self.assertEqual(self.listing()["codex"]["verification"]["verified_at"], 0, "another client was marked")
+        self.act("claude_code", "connect")
+        self.assertEqual(self.listing()["claude_code"]["verification"]["verified_at"], 0)
+        self.call("verify_client", {"code": "DW-000000"}, 404)
 
     def test_claude_code_connect_preserves_settings_and_disconnects(self):
         config = self.root / ".claude.json"
@@ -249,7 +280,8 @@ class ClientTests(Base):
         self.assertIn("  other:\n    command: \"x\"", text)
         self.assertIn("  deepwhite-studio:", text)
         self.assertIn("terminal:\n  backend: local", text)
-        self.assertEqual(self.listing()["hermes"]["mcp"]["state"], "connected")
+        # Hermes is no longer listed on the page (U11) but stays connectable through the API.
+        self.assertEqual(self.act("hermes", "connect")["client"]["mcp"]["state"], "connected")
         self.act("hermes", "disconnect")
         self.assertNotIn("deepwhite-studio", config.read_text(encoding="utf-8"))
         self.assertIn("  other:", config.read_text(encoding="utf-8"))
@@ -332,17 +364,17 @@ class ClientTests(Base):
 
     def test_bad_hermes_encoding_only_blocks_hermes(self):
         # CLIENT-03: one unreadable client must not break the whole list.
-        config = self.root / "Local/hermes/config.yaml"
-        config.write_bytes(b"model: \xff\xfe\x80 broken\n")
+        config = self.root / ".workbuddy/mcp.json"
+        config.write_bytes(b"{\"model\": \"\xff\xfe\x80 broken\"}")
         self.act("claude_code", "connect")
         response = self.client.get("/api/studio/clients")
         self.assertEqual(response.status_code, 200, response.text)
         items = {item["id"]: item for item in response.json()["items"]}
         self.assertEqual(items["claude_code"]["mcp"]["state"], "connected")
-        self.assertEqual(items["hermes"]["mcp"]["state"], "blocked")
-        self.assertIn("UTF-8", items["hermes"]["mcp"]["message"])
-        self.act("hermes", "connect", 409)
-        self.assertEqual(config.read_bytes(), b"model: \xff\xfe\x80 broken\n")
+        self.assertEqual(items["workbuddy"]["mcp"]["state"], "blocked")
+        self.assertIn("JSON", items["workbuddy"]["mcp"]["message"])
+        self.act("workbuddy", "connect", 409)
+        self.assertEqual(config.read_bytes(), b"{\"model\": \"\xff\xfe\x80 broken\"}")
 
     def test_relative_codex_home_resolves_to_one_absolute_target(self):
         # CLIENT-04: a relative CODEX_HOME is resolved once; it is shown and is the only place written.

@@ -73,7 +73,7 @@ class HttpTransportTests(unittest.TestCase):
                                  headers={"Mcp-Session-Id": session})
         names = [tool["name"] for tool in listed["result"]["tools"]]
         self.assertIn("studio_status", names)
-        self.assertEqual(len(names), 17)
+        self.assertEqual(len(names), 18)  # + verify_client (U11)
         _, called = self.request("POST", body={"jsonrpc": "2.0", "id": 3, "method": "tools/call",
                                                "params": {"name": "studio_status", "arguments": {}}},
                                  headers={"Mcp-Session-Id": session})

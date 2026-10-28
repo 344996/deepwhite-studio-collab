@@ -74,8 +74,8 @@ async function main(){
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>toast('提示：减少动效时仍清晰可见。'));await check();assert.equal(await notice.evaluate(e=>parseFloat(getComputedStyle(e).transitionDuration)),0);await page.screenshot({path:path.join(artifacts,'reduced-motion-1500.png')});pass('reduced motion disables notice transition');
   await page.waitForFunction(()=>!document.getElementById('toast').classList.contains('show'));assert.equal(await notice.evaluate(e=>+getComputedStyle(e).opacity),0);pass('native bounded dismissal timer retained');
   // Saved mock receipts exercise real result buttons and dialogs in both engines.
-  const videoBytes=await page.evaluate(async()=>{const c=document.createElement('canvas');c.width=320;c.height=180;const ctx=c.getContext('2d');ctx.fillStyle='#2a3029';ctx.fillRect(0,0,320,180);const stream=c.captureStream(8),rec=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8'}),chunks=[];rec.ondataavailable=e=>chunks.push(e.data);const stopped=new Promise(r=>rec.onstop=r);rec.start();await new Promise(r=>setTimeout(r,400));rec.stop();await stopped;stream.getTracks().forEach(t=>t.stop());return [...new Uint8Array(await new Blob(chunks).arrayBuffer())];});
-  fs.writeFileSync(path.join(runtime,'output/notice-fixture.webm'),Buffer.from(videoBytes));
+  // A recorded, checked clip: recording live in headless Edge sometimes yields an empty file.
+  fs.copyFileSync(path.join(__dirname,'fixtures','native-fixture.webm'),path.join(runtime,'output/notice-fixture.webm'));
   const videoUrl='/output/notice-fixture.webm';
   for(const kind of ['smart','classic'])for(const media of ['llm','video']){
    const c=(await api('/api/canvases','POST',{title:`任务卡视觉 ${kind} ${media}`,kind,project:project.id})).canvas;

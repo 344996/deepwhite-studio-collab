@@ -18,6 +18,9 @@
   const element=(tag,cls,text)=>{const item=document.createElement(tag);if(cls)item.className=cls;if(text)item.textContent=text;return item;};
   const isolate=item=>{for(const type of ['pointerdown','mousedown','dblclick','wheel','keydown'])item.addEventListener(type,event=>event.stopPropagation());return item;};
   function previewDialog(output) {
+    // Over another modal the close event (which removes a preview) can lag ~200ms; a quick reopen
+    // must not leave the old one in the page.
+    document.querySelectorAll('.studio-media-preview-dialog:not([open])').forEach(old=>old.remove());
     const dialog=element('dialog','studio-media-preview-dialog');dialog.setAttribute('aria-label','生成结果预览');
     const close=element('button','','关闭预览');close.type='button';close.onclick=()=>dialog.close();
     const media=element(output.kind==='video'?'video':output.kind==='audio'?'audio':'img');
@@ -89,9 +92,22 @@
     smartHistory();window.StudioNodeComposer=Object.freeze({ready:true,preview:previewDialog});return;
   }
   const draw=renderNode;
+  // UI-NEW-01: in-node editing wants 600px, but widening a node saved narrower must not slide it
+  // under its right-hand neighbour, where clicks would land on the wrong card.
+  const height=n=>nodesEl?.querySelector(`[data-id="${CSS.escape(String(n.id))}"]`)?.offsetHeight||Number(n.h)||320;
+  function roomyWidth(node,wanted){
+    const current=Number(node.w)||0;if(current>=wanted)return current;
+    const top=Number(node.y)||0,bottom=top+height(node);let room=wanted;
+    for(const other of nodes){
+      if(other===node||!(Number(other.x)>Number(node.x)))continue;
+      const otherTop=Number(other.y)||0;if(otherTop>=bottom||otherTop+height(other)<=top)continue;
+      room=Math.min(room,Number(other.x)-Number(node.x)-24);
+    }
+    return Math.max(current,room);
+  }
   renderNode=node=>{
     const eligible=['generator','video'].includes(node.type);
-    if(eligible)node.w=Math.max(Number(node.w)||0,600);
+    if(eligible)node.w=roomyWidth(node,600);
     const card=draw(node);
     if(!eligible)return card;
     const body=card.querySelector('.node-body'), composer=body?.querySelector('.generator-body,.video-body')||body?.firstElementChild;
