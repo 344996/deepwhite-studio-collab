@@ -368,17 +368,13 @@ def install_skills(client_id):
                 continue
             files = _skill_files(skill["id"])
             backup = ""
-            if folder.exists():
-                if folder.is_symlink() or not folder.is_dir():
-                    raise ClientError(f"{folder.name} 位置不是普通文件夹，已停止安装。")
-                # Keep the user's copy (edited or foreign) before replacing it. Backups and
-                # staging live NEXT TO the skills folder: clients load every subfolder of it
-                # that has a SKILL.md, so a backup inside would appear as a duplicate Skill.
-                backups = base.parent / "deepwhite-skill-backups"
-                backups.mkdir(parents=True, exist_ok=True)
-                backup = str(backups / f"{skill['id']}-{time.strftime('%Y%m%d-%H%M%S')}")
-                shutil.move(str(folder), backup)
+            if folder.exists() and (folder.is_symlink() or not folder.is_dir()):
+                raise ClientError(f"{folder.name} 位置不是普通文件夹，已停止安装。")
             base.parent.mkdir(parents=True, exist_ok=True)
+            # SKILL-ROLLBACK: the new copy is complete before the old one moves, and a failed
+            # activation puts the old one back, so the client always has a working Skill.
+            # Backups and staging live NEXT TO the skills folder: clients load every subfolder
+            # of it that has a SKILL.md, so a copy inside would appear as a duplicate Skill.
             staging = Path(tempfile.mkdtemp(prefix=".deepwhite-skill-staging-", dir=base.parent))
             try:
                 for relative, content in files.items():
@@ -391,7 +387,20 @@ def install_skills(client_id):
                     "sha256": {name: hashlib.sha256(content).hexdigest() for name, content in files.items()}},
                     ensure_ascii=False, indent=2), encoding="utf-8")
                 base.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(staging), str(folder))
+                if folder.exists():
+                    backups = base.parent / "deepwhite-skill-backups"
+                    backups.mkdir(parents=True, exist_ok=True)
+                    backup = str(backups / f"{skill['id']}-{time.strftime('%Y%m%d-%H%M%S')}")
+                    shutil.move(str(folder), backup)
+                try:
+                    shutil.move(str(staging), str(folder))
+                except OSError as exc:
+                    if folder.exists():
+                        shutil.rmtree(folder, ignore_errors=True)
+                    if backup:
+                        shutil.move(backup, str(folder))
+                        raise ClientError(f"{skill['id']} 升级失败（{exc.strerror or exc}），已恢复原来的版本；请检查目录权限或文件占用后重试。") from exc
+                    raise ClientError(f"{skill['id']} 安装失败（{exc.strerror or exc}）；请检查目录权限或文件占用后重试。") from exc
             finally:
                 if staging.exists():
                     shutil.rmtree(staging, ignore_errors=True)

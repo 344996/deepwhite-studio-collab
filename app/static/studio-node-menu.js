@@ -36,7 +36,7 @@
 
   async function chooseUpload(point, groupId='') {
     const input=document.createElement('input');
-    input.type='file';input.accept='image/*,video/*,audio/*,.txt,text/plain';input.multiple=true;
+    input.type='file';input.accept=smart?'image/*,video/*,audio/*':'image/*,video/*,audio/*,.txt,text/plain';input.multiple=true;
     input.onchange=async()=>{
       if(!input.files?.length)return;
       try {
@@ -44,7 +44,10 @@
         if(smart) await handleFiles(input.files,groupId,{forceNew:true,point});
         else {
           if(mediaFiles.length){pushUndo();await uploadMediaFiles(mediaFiles,point);}
-          for(let index=0;index<textFiles.length;index++)await importTextFile(textFiles[index],{x:point.x+index*36,y:point.y+index*36});
+          // F02: one unreadable or oversized file must not silently skip the files after it.
+          const failures=[];
+          for(let index=0;index<textFiles.length;index++){try{await importTextFile(textFiles[index],{x:point.x+index*36,y:point.y+index*36});}catch(error){failures.push(error.message);}}
+          if(failures.length)report(failures.join(' '));
         }
       } catch(error) {report(error.message||'上传失败，请重试。');}
     };
@@ -190,6 +193,7 @@
       catch{throw Error(`「${file.name}」编码无法识别，请另存为 UTF-8 或 GB18030 后重试。`);}
     }
     text=text.replace(/^\uFEFF/,'');pushUndo();
+    if(!text.trim())report(`\u300C${file.name}\u300D\u662F\u7A7A\u6587\u4EF6\uFF0C\u5DF2\u521B\u5EFA\u7A7A\u767D\u6587\u672C\u8282\u70B9\uFF0C\u8BF7\u586B\u5199\u5185\u5BB9\u3002`);
     const node=addPromptNode(point);node.text=text;node.title=file.name.replace(/\.txt$/i,'')||file.name;node.studioTitle=node.title;
     selected.clear();selected.add(node.id);render();scheduleSave();
     if(encoding!=='UTF-8')report(`已按 ${encoding} 导入「${file.name}」，可直接编辑文本。`);

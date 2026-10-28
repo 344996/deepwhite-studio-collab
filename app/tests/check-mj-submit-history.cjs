@@ -7,7 +7,7 @@ assert(start>=0&&end>start);
 function fixture(status){
   const node={id:'mj-node',apiProvider:'offline',studioHistoryRestored:true,studioMjTask:'original-task',studioMjHistory:'original-history',studioMjStatus:status,studioMjRequest:{params:{prompt:'original'}}};
   const events=[],context={canvas:{id:'isolated-canvas'},nodes:[node],polling:new Set(),JSON,Error,
-    mjParams:()=>({prompt:'explicit new prompt'}),mjCount:()=>1,rerender:()=>{},scheduleSave:()=>{},
+    mjParams:()=>({prompt:'explicit new prompt'}),mjCount:()=>1,rerender:()=>{},scheduleSave:()=>{},saveCanvas:()=>{},reconcile:async()=>{},
     persistAttempt:async(n,request)=>{assert(!n.studioHistoryRestored);assert.equal(n.studioMjStatus,'submitting');assert.equal(n.studioMjTask,'');events.push({kind:'save',request:JSON.parse(JSON.stringify(request))});},
     api:async(url,body)=>{assert.equal(events.at(-1).kind,'save');events.push({kind:'submit',url,body});return {task_id:'fresh-task',history_id:'fresh-history'};},
     track:async n=>{n.studioMjStatus='succeeded';return true;},resume:async n=>events.push({kind:'resume',id:n.studioMjTask}),failure:(_n,error)=>{throw error;}};

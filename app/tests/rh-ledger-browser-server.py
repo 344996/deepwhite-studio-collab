@@ -56,4 +56,6 @@ os.makedirs(main.OUTPUT_INPUT_DIR,exist_ok=True)
 Path(main.OUTPUT_INPUT_DIR,'fixture-input.png').write_bytes(PNG)
 storage=Path(main.storage_kind_dir('generated'));storage.mkdir(parents=True,exist_ok=True)
 (storage/'fixture-storage.png').write_bytes(PNG)
+# A second managed file with different bytes, so the asset library keeps two versions.
+(storage/'fixture-scene.png').write_bytes(PNG+b'scene')
 uvicorn.run(studio_server.app,host='127.0.0.1',port=int(os.getenv('DEEPWHITE_STUDIO_PORT','3860')))

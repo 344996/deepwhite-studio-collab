@@ -49,10 +49,12 @@ async function main(){
   await page.goto(base+'/static/canvas.html?id='+canvas.id);await page.locator('#shell:not(.no-canvas) #board').waitFor();await page.waitForFunction(()=>window.StudioRunningHub&&window.StudioSave?.ensureCurrent);
   const id=await page.evaluate(()=>{
    nodes=[];connections=[];selected.clear();const node=addRhNode({x:70,y:80});node.instanceType='plus';
+   // RH-NEW-01 (2026-10-26): workbench-kept fields are read-only and never sent, so the exact
+   // 0 / text / big-seed checks below use exposed (overridable) fields.
    const fields=[
-    {nodeId:'1',fieldName:'steps',fieldType:'INT',sourceFromUpstream:false,fieldValue:30},
-    {nodeId:'2',fieldName:'text',fieldType:'STRING',sourceFromUpstream:false,fieldValue:'默认手写'},
-    {nodeId:'3',fieldName:'seed',fieldType:'INT',sourceFromUpstream:false,fieldValue:1,random_enabled:true},
+    {nodeId:'1',fieldName:'steps',fieldType:'INT',fieldValue:30},
+    {nodeId:'2',fieldName:'text',fieldType:'STRING',fieldValue:'默认手写'},
+    {nodeId:'3',fieldName:'seed',fieldType:'INT',fieldValue:1,random_enabled:true},
     {nodeId:'8',fieldName:'image',fieldType:'IMAGE',imageOrder:1,required:true},
     {nodeId:'9',fieldName:'image',fieldType:'IMAGE',imageOrder:0,required:true},
     {nodeId:'10',fieldName:'image',fieldType:'IMAGE',imageOrder:2,required:false},
@@ -70,7 +72,7 @@ async function main(){
   const mapping=await page.evaluate(async()=>{const n=nodes.find(n=>n.id===rhTestId),info=await rhBuildNodeInfoList(n,rhTestMedia),extras=await rhBuildWorkflowRequestExtras(n,rhTestMedia,info);return {info,extras,indexes:rhFieldIndexes(rhActiveFields(n)),params:n.rhParams};});
   assert.equal(mapping.indexes['9::image'],0);assert.equal(mapping.indexes['8::image'],1);assert.equal(mapping.info.find(f=>f.fieldName==='steps').fieldValue,0);assert.equal(mapping.info.find(f=>f.fieldName==='text').fieldValue,'手写原文');assert.equal(mapping.info.find(f=>f.fieldName==='seed').fieldValue,'18446744073709551615');
   assert(uploaded.some(item=>item.url.endsWith('upstream-one.png')));assert(!uploaded.some(item=>item.url.endsWith('upstream-zero.png')));assert.equal(mapping.info.filter(f=>['image','video','audio'].includes(f.fieldName)).length,4);assert.equal(mapping.extras.workflow['9'].inputs.image,'default.png');assert(!mapping.extras.workflow['10']);
-  const defaults=await page.evaluate(()=>{const n=nodes.find(n=>n.id===rhTestId),text=rhActiveFields(n).find(f=>f.fieldName==='text'),image={nodeId:'99',fieldName:'image',fieldType:'IMAGE',sourceFromUpstream:false,fieldValue:'api/manual-default.png'};const saved=n.rhParams['2::text'];delete n.rhParams['2::text'];const result={prompt:rhFieldValue(n,text,rhTestMedia),image:rhFieldValue(n,image,rhTestMedia)};n.rhParams['2::text']=saved;return result;});
+  const defaults=await page.evaluate(()=>{const n=nodes.find(n=>n.id===rhTestId),text={...rhActiveFields(n).find(f=>f.fieldName==='text'),sourceFromUpstream:false},image={nodeId:'99',fieldName:'image',fieldType:'IMAGE',sourceFromUpstream:false,fieldValue:'api/manual-default.png'};const saved=n.rhParams['2::text'];delete n.rhParams['2::text'];const result={prompt:rhFieldValue(n,text,rhTestMedia),image:rhFieldValue(n,image,rhTestMedia)};n.rhParams['2::text']=saved;return result;});
   assert.equal(defaults.prompt,'默认手写');assert.equal(defaults.image,'api/manual-default.png');
   assert.equal(await page.locator(`[data-id="${id}"] .rh-entry-select`).inputValue(),'workflow:12345678');
   await page.evaluate(async()=>await runRhNode(rhTestId));assert.equal(submitted.length,1);assert.equal(submitted[0].payload.instanceType,'plus');assert.equal(submitted[0].payload.nodeInfoList.find(f=>f.fieldName==='seed').fieldValue,'18446744073709551615');

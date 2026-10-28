@@ -127,7 +127,7 @@
     const quote = item.quote;
     if (quote == null) return {text:'费用未知', unknown:true};
     if (typeof quote === 'string' || typeof quote === 'number') return {text:`费用参考：${quote}`, unknown:false};
-    if (quote.display || quote.label) return {text:`费用参考：${quote.display || quote.label}`, unknown:false};
+    if (quote.display || quote.label) return {text:`费用参考：${quote.display || quote.label}`, unknown:quote.price === null};
     if (quote.amount != null) return {text:`费用参考：${quote.currency || ''}${quote.amount}`, unknown:false};
     return {text:'费用未知', unknown:true};
   }

@@ -134,11 +134,67 @@ def safe_error_detail(detail):
     return text[:1400] or '任务执行失败，请核对原任务'
 
 
+_SIGNED_QUERY = re.compile(r'^(?:x-amz-.+|x-goog-.+|x-oss-.+|x-signature|signature|sig|token|access_token|auth.*|'
+                           r'credential|expires|policy|key-pair-id|ossaccesskeyid|api[-_]?key|apikey|key|se|sp|sv|sr|st|skoid|sktid|ske|skt|sks|skv)$', re.I)
+_URL = re.compile(r'''\bhttps?://[^\s<>"']+''', re.I)
+
+
+def redact_signed_url(url):
+    """Drop user info, and the whole query when any parameter grants access (S3, GCS, OSS, SAS, tokens)."""
+    parts = urllib.parse.urlsplit(url)
+    host = parts.netloc.rsplit('@', 1)[-1]
+    query = parts.query
+    if any(_SIGNED_QUERY.match(name) for name, _ in urllib.parse.parse_qsl(query, keep_blank_values=True)):
+        query = ''
+    return urllib.parse.urlunsplit((parts.scheme, host, parts.path, query, ''))
+
+
+def redact_signed(value):
+    """F04/REF-03: public JSON never carries signed links. Internal records keep them for recovery."""
+    if isinstance(value, dict):
+        return {key: redact_signed(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [redact_signed(item) for item in value]
+    if isinstance(value, str) and '://' in value:
+        return _URL.sub(lambda match: redact_signed_url(match[0]), value)
+    return value
+
+
+def _media_key(url):
+    return hashlib.sha256(url.encode('utf-8')).hexdigest()[:24]
+
+
+def _media_handles(task_id, value):
+    """A delivered result that is still a signed remote link becomes a local handle that streams it."""
+    if isinstance(value, dict):
+        return {key: _media_handles(task_id, item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_media_handles(task_id, item) for item in value]
+    if isinstance(value, str) and _URL.fullmatch(value) and redact_signed_url(value) != value:
+        return '/api/studio/task-media/' + urllib.parse.quote(task_id, safe='') + '?u=' + _media_key(value)
+    return value
+
+
+def signed_media_url(task_id, key):
+    """Only links already stored in this task's result can be streamed."""
+    record = raw(task_id) if re.fullmatch(r'[A-Za-z0-9_.:-]{1,200}', str(task_id or '')) else None
+    found = []
+    def walk(value):
+        if isinstance(value, dict): [walk(item) for item in value.values()]
+        elif isinstance(value, list): [walk(item) for item in value]
+        elif isinstance(value, str) and _URL.fullmatch(value) and _media_key(value) == key: found.append(value)
+    walk((record or {}).get('result'))
+    return found[0] if found else None
+
+
 def public(record):
     if record is None:
         return None
     value = {k: v for k, v in record.items() if k not in ('request', 'fingerprint', 'task_kind', 'execution')}
     value = json.loads(json.dumps(value, ensure_ascii=False))
+    if value.get('result') is not None:
+        value['result'] = _media_handles(record['id'], value['result'])
+    value = redact_signed(value)
     if value.get('error'):
         value['error'] = safe_error_detail(value['error'])  # Older ledgers may contain raw exceptions.
     value['task_id'] = value['id']

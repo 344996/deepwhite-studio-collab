@@ -6,9 +6,22 @@ import studio_assets as assets
 from studio_generation import Generation
 
 
+# F06: what external agents may start, and why the rest must be run on the canvas.
+UNSUPPORTED={
+    'runninghub':'RunningHub 工作流需要在画布中选择流程、上传素材并按积分确认，外部智能体暂不能发起；可以读取和编辑该节点，请在画布中点击运行。',
+    'audio':'音频（配音、音乐、音效）生成暂不支持由外部智能体发起；可以编辑节点，请在画布中点击生成。',
+    'midjourney':'MJ 工具节点使用独立的任务与回执流程，外部智能体暂不能发起；请在画布中执行。',
+}
+
+
 def node_request(canvas,node,request_id):
+    if node.get('type') in UNSUPPORTED:
+        raise HTTPException(400,UNSUPPORTED[node['type']])
     if node.get('type') not in ('generator','video'):
-        raise HTTPException(400,'只支持图片和视频生成节点。')
+        raise HTTPException(400,'外部智能体只能发起图片和视频生成节点；其他节点可以读取和编辑，请在画布中运行。')
+    if str(node.get('model') or '').startswith('midjourney-'):
+        # The generic image adapter would send it to the wrong endpoint.
+        raise HTTPException(400,'MJ 生成使用独立的任务与回执流程，外部智能体暂不能发起；请在画布中点击生成。')
     project=canvas.get('project') or 'default'
     indexed={n['id']:n for n in canvas.get('nodes',[])}
     refs=[];texts=[]

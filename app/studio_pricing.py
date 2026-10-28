@@ -138,20 +138,25 @@ def estimate(raw, mid, request):
 def install(app):
     @app.post('/api/studio/quote')
     async def quote(request: Quote):
-        from studio_comfy import PROVIDER
-        if request.provider_id==PROVIDER:
-            return {'price':0,'label':'本地运行 · 不扣 API 额度','note':'使用本机显卡和电力；需要启动本地 ComfyUI。'}
-        provider=core.get_api_provider(request.provider_id)
-        if urlsplit(provider.get('base_url','')).hostname != 'api.deepwhiteai.com':
-            return {'price':None,'label':'暂无可靠估价','note':'此平台未提供可用的计价数据。'}
-        try:
-            if request.model.startswith('midjourney-') and request.model!='midjourney-imagine':
-                from studio_midjourney import require_action
-                require_action(request.provider_id,request.model.removeprefix('midjourney-'))
-                mid=request.model
-            else:
-                mid=catalog.resolve_model(request.provider_id,request.model,request.kind,
-                    images=[{'role':'first_frame' if request.frame_mode else ''}]*request.image_count,videos=[1]*request.video_count,audios=[1]*request.audio_count,multimodal=False if request.frame_mode else request.multimodal)
-        except HTTPException as exc:
-            return {'price':None,'label':'请检查模型或输入','note':exc.detail}
-        return estimate(await snapshot(),mid,request)
+        return await quote_for(request)
+
+
+async def quote_for(request):
+    """The one estimate shown on the canvas and on approval cards (F05)."""
+    from studio_comfy import PROVIDER
+    if request.provider_id==PROVIDER:
+        return {'price':0,'label':'本地运行 · 不扣 API 额度','note':'使用本机显卡和电力；需要启动本地 ComfyUI。'}
+    provider=core.get_api_provider(request.provider_id)
+    if urlsplit(provider.get('base_url','')).hostname != 'api.deepwhiteai.com':
+        return {'price':None,'label':'暂无可靠估价','note':'此平台未提供可用的计价数据。'}
+    try:
+        if request.model.startswith('midjourney-') and request.model!='midjourney-imagine':
+            from studio_midjourney import require_action
+            require_action(request.provider_id,request.model.removeprefix('midjourney-'))
+            mid=request.model
+        else:
+            mid=catalog.resolve_model(request.provider_id,request.model,request.kind,
+                images=[{'role':'first_frame' if request.frame_mode else ''}]*request.image_count,videos=[1]*request.video_count,audios=[1]*request.audio_count,multimodal=False if request.frame_mode else request.multimodal)
+    except HTTPException as exc:
+        return {'price':None,'label':'请检查模型或输入','note':exc.detail}
+    return estimate(await snapshot(),mid,request)

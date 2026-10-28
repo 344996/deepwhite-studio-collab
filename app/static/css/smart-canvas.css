@@ -1572,3 +1572,5 @@ input[type=range].smart-range::-webkit-slider-thumb { -webkit-appearance:none; w
 .smart-group-summary i,.smart-group-summary svg { width:13px; height:13px; }
 .smart-group-empty { flex:1 1 auto; min-height:74px; display:flex; align-items:center; justify-content:center; gap:6px; color:var(--faint); font-size:10px; font-weight:700; text-align:center; border-radius:10px; border:1px dashed var(--line); background:var(--soft); }
 .smart-group-empty i,.smart-group-empty svg { width:14px; height:14px; }
+
+.rh-keep-original{display:grid;gap:3px;margin:6px 0;padding:8px 10px;border:1px dashed var(--line,var(--border));border-radius:8px;font-size:12px;line-height:1.5}.rh-keep-original span{opacity:.75}.rh-effective{margin-top:8px;font-size:12px}.rh-effective summary{cursor:pointer}.rh-effective pre{white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;padding:8px;border-radius:8px;background:var(--panel);font-size:11px;line-height:1.6}
