@@ -24,7 +24,9 @@ const fs=require('fs');
  const canvas=await (await page.request.post(base+'/api/canvases',{data:{title:'资产交互验收',project:'default'}})).json();
  const id=canvas.canvas.id;
  await page.goto(base+'/static/canvas.html?id='+id);
- await page.getByRole('button',{name:'项目资产',exact:true}).click();
+ // The 0929 canvas layout retired the visible 项目资产 entry (studio-layout-0929.js); the panel and its
+ // add-to-canvas bridge are still installed, so drive that integration through the retired button.
+ await page.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id);await page.locator('[aria-label="项目资产"]').waitFor({state:'attached'});await page.locator('[aria-label="项目资产"]').evaluate(button=>button.click());
  const frame=page.frameLocator('iframe[title="项目资产"]');
  await frame.getByRole('button',{name:'加入画布',exact:true}).first().click();
  await page.waitForFunction(()=>typeof nodes!=='undefined' && nodes.some(n=>n.assetVersionId));

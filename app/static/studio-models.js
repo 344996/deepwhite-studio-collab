@@ -166,8 +166,12 @@
   const names={chat:'文本模型',image:'图片模型',video:'视频模型'};
   // U04: "常用" per kind, keyed by channel + model and kept on the server.
   let favorites={};
-  fetch('/api/studio/model-favorites').then(r=>r.ok?r.json():{}).then(v=>{favorites=v||{};}).catch(()=>{});
-  const saveFavorites=kind=>fetch('/api/studio/model-favorites/'+kind,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({keys:favorites[kind]||[]})}).catch(()=>{});
+  // Saves run one after another so quick ☆ clicks cannot land out of order.
+  let favoriteSaves=Promise.resolve();
+  const loadFavorites=()=>fetch('/api/studio/model-favorites').then(r=>r.ok?r.json():{}).then(v=>{favorites=v||{};}).catch(()=>{});
+  loadFavorites();
+  // A refused save is replaced by the saved list, so the next opening shows what is really kept.
+  const saveFavorites=kind=>{const keys=[...(favorites[kind]||[])];favoriteSaves=favoriteSaves.then(()=>fetch('/api/studio/model-favorites/'+kind,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({keys})})).then(r=>{if(!r.ok)throw Error();}).catch(()=>loadFavorites());};
   function openPicker(button,items,current,choose,kind,owner){
     if(!ownsPicker(owner))return;
     pickerOwner=owner;selectedSource=owner.select;anchor=button;panel.replaceChildren();

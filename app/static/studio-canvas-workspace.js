@@ -14,7 +14,12 @@
       item.title = label; item.setAttribute('aria-label', label); item.addEventListener('click', action); return item;
     };
     const isolate = element => {
-      for (const type of ['pointerdown', 'mousedown', 'dblclick', 'wheel', 'keydown', 'keyup']) element.addEventListener(type, event => event.stopPropagation());
+      // Keys typed in the chrome must not reach canvas shortcuts, but Escape still closes whatever
+      // dialog is open (crop, preview, log) after a toolbar button took the focus.
+      for (const type of ['pointerdown', 'mousedown', 'dblclick', 'wheel', 'keydown', 'keyup']) element.addEventListener(type, event => {
+        if (event.key === 'Escape') return;
+        event.stopPropagation();
+      });
     };
     const controls = document.querySelector('.workspace-canvas-tools'), more = document.querySelector('.workspace-more-panel');
     const saveStatus = document.getElementById(smart ? 'smartV2SaveStatus' : 'studioV2SaveState');

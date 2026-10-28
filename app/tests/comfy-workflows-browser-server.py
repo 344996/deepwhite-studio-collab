@@ -1,4 +1,7 @@
 """Isolated local browser fixture for custom ComfyUI workflows; no GPU or upstream calls."""
+import os
+# Old smart canvases are seeded here only to stand in for existing user data (U10).
+os.environ.setdefault('DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES', '1')
 import json
 import os
 import sys

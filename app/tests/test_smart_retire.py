@@ -9,6 +9,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 runtime = tempfile.TemporaryDirectory(prefix='dw-smart-retire-')
 os.environ['DEEPWHITE_STUDIO_RUNTIME_DIR'] = runtime.name
+os.environ['DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES'] = '1'  # seed old smart canvases as user data
 import studio_server
 import main as core
 import studio_control as control
@@ -27,6 +29,8 @@ NODES = [
     {'id': 'one', 'type': 'smart-image', 'title': '人物', 'images': [{'url': '/output/person.png'}], 'x': 400, 'y': 20},
     {'id': 'many', 'type': 'smart-image', 'title': '分镜', 'images': [{'url': '/output/a.png'}, {'url': '/output/b.png'}],
      'runSettings': {'engine': 'api', 'model': 'deepwhiteai-image-g2'}, 'x': 800, 'y': 20},
+    {'id': 'draft', 'type': 'smart-image', 'title': '待生成', 'images': [], 'promptDraftText': '雨夜的修表铺', 'x': 1200, 'y': 20},
+    {'id': 'ai', 'type': 'smart-prompt', 'text': '原句', 'llmEnabled': True, 'llmInstruction': '改写成镜头语言', 'x': 10, 'y': 900},
     {'id': 'grp', 'type': 'smart-group', 'title': '第一场', 'x': 0, 'y': 500},
     {'id': 'loop', 'type': 'smart-loop', 'x': 400, 'y': 500, 'count': 3},
 ]
@@ -54,16 +58,21 @@ class SmartRetireTests(unittest.TestCase):
         self.assertEqual(copy['kind'], 'classic')
         self.assertEqual(copy['title'], '七码头（经典版）')
         types = {n['id']: n['type'] for n in copy['nodes']}
-        self.assertEqual(types, {'p': 'prompt', 'one': 'image', 'many': 'output', 'grp': 'prompt', 'loop': 'prompt'})
+        self.assertEqual(types, {'p': 'prompt', 'one': 'image', 'many': 'output', 'draft': 'generator', 'ai': 'prompt',
+                                 'grp': 'prompt', 'loop': 'prompt'})
         nodes = {n['id']: n for n in copy['nodes']}
         self.assertEqual(nodes['p']['text'], '林夏走进修表铺')
         self.assertEqual(nodes['one']['url'], '/output/person.png')
         self.assertEqual([i['url'] for i in nodes['many']['images']], ['/output/a.png', '/output/b.png'])
         self.assertIn('未自动转换', nodes['loop']['text'])
+        self.assertEqual(nodes['draft']['studioPrompt'], '雨夜的修表铺', 'a draft prompt must not be lost')
+        self.assertEqual(nodes['ai']['text'], '原句')
+        self.assertEqual(result['rewrite_settings_kept'], 1)
+        self.assertIn('AI 改写', result['message'])
         for original in NODES:
             self.assertEqual(nodes[original['id']]['legacySmart'], original, 'original node data was not kept')
         self.assertEqual([(c['from'], c['to']) for c in copy['connections']], [('p', 'many')])
-        self.assertEqual((result['converted'], result['unconverted']), (3, 2))
+        self.assertEqual((result['converted'], result['unconverted']), (5, 2))
 
     def test_original_is_untouched_and_backed_up(self):
         result = self.migrate()
@@ -74,6 +83,17 @@ class SmartRetireTests(unittest.TestCase):
     def test_repeating_the_migration_returns_the_same_copy(self):
         first, second = self.migrate(), self.migrate()
         self.assertEqual(first['canvas_id'], second['canvas_id'])
+
+    def test_damaged_nodes_are_kept_and_damaged_links_dropped(self):
+        os.environ['DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES'] = '1'
+        smart = core.new_canvas('损坏', kind='smart')
+        canvas = core.load_canvas(smart['id'])
+        canvas.update(nodes=[{'id': 'a', 'type': 'smart-prompt', 'text': 'x'}, {'type': 'smart-image', 'title': '无编号'}, 'junk'],
+                      connections=[{'from': 'a', 'to': 'legacy-1'}, {'from': 'a'}, None, 'junk'])
+        core.save_canvas(canvas)
+        copy = core.load_canvas(self.client.post(f'/api/canvases/{smart["id"]}/migrate-classic').json()['canvas_id'])
+        self.assertEqual([(n['id'], n['type']) for n in copy['nodes']], [('a', 'prompt'), ('legacy-1', 'generator')])
+        self.assertEqual([(c['from'], c['to']) for c in copy['connections']], [('a', 'legacy-1')])
 
     def test_classic_canvases_are_not_migrated(self):
         classic = core.new_canvas('普通')
@@ -88,6 +108,18 @@ class SmartRetireTests(unittest.TestCase):
             'name': 'create_canvas', 'arguments': {'project_id': project['id'], 'title': '新智能', 'kind': 'smart',
                                                    'expected_revision': revision, 'operation_id': 'op-smart-retired-1'}})
         self.assertEqual(response.status_code, 400, response.text)
+
+    def test_the_server_refuses_new_smart_canvases(self):
+        with mock.patch.dict(os.environ, {'DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES': ''}):
+            before = len(core.list_canvases()) if hasattr(core, 'list_canvases') else None
+            refused = self.client.post('/api/canvases', json={'title': '新智能', 'kind': 'smart'})
+            self.assertEqual(refused.status_code, 410, refused.text)
+            self.assertIn('停止新建', refused.json()['detail'])
+            if before is not None:
+                self.assertEqual(len(core.list_canvases()), before, 'a refused request must not leave a canvas behind')
+            classic = self.client.post('/api/canvases', json={'title': '普通', 'kind': 'classic'})
+            self.assertEqual(classic.status_code, 200, classic.text)
+            self.assertEqual(classic.json()['canvas']['kind'], 'classic')
 
 
 if __name__ == '__main__':

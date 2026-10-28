@@ -5,7 +5,9 @@
   if (!grid) return;
   const $ = id => document.getElementById(id);
   const manualSelect = $('clientManualSelect'), manualText = $('clientManualText');
-  let data = null, busy = '';
+  let data = null, busy = '', watchUntil = 0;
+  // The agent's verification can only be noticed by asking again; do that for a while after a connect or copy.
+  const watch = () => { watchUntil = Date.now() + 10 * 60 * 1000; };
   const ICONS = {codex: 'Cx', claude_code: 'CC', workbuddy: 'WB', doubao: '豆', deepseek_harness: 'DS'};
 
   function el(tag, text, cls) {
@@ -55,6 +57,7 @@
       const index = data.items.findIndex(item => item.id === client.id);
       if (index >= 0 && result.client) data.items[index] = result.client;
       say(result.message || (result.changed === false ? '已是最新状态，无需修改。' : '已完成。'));
+      if (action === 'connect') watch();
       document.dispatchEvent(new CustomEvent('studio-clients-changed'));
     } catch (error) {
       say(error.message, true);
@@ -92,7 +95,7 @@
     }
     const verification = client.verification;
     if (verification && (mcp === 'connected' || mcp === 'manual')) {
-      actions.append(button('复制验证命令', '', () => copy(verification.command, '已复制验证命令。发给 ' + client.name + '，它读取画布后这里会显示“已验证”。')));
+      actions.append(button('复制验证命令', '', () => { watch(); copy(verification.command, '已复制验证命令。发给 ' + client.name + '，它读取画布后这里会显示“已验证”。'); }));
     }
     if (actions.childElementCount) node.append(actions);
     const hint = mcp === 'blocked' || mcp === 'manual' ? client.mcp.message
@@ -139,9 +142,9 @@
   $('clientRefresh').addEventListener('click', () => { say(''); load(); });
   const tab = document.querySelector('[data-tab="control"]');
   tab?.addEventListener('click', () => load());
-  // The verification arrives from the agent, not from this page: look again while one is pending.
+  // The verification arrives from the agent, not from this page: look again while one is pending and watched.
   setInterval(() => {
-    if (document.hidden || busy || !grid.offsetParent) return;
+    if (document.hidden || busy || !grid.offsetParent || Date.now() > watchUntil) return;
     if (data?.items.some(item => ['connected', 'manual'].includes(item.mcp.state) && !item.verification?.verified_at)) load();
   }, 4000);
   load();

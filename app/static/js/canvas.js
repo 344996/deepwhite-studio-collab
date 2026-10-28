@@ -691,6 +691,11 @@ function midjourneyProviderOptions(selectedId){
 function providerById(id){
     return (apiProviders.length ? apiProviders : defaultApiProviders()).find(p => p.id === id) || imageApiProviders()[0] || defaultApiProviders()[0];
 }
+// The built-in provider list is only a placeholder until an API is configured: a node keeps no
+// channel rather than storing that placeholder, so it never shows a channel the user never had.
+function realProviderId(id){
+    return id && apiProviders.some(p => p.id === id) ? id : '';
+}
 function resolveProviderId(id){
     return providerById(id)?.id || 'comfly';
 }
@@ -753,7 +758,7 @@ function providerVideoModels(providerId){
 }
 function sanitizeVideoNodeProviderModel(node){
     if(!node || node.type !== 'video') return;
-    node.apiProvider = resolveVideoProviderId(node.apiProvider || 'comfly');
+    node.apiProvider = realProviderId(resolveVideoProviderId(node.apiProvider || '')) || node.apiProvider || '';
     const models = providerVideoModels(node.apiProvider);
     if(!models.length) node.model = '';
     else if(!models.includes(node.model)) node.model = models[0] || '';
@@ -2647,7 +2652,7 @@ function pickMediaForNode(nodeId){
 }
 function addLLMNode(point){
     const p = point || defaultPoint(80, 0);
-    const providerId = chatApiProviders()[0]?.id || 'comfly';
+    const providerId = realProviderId(chatApiProviders()[0]?.id);
     return addNode({
         id:uid('llm'),
         type:'llm',
@@ -2706,7 +2711,7 @@ function addMsGenNode(point){
 }
 function addVideoNode(point){
     const p = point || defaultPoint(160, 0);
-    const providerId = videoApiProviders()[0]?.id || 'comfly';
+    const providerId = realProviderId(videoApiProviders()[0]?.id);
     const models = providerVideoModels(providerId);
     return addNode({
         id:uid('vid'),
@@ -8168,7 +8173,7 @@ function renderLLMBody(node){
     const wrap = document.createElement('div');
     wrap.className = 'llm-body';
     const mode = node.mode || 'node';
-    node.llmProvider = resolveChatProviderId(node.llmProvider || 'comfly');
+    node.llmProvider = realProviderId(resolveChatProviderId(node.llmProvider || '')) || node.llmProvider || '';
     const llmProv = node.llmProvider;
     if(llmProv === 'modelscope') node.model = node.llmMsModel || node.model;
     if(!providerChatModels(llmProv).includes(node.model)) node.model = providerChatModels(llmProv)[0] || node.model;

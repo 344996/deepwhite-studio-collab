@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 runtime = tempfile.TemporaryDirectory(prefix="dw-external-")
 os.environ["DEEPWHITE_STUDIO_RUNTIME_DIR"] = runtime.name
+os.environ["DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES"] = "1"  # seed old smart canvases as user data
 import httpx
 import studio_server
 import main as core

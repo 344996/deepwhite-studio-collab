@@ -69,7 +69,8 @@
   window.addEventListener('beforeunload',e=>{if(dirty||storageDirty||loading){e.preventDefault();e.returnValue='';}});
   const accountCard=document.createElement('section');accountCard.className='settings-feature-card';accountCard.id='settingsAccountConnection';accountCard.setAttribute('aria-live','polite');$('apiForm').before(accountCard);
   // U01: logged in but not authorised for generation is a visible, fixable state, tried once per session.
-  let accountError='';
+  // autoTried also guards the page when sessionStorage is unavailable, so the retry can never loop.
+  let accountError='',autoTried=false;
   async function refreshAccountCard(){let account;try{account=await api('/api/studio/account');}catch{}accountCard.replaceChildren();
     const generation=account?.generation,ready=generation?.status==='ready';
     const title=document.createElement('h2');title.textContent=!account?'登录后自动连接官方 API':ready?'已登录 · '+account.username+' · 可直接生成，无需填写 API Key':'已登录 · '+account.username+' · 生成授权未完成';
@@ -77,8 +78,8 @@
     accountCard.dataset.tone=account&&!ready?'warn':'';
     const action=document.createElement('button');action.type='button';action.textContent=!account?'登录 / 注册':ready?'刷新模型':'重新授权';if(account&&!ready)action.className='primary';
     action.onclick=account?reconnect:()=>{if(parent!==window&&parent.StudioAccount)parent.StudioAccount.open();else{location.href='/?studio-account=1';}};accountCard.append(title,detail,action);
-    let tried=false;try{tried=sessionStorage.getItem('studio.account.autoProvision')==='1';}catch{}
-    if(account&&!ready&&generation?.retryable!==false&&!tried&&!loading){try{sessionStorage.setItem('studio.account.autoProvision','1');}catch{}reconnect();}}
+    let tried=autoTried;try{tried=tried||sessionStorage.getItem('studio.account.autoProvision')==='1';}catch{}
+    if(account&&!ready&&generation?.retryable!==false&&!tried&&!loading){autoTried=true;try{sessionStorage.setItem('studio.account.autoProvision','1');}catch{}reconnect();}}
   async function loadProviders(preferred,{background=false}={}){const revision=formRevision,selected=current?.id;const[data,catalog]=await Promise.all([api('/api/providers'),api('/api/studio/model-catalog')]);if(background&&(dirty||storageDirty||loading||revision!==formRevision||selected!==current?.id))return;providers=data.providers;catalogs=catalog.providers;preview=catalog.preview||{};current=providers.find(p=>p.id===preferred)||providers.find(p=>p.id.startsWith('deepwhite-account-')&&p.has_key)||providers.find(p=>p.protocol==='openai'&&p.base_url?.includes('api.deepwhiteai.com')&&!p.id.startsWith('deepwhite-account-'));if(!current){current=fresh();if(providers.some(p=>p.id===current.id))current.id+='-'+crypto.randomUUID().slice(0,8);providers.unshift(current);}render();}
   async function reconnect(){if(loading)return;lock(true);accountError='';notice('apiResult','正在连接账户生成授权并同步模型…');try{const result=await api('/api/studio/account/provision','POST');await loadProviders(result.generation.provider_id);notice('apiResult',result.generation.message,result.generation.status!=='ready');broadcast();}catch(error){accountError='授权未完成：'+error.message;notice('apiResult',error.message,true);}finally{lock(false);}await refreshAccountCard();}
   try{const channel=new BroadcastChannel('studio-api');channel.onmessage=async()=>{await refreshAccountCard();if(!dirty&&!storageDirty&&!loading)await loadProviders(undefined,{background:true}).catch(()=>{});};}catch{}

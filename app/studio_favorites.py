@@ -26,7 +26,10 @@ def load():
         value = json.loads(path().read_text(encoding='utf-8'))
     except (OSError, ValueError):
         value = {}
-    return {kind: [key for key in value.get(kind, []) if isinstance(key, str)] if isinstance(value, dict) else [] for kind in KINDS}
+    value = value if isinstance(value, dict) else {}
+    # A damaged entry (not a list) reads as empty instead of breaking every picker.
+    return {kind: [key for key in value[kind] if isinstance(key, str)] if isinstance(value.get(kind), list) else []
+            for kind in KINDS}
 
 
 def save(kind, keys):

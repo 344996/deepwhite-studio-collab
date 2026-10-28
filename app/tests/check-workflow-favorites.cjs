@@ -37,6 +37,15 @@ async function main(){
    await page.locator('[data-scope-filter]').selectOption('fav');await delay(150);
    assert.match(await page.locator('[data-list]').innerText(),/还没有收藏/);
   });
+  await check('a favourite the server refused is undone and explained',async()=>{
+   await page.locator('[data-scope-filter]').selectOption('all');await delay(150);
+   await page.route('**/api/studio/model-favorites/workflow',route=>route.fulfill({status:500,json:{detail:'磁盘已满（模拟）'}}));
+   const star=page.locator('.sw-item-row:has(.sw-item[data-workflow-id="wf-a"])').locator('.sw-star');
+   await star.click();
+   await page.waitForFunction(()=>/收藏没有保存/.test(document.querySelector('.sw-footer-status [role=status]')?.textContent||''));
+   await page.waitForFunction(()=>document.querySelector('.sw-item-row:has(.sw-item[data-workflow-id="wf-a"]) .sw-star')?.getAttribute('aria-pressed')==='false');
+   await page.unroute('**/api/studio/model-favorites/workflow');
+  });
   assert.deepEqual(h.errors,[]);assert.deepEqual(h.external,[]);
  }catch(e){console.error(h.log().slice(-2000));throw e;}
  finally{await h.stop();}

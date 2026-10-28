@@ -37,23 +37,33 @@
     try {
       const saved = await api('/api/studio/settings/runninghub', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
       show(saved); say(saved.message);
+      // Open canvases pick up the new defaults without a reload.
+      const message = {type: 'providers-changed', updated_at: Date.now()};
+      if (parent !== window) parent.postMessage(message, location.origin);
+      try { const channel = new BroadcastChannel('studio-api'); channel.postMessage(message); channel.close(); } catch {}
     } catch (error) { say(error.message, true); }
   });
+  function row(label, text, ok) {
+    const item = document.createElement('li'); item.dataset.ok = String(ok);
+    item.append(Object.assign(document.createElement('span'), {textContent: label}), Object.assign(document.createElement('b'), {textContent: text}));
+    return item;
+  }
+  // Each saved key is checked on its own, so a wallet key cannot hide a broken membership key.
   $('rhTest').addEventListener('click', async () => {
     const list = $('rhStages'); list.replaceChildren(); say('正在检查（只读取模型目录，不提交任务、不扣积分）…');
     try {
-      const state = await api('/api/studio/settings/runninghub');
-      const result = await api('/api/providers/test-connection', {method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({provider_id: 'runninghub', protocol: 'runninghub', base_url: state.base_url, api_key: ''})});
-      const stages = result.stages || {};
-      for (const [key, label] of STAGES) {
-        const value = stages[key];
-        const ok = value === true || value === 'ok' || value === 'openapi';
-        const text = key === 'auth' ? ({ok: '通过', failed: '未通过' + (stages.auth_status ? `（HTTP ${stages.auth_status}）` : ''), unverified: '未能核实'}[value] || '未检查')
-          : key === 'catalog' ? ({openapi: '可读', github: '只读到公开目录'}[value] || '未读取') : (value ? '可达' : '不可达');
-        const item = document.createElement('li'); item.dataset.ok = String(ok);
-        item.append(Object.assign(document.createElement('span'), {textContent: label}), Object.assign(document.createElement('b'), {textContent: text}));
-        list.append(item);
+      const result = await api('/api/studio/settings/runninghub/test', {method: 'POST'});
+      for (const check of result.checks || []) {
+        if (!check.saved) { list.append(row(check.label, '未保存，不检查', true)); continue; }
+        const stages = check.stages || {};
+        for (const [key, label] of STAGES) {
+          const value = stages[key];
+          const ok = value === true || value === 'ok' || value === 'openapi';
+          const text = key === 'auth' ? ({ok: '通过', failed: '未通过' + (stages.auth_status ? `（HTTP ${stages.auth_status}）` : ''), unverified: '未能核实'}[value] || '未检查')
+            : key === 'catalog' ? ({openapi: '可读', github: '只读到公开目录'}[value] || '未读取')
+            : (value ? '可达' : stages.reach === 'timeout' ? '超时' : '不可达');
+          list.append(row(check.label + ' · ' + label, text, ok));
+        }
       }
       say(result.message || (result.ok ? '连接正常。' : '连接未通过。'), !result.ok);
     } catch (error) { say(error.message, true); }

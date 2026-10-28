@@ -51,6 +51,12 @@ async function main(){
       if(url.pathname==='/api/studio/mj/history/mj_direct/resume'){
         queries.push({method:request.method(),history:'mj_direct'});return route.fulfill({json:{task_id:'',history_id:'mj_direct',status:'succeeded',remote_status:'succeeded',media_status:'completed',images:[image]}});
       }
+      if(url.pathname.startsWith('/api/studio/mj/attempts/')){
+        // The submit above is faked here, so answer as the real server would for an attempt it
+        // recorded (F01) whose upstream reply was lost: found, no task number, result uncertain.
+        queries.push({method:request.method(),attempt:url.pathname.split('/').at(-1)});
+        return route.fulfill({json:{found:true,history_id:'mj_batch_second',task_id:'',status:'uncertain',error:'MJ 网络响应异常',canvas_id:canvas.id,node_id:'mj-batch'}});
+      }
       if(request.method()==='POST'&&/\/api\/(studio\/generations|canvas-(image|video|llm)|online-image|generate|midjourney\/)/.test(url.pathname))throw Error('Unexpected generation route '+url.pathname);
       return route.continue();
     });
@@ -105,7 +111,7 @@ async function main(){
     assert.equal(submitted.length,6);assert.equal(await page.evaluate(()=>nodes[0].studioMjTask),'');assert.equal(await page.evaluate(()=>nodes[0].studioMjHistory),'');assert.equal(await page.evaluate(()=>nodes[0].studioMjPastTasks[0].task_id),'task_batch_first');
     await batch.locator('.gen-run-row .gen-btn').click();assert.equal(submitted.length,6);
     // Reload after saving an in-flight attempt with no receipt must turn it uncertain, never POST.
-    await page.evaluate(async()=>{nodes[0].studioMjStatus='submitting';await saveCanvas();});await page.reload();await batch.locator('.studio-mj-panel').waitFor({state:'attached'});await batch.locator('.gen-run-row .gen-btn').click();assert.equal(submitted.length,6);assert.equal(await page.evaluate(()=>nodes[0].studioMjStatus),'uncertain');
+    await page.evaluate(async()=>{nodes[0].studioMjStatus='submitting';await saveCanvas();});await page.reload();await batch.locator('.studio-mj-panel').waitFor({state:'attached'});await batch.locator('.gen-run-row .gen-btn').click();/* F01: the attempt is looked up on the server first (async), then marked uncertain */await page.waitForFunction(()=>nodes[0].studioMjStatus==='uncertain',null,{timeout:8000});assert.equal(submitted.length,6);
     for(const problem of ['save-error','save-conflict']){
       await page.evaluate(()=>{nodes=[];connections=[];const n=addGeneratorNode({x:80,y:80});n.id='mj-save';n.model='midjourney-imagine';n.apiProvider='deepwhite';n.studioPrompt='offline saving';render();});
       const saving=page.locator('[data-id="mj-save"]');await saving.locator('.studio-mj-panel').waitFor({state:'attached'});mode=problem;await saving.locator('.gen-run-row .gen-btn').click();await page.waitForFunction(()=>nodes.find(n=>n.id==='mj-save')?.studioMjStatus==='failed');

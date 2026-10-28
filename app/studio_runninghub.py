@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import threading
 import hashlib
 import inspect
 import re
@@ -85,29 +86,50 @@ def upload_index_path():
     return Path(core.DATA_DIR)/'studio_rh_uploads.json'
 
 
+UPLOAD_LOCK=threading.Lock()  # several images of one node upload at once
+
+
+def _upload_index():
+    try:index=json.loads(upload_index_path().read_text(encoding='utf-8'))
+    except (OSError,ValueError):index={}
+    return {str(k):v for k,v in index.items() if isinstance(v,dict)} if isinstance(index,dict) else {}
+
+
 def remember_upload(file_name,source,content):
     from studio_legacy_tasks import redact_signed_url
     match=re.search(r'/api/studio/assets/([a-f0-9]{32})/file',str(source or ''))
     entry={'source':str(source) if str(source).startswith('/') else redact_signed_url(str(source)),
            'version_id':match.group(1) if match else '','sha256':hashlib.sha256(content).hexdigest(),'at':int(time.time())}
     path=upload_index_path()
-    try:index=json.loads(path.read_text(encoding='utf-8'))
-    except (OSError,ValueError):index={}
-    index[str(file_name)]=entry
-    # Keep the newest entries only; a trace of last year's uploads is not needed to run.
-    index=dict(sorted(index.items(),key=lambda item:item[1].get('at',0))[-5000:])
-    temporary=path.with_suffix('.tmp');temporary.write_text(json.dumps(index,ensure_ascii=False),encoding='utf-8');os.replace(temporary,path)
+    with UPLOAD_LOCK:
+        index=_upload_index()
+        index[str(file_name)]=entry
+        # Keep the newest entries only; a trace of last year's uploads is not needed to run.
+        index=dict(sorted(index.items(),key=lambda item:item[1].get('at',0))[-5000:])
+        temporary=path.with_suffix('.tmp');temporary.write_text(json.dumps(index,ensure_ascii=False),encoding='utf-8');os.replace(temporary,path)
+
+
+def _media_fields(payload):
+    """(node, field, value) for every text value in the request: app/workflow fields by node, model fields by path."""
+    for item in payload.get('nodeInfoList') or []:
+        if isinstance(item,dict):yield str(item.get('nodeId','')),str(item.get('fieldName','')),str(item.get('fieldValue') or '')
+    def walk(value,where):
+        if isinstance(value,dict):
+            for key,child in value.items():
+                if where or key!='nodeInfoList':yield from walk(child,f'{where}.{key}' if where else str(key))
+        elif isinstance(value,list):
+            for index,child in enumerate(value):yield from walk(child,f'{where}[{index}]')
+        elif isinstance(value,str):yield '',where,value
+    yield from walk(payload,'')
 
 
 def submission_snapshot(payload):
-    try:index=json.loads(upload_index_path().read_text(encoding='utf-8'))
-    except (OSError,ValueError):index={}
+    index=_upload_index()
     media=[]
-    for item in payload.get('nodeInfoList') or []:
-        value=str(item.get('fieldValue') or '')
+    for node,field,value in _media_fields(payload):
         if value in index or MEDIA_VALUE.match(value):
             known=index.get(value,{})
-            media.append({'node':str(item.get('nodeId','')),'field':str(item.get('fieldName','')),'uploaded_as':value,
+            media.append({'node':node,'field':field,'uploaded_as':value,
                           'source':known.get('source',''),'version_id':known.get('version_id',''),'sha256':known.get('sha256','')})
     return {'recorded':'local_before_send','request_version':SUBMISSION_VERSION,'media':media,
             'body_sha256':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
@@ -134,7 +156,7 @@ async def submit(request):
         except HTTPException as error:
             if error.status_code!=404:raise
         record={'id':request.request_id,'request':request.model_dump(),'provider_id':'runninghub','base_url':str(provider.get('base_url','')).rstrip('/'),'status':'submitting','task_id':'','outputs':[],'error':'','created_at':time.time()}
-        if request.kind!='model':record['submission']=submission_snapshot(normalized)
+        record['submission']=submission_snapshot(normalized)
         if request.kind=='model':
             record['children']=[{'request_id':model_child_request_id(request.request_id,index),'index':index,'task_id':'','status':'planned','outputs':[],'error':''} for index in range(body.count)]
             record['submission_complete']=False

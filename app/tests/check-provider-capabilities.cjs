@@ -18,7 +18,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
   await page.goto(base+'/settings');await page.waitForFunction(()=>!document.getElementById('apiForm').inert);
   await page.locator('#providerCapabilities').getByText('此平台的调用范围',{exact:true}).waitFor();
   await page.locator('#apiKey').fill('fixture-only-key');await page.locator('#saveProvider').click();
-  await page.locator('#saveState').getByText('连接设置已保存。',{exact:true}).waitFor();
+  await page.locator('#saveState').getByText(/^连接设置已保存。/).waitFor();
   await page.locator('#providerCapabilities').getByText(/网站登录管理账户/).waitFor();checks.push('Saved provider shows account and credential separation');
   await page.locator('#testConnection').click();await page.locator('#providerCapabilities').getByText(/最近列表检查/).waitFor();checks.push('GET-only successful probe produces address-bound receipt');
   const response=await fetch(base+'/api/studio/settings/provider-capabilities');assert.equal(response.status,200);assert(!(await response.text()).includes('fixture-only-key'));checks.push('Capability response contains no submitted API key');

@@ -1,4 +1,7 @@
 """Isolated native-task integration server. All upstream HTTP stays in MockTransport."""
+import os
+# Old smart canvases are seeded here only to stand in for existing user data (U10).
+os.environ.setdefault('DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES', '1')
 import asyncio
 import json
 import os

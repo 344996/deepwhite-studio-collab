@@ -143,9 +143,10 @@ async function main() {
       assert.equal(after.scale, before.scale); assert.equal(after.x, before.x - 120); assert.equal(after.y, before.y);
     });
     await check('Vertical wheel zoom magnitude follows delta and opposite deltas cancel', async () => {
-      const initial = await view(); await wheel(0, -20); const small = await view(); await wheel(0, 20); const restored = await view();
+      // A plain wheel pans; Ctrl+wheel zooms (the canvas v2 design).
+      const initial = await view(); await wheel(0, -20, 'Control'); const small = await view(); await wheel(0, 20, 'Control'); const restored = await view();
       assert(Math.abs(restored.scale - initial.scale) < 1e-10, 'equal opposite deltas must cancel, without zoom drift');
-      await wheel(0, -100); const large = await view(); assert(large.scale - restored.scale > (small.scale - initial.scale) * 2, 'larger wheel input must cause larger zoom');
+      await wheel(0, -100, 'Control'); const large = await view(); assert(large.scale - restored.scale > (small.scale - initial.scale) * 2, 'larger wheel input must cause larger zoom');
     });
     await check('Ctrl zoom preserves the pointer anchor and takes priority over pan', async () => {
       const point = await blank(); await page.mouse.move(point.x, point.y);
@@ -160,8 +161,8 @@ async function main() {
       await sleep(50); assert.deepEqual(await view(), before);
     });
     await check('Wheel zoom bounds remain finite at both extremes', async () => {
-      await wheel(0, -1e7, 'Control'); const max = await view(); assert(max.scale <= 2.5 && max.scale > 1); assert(Number.isFinite(max.x) && Number.isFinite(max.y));
-      await wheel(0, 1e7, 'Control'); const min = await view(); assert(min.scale >= .06 && min.scale < 1); assert(Number.isFinite(min.x) && Number.isFinite(min.y));
+      await wheel(0, -1e7, 'Control'); const max = await view(); /* ZOOM_MAX = 8 in studio-canvas-v2.js */assert(max.scale <= 8 && max.scale > 1, 'max zoom '+JSON.stringify(max)); assert(Number.isFinite(max.x) && Number.isFinite(max.y));
+      await wheel(0, 1e7, 'Control'); const min = await view(); assert(min.scale >= .06 && min.scale < 1, 'min zoom '+JSON.stringify(min)); assert(Number.isFinite(min.x) && Number.isFinite(min.y));
     });
     await check('Smart horizontal and diagonal wheel pans without changing scale', async () => {
       const before = await view(); await wheel(45, 25); const after = await view();
@@ -185,7 +186,7 @@ async function main() {
     }, 'smart');
     await check('Smart repeated zoom stays within usable finite bounds', async () => {
       for (let i = 0; i < 5; i++) await wheel(0, -1000, 'Control');
-      const max = await view(); assert(max.scale <= 2.5 && max.scale > 1, 'zoom must not grow beyond usable canvas limits'); assert(Number.isFinite(max.x) && Number.isFinite(max.y));
+      const max = await view(); assert(max.scale <= 8 && max.scale > 1, 'zoom must not grow beyond usable canvas limits '+JSON.stringify(max)); assert(Number.isFinite(max.x) && Number.isFinite(max.y));
       for (let i = 0; i < 10; i++) await wheel(0, 1000, 'Control');
       const min = await view(); assert(min.scale >= .06 && min.scale < 1); assert(Number.isFinite(min.x) && Number.isFinite(min.y));
     }, 'smart');

@@ -75,7 +75,7 @@ async function main() {
   const config = enabled.client_config.mcpServers['deepwhite-studio'];
   startBridge(config); await handshake();
   const listed = await rpc('tools/list', {});
-  assert.equal(listed.tools.length, 17);
+  assert.equal(listed.tools.length, 18); // includes verify_client (U11)
   const projects = await call('list_projects');
   assert((await call('get_node_schema')).creatable_types.includes('prompt'));
   const creation = {project_id: 'default', title: 'AI 协作画布 · 本地验收',
@@ -157,7 +157,7 @@ async function main() {
   settingsPage.on('pageerror', error => errors.push(error.message));
   await settingsPage.goto(base + '/settings');
   await settingsPage.locator('[data-tab="control"]').click();
-  assert(await settingsPage.getByText('启用后，智能体可读取项目', {exact: false}).isVisible());
+  assert(await settingsPage.getByText('允许智能体读取项目', {exact: false}).isVisible());
   await settingsPage.screenshot({path: path.join(output, 'settings.png')});
   await api('/api/studio/control/settings', 'PUT', {enabled: false});
   await call('list_projects', {}, true);

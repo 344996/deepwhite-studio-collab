@@ -19,7 +19,7 @@
       },
       {
         "file": "js/asset-manager.js",
-        "sha256": "452a6c0f991016fb94551380f9b62ccb7475cb06f879f4a681561daaf665e533"
+        "sha256": "4060a9fb4b98ba3fbe9119c4a79a5ee6d41ab33886631b0f569a09156ab99b00"
       },
       {
         "file": "js/canvas-list.js",
@@ -27,7 +27,7 @@
       },
       {
         "file": "js/canvas.js",
-        "sha256": "a62e862a65a549525503698f4e2070610b4c4fb1189c35f85e466c92bbe3b43b"
+        "sha256": "34c52c86dc7977a927898533220dda10768352a8b9fccbfc07e7c894f5d40ad3"
       },
       {
         "file": "js/comfyui-settings.js",
@@ -115,11 +115,11 @@
       },
       {
         "file": "studio-canvas-workspace.js",
-        "sha256": "bb16de27c2447f1a1ce866fbada0cbadc5e46e8d733bf8452540069ebea318fc"
+        "sha256": "ae066aa23d349dce9b5b7ba0d9066746f26480cabe77f2d9e4ac705ef7093f86"
       },
       {
         "file": "studio-clients.js",
-        "sha256": "60aace6b65e4fbec8d767f0f26f9c04d24e4a1a15ebfc7419adb24dd376138b0"
+        "sha256": "4d0e1a523ca91bc81a061ab5e3aa785fba809b4fdf23365def896aebbb0bd60e"
       },
       {
         "file": "studio-compact-generation.js",
@@ -135,7 +135,7 @@
       },
       {
         "file": "studio-dreamina.js",
-        "sha256": "8cda04807f54977af7d13e7a6b05e5fd26e0a54954a6f6d827524f5024f71010"
+        "sha256": "5e091deec245028b83b00473b7beac87bc6d6712b8b0e5cc2c5064324ba0a328"
       },
       {
         "file": "studio-feedback.js",
@@ -195,7 +195,7 @@
       },
       {
         "file": "studio-models.js",
-        "sha256": "9fa718f838f4189ab6f10ab0843da20e1b44a31bede3ec32e771dc7d6b9903ee"
+        "sha256": "815f0206e932ceda62fafc564d5c4d2a8ce854d13e45f64e527fdf124e2b60e3"
       },
       {
         "file": "studio-native-tasks.js",
@@ -231,11 +231,11 @@
       },
       {
         "file": "studio-result-collapse.js",
-        "sha256": "a0a423d5bfbdc959b4b63923d61cfc8b2dd96905788449b3d379a89b27960fc2"
+        "sha256": "576f16f345d5be473ab974e38ee13b206676820d979d02e0759bda764044f733"
       },
       {
         "file": "studio-rh-settings.js",
-        "sha256": "3b868b87a330dc3685ee8222d8581c68f30195df30bb4d2f66db441d773b5537"
+        "sha256": "c843638852bf7a4d8d467e4cb4e035ed5653f4eb577a03cfacb55b4d2f2b4b0d"
       },
       {
         "file": "studio-rh-workflows.js",
@@ -243,7 +243,7 @@
       },
       {
         "file": "studio-runninghub.js",
-        "sha256": "4a703ba4e8ebf5fd5c5f069eba0d967558b3756ae87fd5e38a86b8fcaefd3af0"
+        "sha256": "4022e39643e89b83348117468951d3d325447646487117f54472075069e8b3c9"
       },
       {
         "file": "studio-settings-navigation.js",
@@ -255,7 +255,7 @@
       },
       {
         "file": "studio-settings.js",
-        "sha256": "49e745dd0d4a7efa71483225aa93d61a2538d70be7b263e2883c9fc9d3fb62cd"
+        "sha256": "5ec92c9cfd5f490822ed57809c3f7a36326c931ebf2df440b58e9efd967e6add"
       },
       {
         "file": "studio-skill-nodes.js",
@@ -263,7 +263,7 @@
       },
       {
         "file": "studio-smart-retire.js",
-        "sha256": "f307632650ebe293af60f583fe15fc58970366f0dc8241c07464373d6cefd4c8"
+        "sha256": "e592777bd7444b1f7be79a80d0ee55afc7d7a82fd88cfd5cf4d51cc4df4456b2"
       },
       {
         "file": "studio-smart-v2.js",
@@ -295,15 +295,15 @@
       },
       {
         "file": "studio-workflows.js",
-        "sha256": "ef31c07af39994af9563e3c4ff488d53796d7d43fe329515aedd558b4fa36dee"
+        "sha256": "1e4b04d26c227acae028059b1ba16250b26f7246708bb199070b3bb19e1a2bb6"
       },
       {
         "file": "studio-workspace.js",
-        "sha256": "70409c10268cc5535039a715467e482ff83540b40e3bf0bf0789052e6ec4e06e"
+        "sha256": "818d978a2fbebd90f06e512409ed88fb8b72f2138db180c59aa2977af8ef78e1"
       }
     ],
-    "candidateCount": 55630,
-    "candidatesSha256": "89b5fff3b9f824ca136e8cdbb356bc807e97bf9d7596555e73d7a3156beab8b0"
+    "candidateCount": 55721,
+    "candidatesSha256": "9dcd2fb23e5919a4582339349e6c62fd4eb30a3d8fd3fa51357f3a41656b1b8e"
   },
   "cssSha256": "fa0e9de4fe5ef27ae03188ab8c0675acaf9a4389178bc6d7ca90a809fc10fa50"
 }

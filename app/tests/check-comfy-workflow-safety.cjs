@@ -1,5 +1,5 @@
 /* Isolated production UI acceptance: all Comfy endpoints are browser mocks, no GPU/API. */
-const {chromium}=require('data/local-path');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),net=require('node:net'),{spawn}=require('node:child_process');
 const root=path.resolve(__dirname,'..'),runtime=fs.mkdtempSync(path.join(os.tmpdir(),'dw-comfy-safety-'));
 const evidence=fs.mkdtempSync(path.join(os.tmpdir(),'dw-comfy-evidence-'));
@@ -56,7 +56,7 @@ async function mock(route){
  }
  return route.fulfill({status:404,json:{detail:'mock route unavailable: '+endpoint}});
 }
-async function openManager(){await page.getByRole('button',{name:'工作流工作台',exact:true}).click();await page.locator('.studio-workflow-modal[open]').waitFor();}
+async function openManager(){await page.getByRole('button',{name:'工作流',exact:true}).click();await page.locator('.studio-workflow-modal[open]').waitFor();}
 const modal=()=>page.locator('.studio-workflow-modal[open]');
 const nodePanel=()=>page.locator('.studio-workflow-node').first();
 async function nodeId(){return page.evaluate(()=>nodes.find(n=>n.studioWorkflowId).id);}
@@ -71,7 +71,7 @@ async function settle(){await page.waitForFunction(()=>{const n=nodes.find(n=>n.
  const project=(await api('/api/projects',{name:'隔离工作台验收'})).project;
  const a=(await api('/api/canvases',{title:'A',kind:'classic',project:project.id})).canvas;
  const b=(await api('/api/canvases',{title:'B',kind:'classic',project:project.id})).canvas;
- browser=await chromium.launch({executablePath:'data/local-path',headless:true});
+ browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||undefined,headless:true});
  page=await browser.newPage({viewport:{width:1280,height:800}});page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  await page.route('**/*',mock);
  await page.goto(base+'/static/canvas.html?id='+a.id);await page.waitForFunction(id=>canvas?.id===id&&window.StudioWorkflows,a.id);
@@ -174,7 +174,7 @@ async function settle(){await page.waitForFunction(()=>{const n=nodes.find(n=>n.
  corrupt.on('pageerror',e=>errors.push(e.message));await corrupt.route('**/*',mock);
  await corrupt.addInitScript(()=>sessionStorage.setItem('deepwhite-comfy-workspace-drafts-v1','{broken'));
  await corrupt.goto(base+'/static/canvas.html?id='+a.id);await corrupt.waitForFunction(()=>window.StudioWorkflows&&canvas?.id);
- await corrupt.getByRole('button',{name:'工作流工作台',exact:true}).click();
+ await corrupt.getByRole('button',{name:'工作流',exact:true}).click();
  const cm=corrupt.locator('.studio-workflow-modal[open]');await cm.getByLabel('工作流名称',{exact:true}).waitFor();
  await cm.getByLabel('工作流名称',{exact:true}).fill('损坏存储下的新草稿');
  assert.match(await cm.locator('[data-storage-warning]').innerText(),/原数据未覆盖/);
@@ -184,7 +184,7 @@ async function settle(){await page.waitForFunction(()=>{const n=nodes.find(n=>n.
  await corrupt.keyboard.press('Escape');assert(await cm.isVisible());
  stage('损坏草稿导航不覆盖，Esc取消退出仍保留编辑');
  await cm.getByLabel('关闭工作流工作台').click();await corrupt.getByRole('button',{name:'放弃改动',exact:true}).click();
- await corrupt.getByRole('button',{name:'工作流工作台',exact:true}).click();
+ await corrupt.getByRole('button',{name:'工作流',exact:true}).click();
  assert.notEqual(await cm.getByLabel('工作流名称',{exact:true}).inputValue(),'损坏存储下的新草稿');
  stage('放弃草稿后再打开不复活已放弃内容');
  await cm.getByRole('button',{name:'导入与配置',exact:false}).click();
@@ -197,7 +197,7 @@ async function settle(){await page.waitForFunction(()=>{const n=nodes.find(n=>n.
  quota.on('pageerror',e=>errors.push(e.message));await quota.route('**/*',mock);
  await quota.addInitScript(()=>{const original=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='deepwhite-comfy-workspace-drafts-v1')throw new DOMException('fixture','QuotaExceededError');return original.call(this,key,value);};});
  await quota.goto(base+'/static/canvas.html?id='+a.id);await quota.waitForFunction(()=>window.StudioWorkflows&&canvas?.id);
- await quota.getByRole('button',{name:'工作流工作台',exact:true}).click();
+ await quota.getByRole('button',{name:'工作流',exact:true}).click();
  const qm=quota.locator('.studio-workflow-modal[open]');await qm.getByLabel('工作流名称',{exact:true}).fill('配额失败草稿');
  assert.match(await qm.locator('[data-storage-warning]').innerText(),/未能保存/);
  const download=quota.waitForEvent('download');await qm.getByRole('button',{name:'导出配置草稿'}).click();assert.equal((await download).suggestedFilename(),'comfy-workflow-drafts.json');
@@ -219,7 +219,7 @@ async function settle(){await page.waitForFunction(()=>{const n=nodes.find(n=>n.
  const smartCanvas=(await api('/api/canvases',{title:'Smart 管理',kind:'smart',project:project.id})).canvas;
  const smart=await browser.newPage({viewport:{width:1280,height:800}});smart.on('pageerror',e=>errors.push(e.message));await smart.route('**/*',mock);
  await smart.goto(base+'/static/smart-canvas.html?id='+smartCanvas.id);await smart.waitForFunction(()=>window.StudioWorkflows&&canvas?.id);
- await smart.getByRole('button',{name:'工作流工作台',exact:true}).click();const sm=smart.locator('.studio-workflow-modal[open]');await sm.getByLabel('工作流名称',{exact:true}).waitFor();
+ await smart.getByRole('button',{name:'工作流',exact:true}).click();const sm=smart.locator('.studio-workflow-modal[open]');await sm.getByLabel('工作流名称',{exact:true}).waitFor();
  assert(await sm.getByRole('button',{name:'添加画布节点',exact:true}).isDisabled());assert.match(await sm.locator('[data-add-note]').innerText(),/经典画布/);
  stage('Smart真实入口可管理/预览，未支持节点创建明确受限');
  await smart.close();

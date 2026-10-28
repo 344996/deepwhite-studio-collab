@@ -166,7 +166,7 @@ async function layout(panel, name) {
   });
   await check('paid amount, unknown fee, errors and reduced motion stay honest',async()=>{
     assert.match(await panel.locator('[data-job-id="landscape"] .studio-history-bill').textContent(),/0.142/);
-    assert.match(await panel.locator('[data-job-id="invalid-prompt"] .studio-history-bill').textContent(),/未知/);
+    assert.match(await panel.locator('[data-job-id="invalid-prompt"] .studio-history-bill').textContent(),/待对账.*不是 0 元/);
     assert.match(await panel.locator('[data-job-id="invalid-prompt"] .studio-history-error').textContent(),/5–2000/);
     assert.equal(await panel.locator('[data-job-id="safe-error"] .studio-history-error img').count(),0);
     assert.equal(await panel.locator('[data-job-id="working"] .studio-history-status').evaluate(el=>getComputedStyle(el,'::before').animationName),'none');

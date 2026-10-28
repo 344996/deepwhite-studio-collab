@@ -50,7 +50,13 @@ async function visibleInViewport(selector) {
     assert.match(await page.locator('.workspace-local-note').innerText(),/本地/);
   });
   const urls={home:'/'};
-  for(const kind of ['classic','smart'])await check(`Create ${kind} canvas while logged out`,async()=>{
+  // U10: only a classic canvas can be created; an old smart canvas is seeded as existing user data.
+  await check('the home page offers no smart canvas creation',async()=>{
+    await go('/');assert.equal(await page.locator('[data-workspace-create="smart"]').count(),0);
+    const legacy=(await api('/api/canvases','POST',{title:'需求验收 smart',kind:'smart'}));const id=(legacy.canvas||legacy).id;
+    urls.smart='/static/smart-canvas.html?id='+encodeURIComponent(id);
+  });
+  for(const kind of ['classic'])await check(`Create ${kind} canvas while logged out`,async()=>{
     await go('/');await page.locator(`[data-workspace-create="${kind}"]`).click();
     await page.locator('#homeCreateDialog input').fill('需求验收 '+kind);
     await page.locator('#homeCreateDialog .ws-create-confirm').click();
