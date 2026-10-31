@@ -27,7 +27,7 @@
       },
       {
         "file": "js/canvas.js",
-        "sha256": "34c52c86dc7977a927898533220dda10768352a8b9fccbfc07e7c894f5d40ad3"
+        "sha256": "460e6ac4f73234c1f7d23b2f5e85761deb7fcc433d9c22afa69cec63476385bf"
       },
       {
         "file": "js/comfyui-settings.js",
@@ -107,15 +107,15 @@
       },
       {
         "file": "studio-canvas-inspector.js",
-        "sha256": "e6695058ca74a56bc2e89b26af2756d73aea499cea4b64e3e0c058b30a4ccb46"
+        "sha256": "5142b88fe4679bf27f46789228b83b5a249d28e6de633ab8116756728ef189bd"
       },
       {
         "file": "studio-canvas-v2.js",
-        "sha256": "d5d1dbc74b4f14eb36929db7ba12ccd1b0f1f58456fc0fa5010d2f6db11a227f"
+        "sha256": "6ca04cef20d7ef57ddc22d1a12196d72caedb61b8b61140e9c1cd273dd0eb619"
       },
       {
         "file": "studio-canvas-workspace.js",
-        "sha256": "ae066aa23d349dce9b5b7ba0d9066746f26480cabe77f2d9e4ac705ef7093f86"
+        "sha256": "0bfb3f678f51cb5a10dfdd24d23b891e33d9dd5772779af26f4b0b5eed8baf20"
       },
       {
         "file": "studio-clients.js",
@@ -211,7 +211,7 @@
       },
       {
         "file": "studio-node-menu.js",
-        "sha256": "2f37f7b61874493a963455ed05d792c9b2266efba1c55c72f68eb0e4d4e48066"
+        "sha256": "b23b785555ce5d8b278533aa7147db18a473d6dbd3cb802c6f13ec72cea17ff4"
       },
       {
         "file": "studio-node-polish.js",
@@ -247,7 +247,7 @@
       },
       {
         "file": "studio-settings-navigation.js",
-        "sha256": "f9dcb7da163dc049730eda230691a2ee7e5fdd1dc64223d73c77eb417155b486"
+        "sha256": "ef88dd60a208823ec0e03515227f00030ca545a855edec015b67de47cd82e864"
       },
       {
         "file": "studio-settings-v2.js",
@@ -302,8 +302,8 @@
         "sha256": "818d978a2fbebd90f06e512409ed88fb8b72f2138db180c59aa2977af8ef78e1"
       }
     ],
-    "candidateCount": 55721,
-    "candidatesSha256": "9dcd2fb23e5919a4582339349e6c62fd4eb30a3d8fd3fa51357f3a41656b1b8e"
+    "candidateCount": 55750,
+    "candidatesSha256": "1fc9c09ba18a957a0470ffa621d83940cb49e53227f1cd31605ce382e88ed20c"
   },
   "cssSha256": "fa0e9de4fe5ef27ae03188ab8c0675acaf9a4389178bc6d7ca90a809fc10fa50"
 }

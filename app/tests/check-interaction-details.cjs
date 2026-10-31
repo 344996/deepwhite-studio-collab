@@ -239,8 +239,12 @@ async function pressAndCancel(locator) {
     await page.screenshot({path:path.join(evidence,'touch-390.png')});await touch.close();page=saved;
   });
   // A short browser recording demonstrates real hover/press/release on test data.
-  const demo = await browser.newContext({viewport:{width:1440,height:1000},recordVideo:{dir:path.join(evidence,'video'),size:{width:1440,height:1000}}});
-  await route(demo);page=await demo.newPage();await home();await wait(600);
+  // The recording needs Playwright's ffmpeg; without it the same steps still run, just unrecorded.
+  let demo = await browser.newContext({viewport:{width:1440,height:1000},recordVideo:{dir:path.join(evidence,'video'),size:{width:1440,height:1000}}}),recorded=true;
+  await route(demo);
+  try{page=await demo.newPage();}catch(error){if(!/ffmpeg/i.test(String(error)))throw error;await demo.close();recorded=false;console.log('NOTE ffmpeg is not installed: the demo runs without a recording');
+    demo=await browser.newContext({viewport:{width:1440,height:1000}});await route(demo);page=await demo.newPage();}
+  await home();await wait(600);
   const quick=page.locator('.workspace-quickstart button').first();
   await quick.hover();await wait(600);await page.mouse.down();await wait(260);await page.mouse.move(4,4);await page.mouse.up();await wait(500);
   const cover=page.locator('.ws-card').filter({hasText:'林间来信'}).first().locator('.home-canvas-cover');
@@ -251,10 +255,10 @@ async function pressAndCancel(locator) {
   await page.locator('.studio-history-preview>img').evaluate(el=>el.decode());
   const preview=page.locator('.studio-history-image-preview');await preview.hover();await wait(700);await page.mouse.down();await wait(220);await page.mouse.up();await wait(1100);
   await page.getByRole('button',{name:'关闭预览',exact:true}).click();await wait(500);
-  const video=page.video();await demo.close();await video.saveAs(path.join(evidence,'interaction-demo.webm'));
+  const video=recorded?page.video():null;await demo.close();if(video)await video.saveAs(path.join(evidence,'interaction-demo.webm'));
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(paid,[]);
   assert(writes.every(item=>/^POST \/api\/canvases\/[^/]+\/touch$/.test(item)||item==='POST /api/canvas-assets/check'),'Only normal canvas-open bookkeeping is allowed: '+JSON.stringify(writes));
-  fs.writeFileSync(path.join(evidence,'results.json'),JSON.stringify({passed:true,checks,errors,external,paid,writes,video:'interaction-demo.webm'},null,2));
+  fs.writeFileSync(path.join(evidence,'results.json'),JSON.stringify({passed:true,checks,errors,external,paid,writes,video:recorded?'interaction-demo.webm':null},null,2));
   console.log(JSON.stringify({passed:checks.length,evidence}));
 })().catch(async error=>{
   process.exitCode=1;console.error(error.stack);console.error(log.slice(-1200));

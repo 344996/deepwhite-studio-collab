@@ -21,15 +21,17 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
   return route.fulfill({json:r.url().endsWith('/'+job?.id)?job:{items:[]}});
  });
  await p.goto(base+'/static/canvas.html?id='+c.id);await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id&&apiProviders.some(x=>x.id==='deepwhite-local-comfy'));
- await p.locator('.studio-engine-toolbar').waitFor();assert.equal(engineStarts,0);
+ await p.locator('.studio-engine-toolbar').waitFor({state:'attached'});assert.equal(engineStarts,0);
  await pause(300);await p.evaluate(()=>{addGeneratorNode({x:50,y:60});render();});
- await p.locator('.studio-model-trigger').first().click();await p.getByLabel('调用平台',{exact:true}).selectOption('deepwhite-local-comfy');await p.getByRole('option',{name:/Qwen Image 2.1/}).click();
+ await p.locator('.studio-model-trigger').first().click();await p.getByLabel('选择调用渠道',{exact:true}).selectOption('deepwhite-local-comfy');await p.getByRole('option',{name:/Qwen Image 2.1/}).click();
  await p.waitForFunction(()=>!!document.querySelector('[data-studio-param="optimize_prompt"]'));
  await p.waitForFunction(()=>document.querySelector('.studio-engine-message')?.textContent==='已连接');assert.equal(engineStarts,1);
  await p.evaluate(()=>{apiProviders.push({id:'cloud-fixture',name:'测试 API',enabled:true,has_key:true,base_url:'https://api.deepwhiteai.com/v1',image_models:['deepwhiteai-image-g2'],chat_models:[],video_models:[]});render();});
- await p.locator('.studio-model-trigger').first().click();await p.getByLabel('调用平台',{exact:true}).selectOption('cloud-fixture');await p.locator('.studio-picker-option').first().click();assert.equal(await p.evaluate(()=>nodes.find(n=>n.type==='generator').apiProvider),'cloud-fixture');
- await p.locator('.studio-model-trigger').first().click();await p.getByLabel('调用平台',{exact:true}).selectOption('deepwhite-local-comfy');await p.screenshot({path:path.join(root,'test-output/platform-model-picker.png')});await p.getByRole('option',{name:/Qwen Image 2.1/}).click();assert.equal(await p.evaluate(()=>nodes.find(n=>n.type==='generator').apiProvider),'deepwhite-local-comfy');
+ await p.locator('.studio-model-trigger').first().click();await p.getByLabel('选择调用渠道',{exact:true}).selectOption('cloud-fixture');await p.locator('.studio-picker-option').first().click();assert.equal(await p.evaluate(()=>nodes.find(n=>n.type==='generator').apiProvider),'cloud-fixture');
+ await p.locator('.studio-model-trigger').first().click();await p.getByLabel('选择调用渠道',{exact:true}).selectOption('deepwhite-local-comfy');await p.screenshot({path:path.join(root,'test-output/platform-model-picker.png')});await p.getByRole('option',{name:/Qwen Image 2.1/}).click();assert.equal(await p.evaluate(()=>nodes.find(n=>n.type==='generator').apiProvider),'deepwhite-local-comfy');
 
+ // The 0929 layout moves ComfyUI settings into the 画布设置 popover.
+ await p.locator('#studioGridSettingsToggle').click();
  await p.getByRole('button',{name:'ComfyUI 设置',exact:true}).click();await p.locator('.studio-engine-dialog[open]').waitFor();assert.equal(await p.getByLabel('整合包根目录').inputValue(),'D:\\fixture');await p.getByRole('button',{name:'关闭 ComfyUI 设置',exact:true}).click();
  await p.getByRole('button',{name:'图片生成设置',exact:true}).click();
  const settings=p.locator('.studio-image-settings-popup:popover-open');await settings.waitFor();
@@ -44,19 +46,24 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
  assert.equal(submitted.length,1);assert.equal(submitted[0].provider_id,'deepwhite-local-comfy');assert.equal(submitted[0].references.length,1);assert.equal(submitted[0].params.optimize_prompt,false);assert.equal(submitted[0].params.ratio,'4:3');assert.equal(submitted[0].params.steps,30);
  await p.evaluate(()=>saveCanvas());await p.reload();await p.waitForFunction(()=>typeof nodes!=='undefined'&&nodes.some(n=>n.apiProvider==='deepwhite-local-comfy'));
  assert.equal(await p.locator('.model-select').first().inputValue(),'local-qwen-image-21-edit');assert.deepEqual(errors,[]);
+ // After the reload the engine toolbar is back under the closed "更多工具".
+ const moreTools=p.locator('#workspaceMoreTools'),openMore=async()=>{if(!(await moreTools.evaluate(d=>d.open)))await moreTools.locator('summary').click();};await openMore();
  const toolbar=p.locator('.studio-engine-toolbar');
  await toolbar.getByRole('button',{name:'关闭',exact:true}).waitFor();
- refuseStop=true;await toolbar.getByRole('button',{name:'关闭',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.studio-engine-notice').textContent.includes('任务'));assert(engineRunning);
- refuseStop=false;await toolbar.getByRole('button',{name:'关闭',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.studio-engine-summary').textContent.includes('未开启'));assert.equal(engineSettings.auto_start,false);assert.equal(engineSettings.start_with_app,false);
+ refuseStop=true;await openMore();await toolbar.getByRole('button',{name:'关闭',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.studio-engine-notice').textContent.includes('任务'));assert(engineRunning);
+ refuseStop=false;await openMore();await toolbar.getByRole('button',{name:'关闭',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.studio-engine-summary').textContent.includes('未开启'));assert.equal(engineSettings.auto_start,false);assert.equal(engineSettings.start_with_app,false);
  await p.reload();await pause(3500);assert.equal(engineStarts,1);assert(!engineRunning);
- await toolbar.getByRole('button',{name:'开启',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.studio-engine-summary').textContent.includes('运行中'));assert.equal(engineStarts,2);
- engineOwned=false;await pause(3500);assert(await toolbar.getByRole('button',{name:'关闭',exact:true}).isDisabled());assert((await toolbar.innerText()).includes('外部启动'));
+ await openMore();await toolbar.getByRole('button',{name:'开启',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.studio-engine-summary').textContent.includes('运行中'));assert.equal(engineStarts,2);
+ engineOwned=false;await pause(3500);await openMore();assert(await toolbar.getByRole('button',{name:'关闭',exact:true}).isDisabled());assert((await toolbar.innerText()).includes('外部启动'));
  await p.evaluate(()=>{
  apiProviders.push({id:'layout-fixture',name:'布局测试',enabled:true,has_key:true,base_url:'https://example.test/v1',image_models:['deepwhiteai-image-gk-v2'],video_models:['seedance-2.0-fast'],chat_models:[]});
  const image=addGeneratorNode({x:50,y:650});image.id='layout-image';image.apiProvider='layout-fixture';image.model='deepwhiteai-image-gk-v2';
  const video=addVideoNode({x:750,y:650});video.id='layout-video';video.apiProvider='layout-fixture';video.model='seedance-2.0-fast';render();});
+ // Bring the new nodes into view with the real fit control.
+ await p.getByRole('button',{name:'适应全部节点 · Shift+1',exact:true}).click();await pause(300);
  for(const id of ['layout-image','layout-video']){const node=p.locator('[data-id="'+id+'"]');assert.equal(await node.locator('.studio-image-footer').count(),1);await node.getByRole('button',{name:'生成参数设置',exact:true}).click();assert(await node.locator('.studio-universal-params').isVisible());await node.getByRole('button',{name:'关闭生成设置',exact:true}).click();}
- await p.locator('.studio-image-footer .studio-regular-price').first().waitFor();
- const positions=await p.locator('.studio-image-footer').first().evaluate(el=>{const sels=['.studio-footer-model','.studio-image-settings','.studio-regular-price','.gen-btn'];return sels.map(s=>{const r=el.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y+r.height/2};});});await p.screenshot({path:path.join(root,'test-output/local-qwen-node.png')});assert(positions.every((r,i)=>i===0||r.x>positions[i-1].x));assert(Math.max(...positions.map(r=>r.y))-Math.min(...positions.map(r=>r.y))<5);
+ // The first generator has a result, so U03 keeps it collapsed; measure the new, still-open layout node.
+ await p.locator('[data-id="layout-image"] .studio-image-footer .studio-regular-price').waitFor();
+ const positions=await p.locator('[data-id="layout-image"] .studio-image-footer').evaluate(el=>{const sels=['.studio-footer-model','.studio-image-settings','.studio-regular-price','.gen-btn'];return sels.map(s=>{const r=el.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y+r.height/2};});});await p.screenshot({path:path.join(root,'test-output/local-qwen-node.png')});assert(positions.every((r,i)=>i===0||r.x>positions[i-1].x));assert(Math.max(...positions.map(r=>r.y))-Math.min(...positions.map(r=>r.y))<5);
  await p.screenshot({path:path.join(root,'test-output/local-qwen-node.png')});console.log('PASS: local provider, two-level picker, parameters, submission, result and reload; no GPU calls');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(child)child.kill();});

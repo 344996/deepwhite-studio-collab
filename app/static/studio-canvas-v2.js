@@ -432,7 +432,7 @@
     if(e.ctrlKey||e.metaKey){if(key==='k'||key==='f')action=search;else if(key==='d')action=duplicate;
       else if(key==='0')action=()=>focus(nodes.map(n=>n.id));else if(key==='='||key==='+')action=()=>zoom(1.2);else if(key==='-')action=()=>zoom(1/1.2);
       else if(key==='l')action=connectSelected;else if(key==='enter')action=generateSelected;else if(key==='g')action=e.shiftKey?ungroup:group;else if(key==='z'&&e.shiftKey)action=redo;else if(key==='y')action=redo;}
-    else if(!e.altKey){if(key==='v')action=()=>{mode='select';update();};else if(key==='h')action=()=>{mode='hand';update();};else if(key==='f')action=()=>focus([...selected]);else if(e.shiftKey&&e.code==='Digit1')action=()=>focus(nodes.map(n=>n.id));else if(key==='?')action=help;else if(e.key==='Tab'&&!e.shiftKey&&(document.activeElement===document.body||board.contains(document.activeElement)))action=()=>addMenu(null);}
+    else if(!e.altKey){if(key==='v')action=()=>{mode='select';update();};else if(key==='h')action=()=>{mode='hand';update();};else if(key==='f')action=()=>focus([...selected]);else if(e.shiftKey&&e.code==='Digit1')action=()=>focus(nodes.map(n=>n.id));else if(key==='?')action=help;else if(e.key==='Tab'&&!e.shiftKey&&(document.activeElement===document.body||document.activeElement===board))action=()=>addMenu(null);}// Tab from a control inside a node moves focus as usual.
     if(action){e.preventDefault();e.stopImmediatePropagation();if(!e.repeat)action();}
   },true);
   window.addEventListener('keyup',e=>{if(e.code==='Space'){space=false;update();}if(e.key.toLowerCase()==='x'){knifeHeld=false;if(knifeActive)endDrag(e);setKnifeMode(false);}},true);

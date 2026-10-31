@@ -85,7 +85,8 @@
   document.getElementById('openComfyEngine')?.addEventListener('click', () => window.StudioLocalEngine?.open());
   document.querySelectorAll('[data-open-settings]').forEach(button => button.addEventListener('click', () => open(button.dataset.openSettings)));
   window.StudioSettingsNavigation = Object.freeze({open, get active(){return active;}});
-  paint(new URLSearchParams(location.search).get('tab') || 'api');
+  // This script loads last; keep a tab the user already picked instead of jumping back to the default.
+  paint(new URLSearchParams(location.search).get('tab') || buttons().find(button => button.getAttribute('aria-selected') === 'true')?.dataset.tab || 'api');
   const optionalTabsReady=()=>{
     const optional=nav.querySelector('[data-tab="dreamina"]');
     if(optional)nav.insertBefore(optional,nav.querySelector('[data-tab="storage"]'));
