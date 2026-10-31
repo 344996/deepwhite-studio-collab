@@ -69,6 +69,8 @@
     const assets = document.getElementById(smart ? 'assetToggle' : 'canvasAssetToggle');
     const workflow = document.querySelector('[data-workflow-workbench]') || document.getElementById(smart ? 'smartWorkflowToggle' : 'workflowTransferToggle');
     const primary = [add, select, hand, assets, workflow].filter(Boolean);
+    // The 0929 layout hid these entries; the workspace rail shows them again, so screen readers must see them too.
+    for (const item of [assets, workflow]) if (item) { item.hidden = false; item.removeAttribute('aria-hidden'); }
     const extra = document.createElement('div'); extra.className = 'workspace-extra-tools';
     for (const item of [...rail.children]) if (!primary.includes(item) && !item.classList.contains('v2-rail-divider')) {
       if (item.classList.contains('sv2-advanced')) extra.append(...item.querySelector('.sv2-advanced-panel').children); else extra.append(item);

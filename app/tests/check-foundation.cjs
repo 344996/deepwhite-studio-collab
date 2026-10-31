@@ -17,9 +17,21 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function request(route,method='GET',data){const response=await fetch(base+route,{method,headers:{'Content-Type':'application/json'},...(data?{body:JSON.stringify(data)}:{})});assert(response.ok,`${method} ${route}: ${response.status}`);return response.json();}
 (async()=>{
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'provenance/source-manifest.json'),'utf8'));
+  // Files deliberately changed since the copy: the first three in the sanitized handoff (d59a022),
+  // the rest by later product work in this repository (see git log). Everything else must match.
+  const changed=new Set(['static/js/ltx-director-timeline.js','static/js/comfyui-settings.js','CLI/windows/jimeng/install_wsl_ubuntu.bat',
+    'static/css/canvas.css','static/css/smart-canvas.css','static/js/asset-manager.js','static/js/canvas-list.js','static/js/smart-canvas.js']);
+  // A source checkout carries a python/ shim instead of the bundled runtime; a release carries the runtime.
+  const bundledPython=fs.existsSync(path.join(root,'python/python310.dll'));
+  // Git may rewrite line endings on checkout, so CRLF/LF and the final newline are not counted.
+  const sha=text=>crypto.createHash('sha256').update(Buffer.from(text,'latin1')).digest('hex');
+  const variants=bytes=>{const lf=bytes.toString('latin1').replace(/\r\n/g,'\n').replace(/\n+$/,'');
+    return [bytes.toString('latin1'),...['\n','\r\n'].flatMap(eol=>['',eol,eol+eol].map(end=>lf.replace(/\n/g,eol)+end))].map(sha);};
   for(const [rel,hash] of Object.entries(manifest.copied_files)){
-    if(rel==='main.py'||rel==='static/js/canvas.js'||rel.endsWith('.html'))continue;
-    assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,rel))).digest('hex'),hash,rel);
+    if(rel==='main.py'||rel==='static/js/canvas.js'||rel.endsWith('.html')||changed.has(rel))continue;
+    if(rel.startsWith('python/')&&!bundledPython)continue;
+    assert(fs.existsSync(path.join(root,rel)),rel+' is missing');
+    assert(variants(fs.readFileSync(path.join(root,rel))).includes(hash),rel+' differs from the copied source');
   }
   checks.push('除已记录的生图参数传递修正外，工具、依赖及工作流与源文件校验一致');
   child=spawn(path.join(root,'python/python.exe'),[path.join(root,'studio_server.py')],{cwd:root,windowsHide:true,env:{...process.env,DEEPWHITE_STUDIO_LEGACY_SMART_FIXTURES:'1',DEEPWHITE_STUDIO_PORT:'3859',DEEPWHITE_STUDIO_RUNTIME_DIR:runtime,PYTHONUTF8:'1',PYTHONUNBUFFERED:'1'}});
@@ -83,7 +95,10 @@ async function request(route,method='GET',data){const response=await fetch(base+
   await page.waitForSelector('#shell:not(.no-canvas) #board', {state:'visible'});
   await page.mouse.dblclick(480,320);await page.waitForSelector('#createMenu.open');
   assert.deepEqual(await page.locator('#createMenu [data-studio-add] > span').allTextContents(),['文本','图片','视频','MJ 工具','音频','上传','从作品导入']);
-  assert.deepEqual(await page.locator('#quickToolbar [data-studio-add] > span').allTextContents(),['文本','图片','视频','MJ 工具','音频','上传','从作品导入']);
+  // The toolbar's single "添加" button opens the same menu as a double-click.
+  await page.keyboard.press('Escape');await page.waitForSelector('#createMenu.open',{state:'detached'}).catch(()=>{});
+  await page.locator('#quickToolbar #studioV2Add').click();await page.waitForSelector('#createMenu.open');
+  assert.deepEqual(await page.locator('#createMenu [data-studio-add] > span').allTextContents(),['文本','图片','视频','MJ 工具','音频','上传','从作品导入']);
   assert(await page.locator('[onclick="groupSelectedImages()"]', {strict:true}).count());
   await page.screenshot({path:path.join(out,'classic-menu.png')});
   await page.locator('#createMenu').screenshot({path:path.join(out,'classic-menu-detail.png')});

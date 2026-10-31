@@ -129,9 +129,10 @@
       toolbar.replaceChildren();
       toolbar.innerHTML='<button type="button" class="tool-btn studio-process-tool" data-canvas-tool="compare" title="对比画布中的两张图片"><i data-lucide="columns-2"></i><span>双图对比</span></button><button type="button" class="tool-btn studio-process-tool" data-canvas-tool="frames" title="从选中的视频节点截取关键帧"><i data-lucide="film"></i><span>视频帧</span></button><button type="button" class="tool-btn studio-process-tool" data-canvas-tool="edit" title="处理选中的图片"><i data-lucide="paintbrush"></i><span>图片处理</span></button>';
       if(grouping)toolbar.append(grouping);
-      toolbar.addEventListener('click',event=>{
-        const action=event.target.closest('[data-canvas-tool]')?.dataset.canvasTool;
-        if(!action)return;
+      // Delegated from the document: the workspace layout moves these buttons into "更多工具".
+      document.addEventListener('click',event=>{
+        const action=event.target.closest?.('[data-canvas-tool]')?.dataset.canvasTool;
+        if(!['compare','frames','edit'].includes(action))return;
         event.preventDefault();event.stopPropagation();
         if(action==='compare'){window.openCanvasComparePanel?.();return;}
         const target=[...selected].map(id=>nodes.find(n=>n.id===id)).find(n=>n?.type==='image'&&n.url);

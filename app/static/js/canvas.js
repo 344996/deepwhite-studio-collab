@@ -1205,6 +1205,17 @@ function applyViewport(){
     scheduleMinimapRender();
     scheduleCanvasImageResolutionSync(nodesEl, 120);
 }
+// Focus or scrollIntoView on a node control scrolls the shell. Undo that at once so the UI never drifts,
+// and pan the canvas by the same amount so the control stays where the browser brought it into view.
+shell.addEventListener('scroll', () => {
+    const dx = shell.scrollLeft, dy = shell.scrollTop;
+    if(!dx && !dy) return;
+    shell.scrollLeft = 0; shell.scrollTop = 0;
+    const active = document.activeElement;
+    if(active && active !== document.body && !nodesEl.contains(active)) return; // a panel or dialog, not the canvas
+    viewport.x -= dx; viewport.y -= dy;
+    applyViewport();
+});
 function estimatedNodeRect(n){
     const el = nodesEl?.querySelector?.(`.node[data-id="${CSS.escape(n.id)}"]`);
     const size = defaultNodeSize(n.type);

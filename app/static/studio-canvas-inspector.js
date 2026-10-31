@@ -20,13 +20,16 @@
       toolbar.setAttribute('aria-label', '选中节点操作');
       const bounds = cards.map(card => card.getBoundingClientRect());
       const left = Math.min(...bounds.map(rect => rect.left)), right = Math.max(...bounds.map(rect => rect.right));
-      const top = Math.min(...bounds.map(rect => rect.top));
+      const top = Math.min(...bounds.map(rect => rect.top)), bottom = Math.max(...bounds.map(rect => rect.bottom));
       const header = document.querySelector('.topbar')?.getBoundingClientRect().bottom || 72;
-      const width = toolbar.offsetWidth, height = toolbar.offsetHeight;
+      const width = toolbar.offsetWidth, height = toolbar.offsetHeight, floor = innerHeight-height-84;
+      // Above the selection when it fits, else below it, so the bar never covers the selected node's header.
+      let y = top-height-12;
+      if (y < header+10 && bottom+12 <= floor) y = bottom+12;
       toolbar.style.left = Math.max(12, Math.min(innerWidth-width-12, (left+right-width)/2)) + 'px';
-      toolbar.style.top = Math.max(header+10, Math.min(innerHeight-height-84, top-height-12)) + 'px';
+      toolbar.style.top = Math.max(header+10, Math.min(floor, y)) + 'px';
       toolbar.style.bottom = 'auto'; toolbar.style.transform = 'none';
-      toolbar.hidden = right < 0 || left > innerWidth || Math.max(...bounds.map(rect=>rect.bottom)) < header;
+      toolbar.hidden = right < 0 || left > innerWidth || bottom < header;
     }
     function sync() { if (!frame) frame=requestAnimationFrame(refresh); }
     window.addEventListener('mouseup',sync); window.addEventListener('resize',sync);
