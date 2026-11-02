@@ -11,7 +11,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
   let ready=false;for(let i=0;i<100;i++){try{assert.equal((await api('/api/studio/health')).installation,root);ready=true;break;}catch{await pause(200);}}assert(ready);
   browser=await chromium.launch({channel:'msedge',headless:true});const context=await browser.newContext({viewport:{width:1440,height:1000}});page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   let forbidden=0;await context.route('**/*',route=>{const req=route.request(),u=new URL(req.url());if(u.origin!==base||(req.method()==='POST'&&/\/api\/(canvas-(image|video|llm|comfy)|generate|online-image|providers\/probe)/.test(u.pathname))){forbidden++;return route.abort();}return route.continue();});
-  await page.goto(base);await page.locator('#studioSettingsButton').click();let frame=page.frameLocator('#studioSettingsDialog iframe');
+  await require('./no-collapse.cjs')(page);await page.goto(base);await page.locator('#studioSettingsButton').click();let frame=page.frameLocator('#studioSettingsDialog iframe');
   await frame.locator('#providerSelect option[value="deepwhite"]').waitFor({state:'attached'});assert.equal(await frame.locator('#baseUrl').inputValue(),'https://api.deepwhiteai.com/v1');
   await frame.locator('#closeSettings').click();await page.locator('#studioSettingsDialog').waitFor({state:'hidden'});
   const project=(await api('/api/projects','POST',{name:'自动模型检查'})).project;

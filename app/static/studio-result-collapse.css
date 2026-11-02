@@ -1,4 +1,9 @@
-/* U03: a collapsed result node keeps its media, title and status line. */
+/* U03: a collapsed node keeps its result, title and, while a task runs, the status line. */
 .node.studio-collapsed .studio-node-composer > :not(.studio-basics){display:none!important}
 .node.studio-collapsed .studio-node-composer .studio-basics > :not(.studio-job-state){display:none!important}
-.node.studio-collapsed .studio-node-composer::after{content:'点击节点查看提示词和参数';display:block;padding:6px 10px 8px;font-size:11px;opacity:.6}
+.node.studio-collapsed-quiet .studio-node-composer{display:none!important}
+/* Text node: only the generated text; audio node: only the task status and the result player. */
+.node.llm-node.studio-collapsed .llm-body > :not(.llm-node-pane):not(.llm-chat-pane){display:none!important}
+.node.llm-node.studio-collapsed .llm-node-pane > :not(.llm-output-wrap){display:none!important}
+.node.llm-node.studio-collapsed .llm-chat-pane{display:none!important}
+.node.audio-node.studio-collapsed .studio-audio-ui > :not(.studio-audio-job){display:none!important}

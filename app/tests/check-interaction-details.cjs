@@ -85,7 +85,7 @@ async function pressAndCancel(locator) {
   page = await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',error=>errors.push(error.message));
   await check('home hover is gentle; press has feedback and drag-away cancels without activation', async () => {
     await home();
-    const quick = page.locator('.workspace-quickstart [data-workspace-create="classic"]');
+    const quick = page.locator('.workspace-tools button').first();
     const rest = await visual(quick);
     await quick.hover();await wait(260);
     const hover = await visual(quick);
@@ -223,7 +223,8 @@ async function pressAndCancel(locator) {
   await check('touch scroll cancels pressed feedback, tap activates once and no sticky hover remains', async () => {
     const touch = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'no-preference'});
     await route(touch);const saved = page;page = await touch.newPage();
-    await home();
+    // On a phone the cards start below the fold and covers load when they are seen.
+    await ready();await page.locator('.ws-card').first().scrollIntoViewIfNeeded();await home();
     const list=page.getByRole('button',{name:'列表视图',exact:true});
     await list.evaluate(el=>{window.touchClicks=0;el.addEventListener('click',()=>window.touchClicks++);});
     await list.tap();assert.equal(await page.evaluate(()=>window.touchClicks),1);

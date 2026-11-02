@@ -60,7 +60,7 @@ async function main(){
       if(request.method()==='POST'&&/\/api\/(studio\/generations|canvas-(image|video|llm)|online-image|generate|midjourney\/)/.test(url.pathname))throw Error('Unexpected generation route '+url.pathname);
       return route.continue();
     });
-    await page.goto(base+'/static/canvas.html?id='+canvas.id);await page.locator('#shell:not(.no-canvas) #board').waitFor();await page.waitForFunction(()=>typeof StudioMidjourney!=='undefined'&&typeof canvas!=='undefined'&&canvas?.id);await delay(500);
+    await require('./no-collapse.cjs')(page);await page.goto(base+'/static/canvas.html?id='+canvas.id);await page.locator('#shell:not(.no-canvas) #board').waitFor();await page.waitForFunction(()=>typeof StudioMidjourney!=='undefined'&&typeof canvas!=='undefined'&&canvas?.id);await delay(500);
     await page.evaluate(()=>{
       nodes=[];connections=[];
       for(const [id,x,size] of [['mj-a',80,'1:1'],['mj-b',780,'3:4']]){const n=addGeneratorNode({x,y:80});n.id=id;n.apiProvider='deepwhite';n.model='midjourney-imagine';n.studioPrompt=id+' offline prompt';n.studioParams={ratio:'1:1',resolution:'1k'};n.studioMjParams={size};}

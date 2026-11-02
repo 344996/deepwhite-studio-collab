@@ -47,7 +47,7 @@ async function main(){
    if(req.method()==='POST'&&/\/api\/(?:canvas-(?:llm|video)$|studio\/generations$|online-image|runninghub\/submit)/.test(u.pathname)){blocked.push(u.pathname);return route.fulfill({status:503,json:{detail:'Real generation prohibited'}});}
    return route.continue();
   });
-  const open=async kind=>{await page.goto(base+`/static/${kind==='smart'?'smart-canvas':'canvas'}.html?id=${canvases[kind].id}`);await page.waitForFunction(()=>window.StudioNativeTasks&&nodes.some(n=>n.id==='text'));await page.waitForTimeout(300);};
+  const open=async kind=>{await require('./no-collapse.cjs')(page);await page.goto(base+`/static/${kind==='smart'?'smart-canvas':'canvas'}.html?id=${canvases[kind].id}`);await page.waitForFunction(()=>window.StudioNativeTasks&&nodes.some(n=>n.id==='text'));await page.waitForTimeout(300);};
   const attempt=async id=>page.evaluate(id=>Object.values(nodes.find(n=>n.id===id).studioLegacyAttempts||{}).at(-1),id);
   const waitStatus=async(id,status)=>page.waitForFunction(({id,status})=>Object.values(nodes.find(n=>n.id===id).studioLegacyAttempts||{}).at(-1)?.status===status,{id,status});
   const clickText=async()=>{const previous=(await attempt('text'))?.id;await page.locator('[data-id="text"] .prompt-node-run').click();if(capability)await page.waitForFunction(previous=>Object.values(nodes.find(n=>n.id==='text').studioLegacyAttempts||{}).at(-1)?.id!==previous&&Object.values(nodes.find(n=>n.id==='text').studioLegacyAttempts||{}).length>0,previous);};

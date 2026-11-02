@@ -170,6 +170,7 @@ async def token_for(session, call, state, pid):
     rows = parse_rows(await call(session, 'GET', f'/api/token/search?keyword={name.replace(" ", "%20")}&p=1&page_size=100'))
     matches = [row for row in rows if row.get('name') == name]
     token = next((row for row in matches if row.get('id') == binding.get('token_id')), None)
+    created_key = ''
     if token is None and matches:
         token = max(matches, key=lambda row: int(row.get('id', 0)))
     if token is None:
@@ -178,7 +179,7 @@ async def token_for(session, call, state, pid):
         binding['create_pending'] = True
         save_state(state)
         try:
-            await call(session, 'POST', '/api/token/', {
+            created = await call(session, 'POST', '/api/token/', {
                 'name': name, 'expired_time': -1, 'remain_quota': 0,
                 'unlimited_quota': True, 'model_limits_enabled': False,
                 'model_limits': '', 'allow_ips': '', 'group': '',
@@ -191,6 +192,8 @@ async def token_for(session, call, state, pid):
                 binding.pop('create_pending', None)
                 save_state(state)
             raise
+        if isinstance(created, dict) and created.get('key'):
+            created_key = full_key(created)
         rows = parse_rows(await call(session, 'GET', f'/api/token/search?keyword={name.replace(" ", "%20")}&p=1&page_size=100'))
         token = next((row for row in rows if row.get('name') == name), None)
         if not token:
@@ -204,14 +207,23 @@ async def token_for(session, call, state, pid):
     save_state(state)
     if token.get('status', 1) != 1 or (token.get('expired_time', -1) not in (-1, 0) and token['expired_time'] <= time.time()):
         raise HTTPException(409, '此画布的 API 令牌已被停用或过期。请在 API 网站检查后重新连接；不会自动重新启用。')
-    # New API masks list/get responses; its dedicated key endpoint returns full
-    # generation access. Older deployments returned an unmasked key on GET.
+    # The official site returns a new key once, in the create response, and keeps only a
+    # hash: the key endpoint then answers 410 and a replacement has to be generated. The
+    # token belongs to this installation and its key is never stored, so replacing it on
+    # the next login loses nothing. Older deployments return an unmasked key on GET.
+    if created_key:
+        return created_key
+    if token.get('key_recoverable') is False:
+        return full_key(await call(session, 'POST', f'/api/token/{tid}/regenerate'))
     try:
         key_data = await call(session, 'POST', f'/api/token/{tid}/key')
     except HTTPException as exc:
-        if exc.status_code not in (404, 405):
+        if exc.status_code == 410:
+            key_data = await call(session, 'POST', f'/api/token/{tid}/regenerate')
+        elif exc.status_code in (404, 405):
+            key_data = await call(session, 'GET', f'/api/token/{tid}')
+        else:
             raise
-        key_data = await call(session, 'GET', f'/api/token/{tid}')
     return full_key(key_data)
 
 

@@ -44,15 +44,18 @@ def _capabilities(data):
 
 
 def _error_for(status, data=None):
-    message = ''
+    original = ''
     if isinstance(data, dict):
-        message = str(data.get('message') or data.get('msg') or data.get('detail') or '')[:300].lower()
+        original = str(data.get('message') or data.get('msg') or data.get('detail') or '')[:300].strip()
+    message = original.lower()
     if status == 429 or any(v in message for v in ('too many', 'rate limit', '频繁', '稍后再试')):
         return HTTPException(429, '操作过于频繁，请稍后重试。')
     if status in (401, 403):
         return HTTPException(status, '账号验证失败或网站限制了此操作，请检查账号状态后重试。')
     if status in (404, 405):
         return HTTPException(status, 'API 网站暂未提供此授权接口。可使用自选 API，或联系网站管理员开启兼容接口。')
+    if status == 410:
+        return HTTPException(410, '此令牌的完整密钥已无法取回。')
     if any(v in message for v in ('disabled', 'not allowed', '关闭注册', '禁止注册')):
         return HTTPException(403, 'API 网站当前未开放此注册方式。')
     if any(v in message for v in ('already exists', 'duplicate', '已存在', '已注册', '重复')):
@@ -69,7 +72,8 @@ def _error_for(status, data=None):
         return HTTPException(400, '邮箱无效或尚未通过验证，请检查后重试。')
     if status >= 500:
         return HTTPException(502, 'API 账号服务暂时不可用，请稍后重试。')
-    return HTTPException(400, 'API 网站未接受此操作，请检查输入后重试。')
+    # Say what the site said: a generic line here hid the real cause of a failed setup.
+    return HTTPException(400, 'API 网站未接受此操作：' + original[:120] if original else 'API 网站未接受此操作，请检查输入后重试。')
 
 
 async def _safe_call(session, method, path, body=None, params=None):

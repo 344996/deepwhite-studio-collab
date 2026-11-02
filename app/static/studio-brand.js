@@ -38,7 +38,9 @@
         dialog.close(); frame.src = 'about:blank'; button.focus();
       }
     }
-    button.onclick = event => { event.stopPropagation(); frame.src = '/settings'; dialog.showModal(); };
+    const openSettings = tab => { frame.src = '/settings' + (tab ? '?tab=' + encodeURIComponent(tab) : ''); dialog.showModal(); };
+    button.onclick = event => { event.stopPropagation(); openSettings(); };
+    window.StudioOpenSettings = openSettings;
     dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
     ['pointerdown','mousedown','dblclick','keydown','wheel'].forEach(type => dialog.addEventListener(type,event=>event.stopPropagation()));
     window.addEventListener('message', event => {

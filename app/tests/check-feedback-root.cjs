@@ -6,7 +6,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:3874')?r.continue():r.abort());
   await context.route('**/api/studio/account',r=>r.fulfill({json:{username:'测试账户',balance:123.45,symbol:'¥',avatar_url:'/static/studio-mark.svg'}}));
-  await page.goto('http://127.0.0.1:3874/static/canvas.html?id=controlfixture');
+  await require('./no-collapse.cjs')(page);await page.goto('http://127.0.0.1:3874/static/canvas.html?id=controlfixture');
   await page.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id==='controlfixture');
   await page.waitForTimeout(500);
   await page.evaluate(()=>{nodes=[{id:'ui-image',type:'generator',x:300,y:150,w:780,apiProvider:'mcp-fixture',model:'deepwhiteai-image-g-v2.5-lowprice',studioPrompt:'测试节点，不执行生成',count:1,studioParams:{},studioParamsModel:'deepwhiteai-image-g-v2.5-lowprice'}];connections=[];viewport={x:0,y:0,scale:1};render();});

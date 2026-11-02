@@ -9,7 +9,7 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
  browser=await chromium.launch({channel:'msedge',headless:true});const p=await browser.newPage({viewport:{width:1500,height:1100}});p.on('pageerror',e=>errors.push(e.message));
 
  await p.route('**/api/studio/local-engine**',r=>r.fulfill({json:{state:'stopped',owned:false,message:'未开启',settings:{auto_start:false}}}));
- await p.goto(base+'/static/canvas.html?id='+c.id);await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id);await pause(400);
+ await require('./no-collapse.cjs')(p);await p.goto(base+'/static/canvas.html?id='+c.id);await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id);await pause(400);
  await p.evaluate(()=>{nodes=[];connections=[];viewport={x:0,y:0,scale:0.85};applyViewport();addNode({id:'snap-source',type:'prompt',x:60,y:160,w:300,h:200,text:'参考提示词'});const n=addGeneratorNode({x:570,y:160});n.id='snap-target';render();});
  // Magnetic handle follows nearby pointer and returns when leaving.
  const source=p.locator('[data-id="snap-source"]'),port=source.locator('.port.out');
@@ -29,6 +29,12 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
  await drag();await p.mouse.up();assert.equal(await p.evaluate(()=>connections.length),1);
  await p.evaluate(()=>{connections=[];render();});await drag(true);await p.mouse.up();assert.deepEqual(await p.evaluate(()=>connections.map(c=>[c.from,c.to])),[['snap-source','snap-target']]);
  await p.evaluate(()=>{connections=[];render();});await drag();await p.keyboard.press('Escape');await p.mouse.up();assert.equal(await p.evaluate(()=>connections.length),0);assert.equal(await p.locator('.studio-link-target').count(),0);
+ // Dropping on the text box of a text node connects too; the box must not swallow the drop.
+ await p.evaluate(()=>{connections=[];render();});await pause(150);
+ {const a=await p.locator('[data-id="snap-target"] .port.in').boundingBox(),t=await p.locator('[data-id="snap-source"] textarea').boundingBox();
+  await p.mouse.move(a.x+a.width/2,a.y+a.height/2);await p.mouse.down();await p.mouse.move(t.x+t.width/2,t.y+t.height/2,{steps:8});await p.mouse.up();
+  assert.deepEqual(await p.evaluate(()=>connections.map(c=>[c.from,c.to])),[['snap-source','snap-target']]);assert.equal(await p.evaluate(()=>tempLink),null,'the dragged line stayed attached to the pointer');
+  await p.evaluate(()=>{connections=[];render();});}
  // Dropping on an incompatible card must not create nodes or edges.
  await p.evaluate(()=>addNode({id:'snap-invalid',type:'prompt',x:570,y:650,w:300,h:150,text:'不可接收'}));
  const a=await p.locator('[data-id="snap-source"] .port.out').boundingBox(),b=await p.locator('[data-id="snap-invalid"]').boundingBox();

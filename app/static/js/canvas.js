@@ -8349,7 +8349,8 @@ function bindScrollableText(el){
         if(textSelectionGuard?.el === el) textSelectionGuard.clientY = e.clientY;
     });
     el.addEventListener('mouseup', e => {
-        e.stopPropagation();
+        // A link dragged onto this text box must still reach its drop handler.
+        if(!tempLink) e.stopPropagation();
         if(textSelectionGuard?.el === el) textSelectionGuard.active = false;
     });
     el.addEventListener('mouseleave', e => {

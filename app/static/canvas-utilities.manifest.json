@@ -11,7 +11,7 @@
     "inputs": [
       {
         "file": "canvas.html",
-        "sha256": "006de996bbed90fe7a1ac71800ca367e16fdebeeaa30e98e9a915cd55be36102"
+        "sha256": "00253c1badf254a80f9ee4111a66bfc135cbafd371a5c1aa87f856fe97959c04"
       },
       {
         "file": "js/api-settings.js",
@@ -27,7 +27,7 @@
       },
       {
         "file": "js/canvas.js",
-        "sha256": "460e6ac4f73234c1f7d23b2f5e85761deb7fcc433d9c22afa69cec63476385bf"
+        "sha256": "264482ce077b98c0ed571ae97042de4dafb86904a80d5be47e1e70e0909ca4be"
       },
       {
         "file": "js/comfyui-settings.js",
@@ -67,7 +67,7 @@
       },
       {
         "file": "studio-account-skills.js",
-        "sha256": "5e2a30ed5cd83a8e8850c82a9b62b30702fadc9e04a9dcc18014eb90900c2b89"
+        "sha256": "491c892987ae7336ff351b33e27f4eb9c38542d0e4a9f2cc4a02c79dad8fb275"
       },
       {
         "file": "studio-asset-presets.js",
@@ -91,7 +91,7 @@
       },
       {
         "file": "studio-brand.js",
-        "sha256": "c886e4a79186f23b69581036e810dd9270bf76fe678be1f713f59456e35facba"
+        "sha256": "ba743acf222a64bd79cd70327a4d302b735c367118c6512dd7e8ee9f713689bd"
       },
       {
         "file": "studio-canvas-connections.js",
@@ -107,7 +107,7 @@
       },
       {
         "file": "studio-canvas-inspector.js",
-        "sha256": "5142b88fe4679bf27f46789228b83b5a249d28e6de633ab8116756728ef189bd"
+        "sha256": "2b32d06be22cf318fa11dd53bc023a85ed22dff2099225d471e218d2534cbccb"
       },
       {
         "file": "studio-canvas-v2.js",
@@ -163,7 +163,7 @@
       },
       {
         "file": "studio-home-v2.js",
-        "sha256": "79b74194c8659bc59e6abeb91e861a2ea5dc31b7f82e39300bf13c6f9def113f"
+        "sha256": "9f48ceb57066dad1626ee22f916faae55c6aaadd91318b0444ce1060509ee979"
       },
       {
         "file": "studio-home.js",
@@ -180,6 +180,10 @@
       {
         "file": "studio-layout-0929.js",
         "sha256": "c4b99c08f88145dcf8a9d2e4c6b791de66327e2e6acc2cc423fc9cc8410eab5a"
+      },
+      {
+        "file": "studio-layout-1102.js",
+        "sha256": "3f2df191f7f44427d0b1b5f541e813be61eb4f6a1a7e32acf9cf86c4b45788b8"
       },
       {
         "file": "studio-local-engine.js",
@@ -203,7 +207,7 @@
       },
       {
         "file": "studio-node-composer.js",
-        "sha256": "95e80c297550f78542304aa2b31c70312254c026353d65f6cd1b17e131e457ea"
+        "sha256": "e2238de666f8e2668f7bb41d150f98b88f2b22fb5a0f1f7654598f820c16b3ae"
       },
       {
         "file": "studio-node-editor.js",
@@ -231,7 +235,7 @@
       },
       {
         "file": "studio-result-collapse.js",
-        "sha256": "576f16f345d5be473ab974e38ee13b206676820d979d02e0759bda764044f733"
+        "sha256": "b9dd4c89b9c4322a661d30e147424ca9b6ed42273093f3dbaa942482bf600aa8"
       },
       {
         "file": "studio-rh-settings.js",
@@ -299,11 +303,11 @@
       },
       {
         "file": "studio-workspace.js",
-        "sha256": "818d978a2fbebd90f06e512409ed88fb8b72f2138db180c59aa2977af8ef78e1"
+        "sha256": "410a8ae72fe845ab5b20de43c48ee2f3723ca9b75d114a159433ebb5994782eb"
       }
     ],
-    "candidateCount": 55750,
-    "candidatesSha256": "1fc9c09ba18a957a0470ffa621d83940cb49e53227f1cd31605ce382e88ed20c"
+    "candidateCount": 55831,
+    "candidatesSha256": "dcafe3d4301d02d74af4f99231a4e3d49c4d55e337cb23e1a4651ff87ee43c47"
   },
   "cssSha256": "fa0e9de4fe5ef27ae03188ab8c0675acaf9a4389178bc6d7ca90a809fc10fa50"
 }

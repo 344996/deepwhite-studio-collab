@@ -1,0 +1,88 @@
+/* Canvas layout (2026-11-02): floating controls over a full-height board; a node is a small title, a framed
+   result and, once selected, a composer below it. Colours stay in studio-v2-theme.css. */
+
+/* Left capsule: the former top bar. */
+html.studio-v2-canvas.studio-workspace-refresh .topbar{position:fixed;left:16px;top:16px;right:auto;width:auto;max-width:calc(100vw - 32px);height:42px;padding:0 12px 0 5px;gap:8px;zoom:1!important;border:.8px solid var(--dw-line-strong);border-radius:12px;background:var(--dw-surface);box-shadow:0 8px 24px var(--dw-shadow);pointer-events:auto}
+html.studio-v2-canvas.studio-workspace-refresh .topbar .v2-brand{padding:0;gap:0}
+html.studio-v2-canvas.studio-workspace-refresh .topbar .v2-brand>span{display:none}
+html.studio-v2-canvas.studio-workspace-refresh .topbar .v2-brand-symbol{width:24px;height:24px;border-radius:6px}
+html.studio-v2-canvas.studio-workspace-refresh .topbar .canvas-nav{display:contents}
+html.studio-v2-canvas.studio-workspace-refresh .topbar #backToManagerBtn{order:-1;width:30px;height:30px;border-radius:8px}
+html.studio-v2-canvas.studio-workspace-refresh .topbar #backToManagerBtn:hover{background:var(--dw-hover);color:var(--dw-ink)}
+html.studio-v2-canvas.studio-workspace-refresh .topbar .current-canvas-title{max-width:220px;font-size:13px;font-weight:500}
+
+/* Right capsule. */
+html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools{top:16px;right:16px;gap:2px;padding:4px;border:.8px solid var(--dw-line-strong);border-radius:12px;background:var(--dw-surface);box-shadow:0 8px 24px var(--dw-shadow)}
+html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools>button,html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools summary{height:32px!important;min-height:32px;padding:0 9px!important;border:0!important;border-radius:8px;background:none!important;color:var(--dw-muted)!important;font-size:13px;box-shadow:none}
+html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools>button:hover,html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools summary:hover{background:var(--dw-hover)!important;color:var(--dw-ink)!important}
+html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools>#studioAccountButton{background:var(--dw-primary)!important;color:var(--dw-on-primary)!important;font-weight:500}
+html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools summary span{display:none}
+html.studio-v2-canvas.studio-workspace-refresh .workspace-more-panel{top:44px;width:260px;padding:8px;gap:4px;border:.8px solid var(--dw-line-strong);border-radius:12px}
+html.studio-v2-canvas.studio-workspace-refresh .workspace-more-panel button,html.studio-v2-canvas.studio-workspace-refresh .workspace-more-panel select{min-height:32px;padding:0 9px;border:0;background:none}
+html.studio-v2-canvas.studio-workspace-refresh .workspace-more-panel button:hover{background:var(--dw-hover)}
+
+/* Bottom-left and bottom-right capsules. */
+html.studio-v2-canvas.studio-workspace-refresh .v2-navigation{gap:2px;padding:4px;border:.8px solid var(--dw-line-strong);border-radius:12px;box-shadow:0 8px 24px var(--dw-shadow)}
+html.studio-v2-canvas.studio-workspace-refresh .minimap{border-width:.8px;border-radius:12px}
+html.studio-v2-canvas.studio-workspace-refresh .v2-selection-actions{border:.8px solid var(--dw-line-strong);border-radius:10px}
+
+/* Node titles sit above the frame; the close button only appears when you reach for the node. */
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node:not(.v2-spatial-group)::before{display:none!important}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .node-title{font-size:12px;font-weight:400!important;color:var(--dw-muted)!important}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node.selected .node-title{color:var(--dw-ink)!important}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .studio-node-brand{width:16px;height:16px;min-width:16px;font-size:8px;border-radius:4px}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .node-head button{opacity:0}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node:is(:hover,:focus-within,.selected) .node-head button{opacity:1}
+
+/* Text, audio, result and uploaded-media nodes use the same title and frame as generation nodes. */
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node:not(.studio-media-composer-node):not(.v2-spatial-group){background:transparent!important;border:0!important;box-shadow:none!important;outline:0!important;overflow:visible}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node:not(.studio-media-composer-node):not(.v2-spatial-group)>.node-head{height:30px;min-height:30px;flex-basis:30px;padding:0 4px 6px!important;border:0!important;background:none!important}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node:not(.studio-media-composer-node):not(.v2-spatial-group)>.node-body{padding:12px!important;background:var(--dw-panel)!important;border:1px solid var(--dw-node-line);border-radius:16px;transition:border-color var(--dw-fast)}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node.selected:not(.studio-media-composer-node):not(.v2-spatial-group)>.node-body{border-color:var(--dw-node-on)}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node.image-node>.node-body{padding:0!important;overflow:hidden}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node.prompt-node textarea{border:0!important;background:none!important;padding:4px!important}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.audio-node.studio-collapsed .studio-audio-ui{min-height:48px;padding:0;border:0;background:none}
+
+/* Generation nodes: the frame, then the composer. */
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media{border-color:var(--dw-node-line);border-radius:16px;background:var(--dw-panel)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .selected .studio-node-media{border-color:var(--dw-node-on);box-shadow:none}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media:has(>.studio-preview-reference){align-items:flex-start;justify-content:flex-end;gap:2px;padding:0 26px 20px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-media-placeholder-icon{position:absolute;left:50%;top:52px;width:72px;height:72px;transform:translateX(-50%);opacity:.35}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media>p{font-size:13px;color:var(--dw-muted)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media .studio-preview-reference{display:flex;align-items:center;gap:8px;padding:6px 10px;border:0;background:none;font-size:13px;color:var(--dw-ink)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media .studio-preview-reference:hover{color:var(--dw-muted)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media .studio-preview-reference svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer{display:flex;flex-direction:column;width:97.6%;margin:14px auto 0;padding:12px 14px 10px;background:var(--dw-panel);border:0!important;border-radius:16px;box-shadow:0 12px 34px var(--dw-shadow)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-add{order:-2;margin:0 0 6px;padding:0;border:0;gap:4px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-add button{height:24px;padding:0 9px;border:0;border-radius:999px;background:var(--dw-raised);color:var(--dw-muted);font-size:12px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-add button:hover{color:var(--dw-ink)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-modules{order:-1}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-prompt-input{height:72px!important;min-height:64px!important;padding:4px!important;font-size:13px;line-height:1.6}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-prompt-input::placeholder{color:var(--dw-faint)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-footer{padding-top:6px!important;border-top:0!important;gap:6px!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-settings{border:0;background:none;font-size:12px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-settings:hover{background:var(--dw-hover)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-count-inline select{border:0!important;background:none!important;font-size:12px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer:has(.studio-prompt-input:placeholder-shown) .gen-btn{background:var(--dw-faint);color:var(--dw-bg)}
+
+@media(min-width:900px){
+  html.studio-v2-canvas.studio-workspace-refresh .studio-canvas-corner-0929{left:16px;bottom:16px}
+  html.studio-v2-canvas.studio-workspace-refresh .v2-navigation{right:16px;bottom:16px}
+  html.studio-v2-canvas.studio-workspace-refresh .minimap{right:16px;bottom:64px}
+  /* Main tool bar: add, history, tools, assets, shortcuts. */
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail{left:50%!important;top:auto!important;bottom:16px!important;right:auto!important;transform:translateX(-50%);display:flex!important;flex-direction:row!important;align-items:center;gap:2px;width:auto!important;height:auto!important;max-height:none;padding:8px!important;border:.8px solid var(--dw-line-strong)!important;border-radius:12px!important;background:var(--dw-surface)!important;box-shadow:0 8px 24px var(--dw-shadow)!important}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail button{display:inline-flex;gap:6px;width:auto!important;min-width:32px;height:32px!important;padding:0 9px!important;border-radius:8px;font-size:13px;flex-direction:row}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail button>span{display:inline!important}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail :is(#studioV2Add,#studioV2Select,#studioV2Hand,#workspaceShortcuts)>span{display:none!important}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail button[aria-pressed=true]{border:0!important;background:var(--dw-raised)!important;color:var(--dw-ink)!important;box-shadow:none!important}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail button::after{display:none!important}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail #studioV2Add{width:36px!important;padding:0!important;justify-content:center;background:var(--dw-primary)!important;color:var(--dw-on-primary)!important}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail .v2-rail-divider{width:1px;height:18px;margin:0 4px;flex:none}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail button svg{width:16px;height:16px}
+}
+@media(max-width:899px){
+  html.studio-v2-canvas.studio-workspace-refresh .topbar{left:12px;top:12px;max-width:calc(100vw - 24px)}
+  html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools{top:64px;right:12px}
+  html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail .v2-rail-divider{display:none}
+}

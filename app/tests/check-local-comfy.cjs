@@ -20,7 +20,7 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
   const r=route.request();if(r.method()==='POST'){const body=r.postDataJSON();submitted.push(body);job={id:body.request_id,request:body,resolved_model:body.model,status:'succeeded',created_at:Date.now()/1000,children:[],task_ids:['mock-local'],outputs:[{url:'/static/studio-mark.svg',kind:'image'}],text:'',error:''};return route.fulfill({json:job});}
   return route.fulfill({json:r.url().endsWith('/'+job?.id)?job:{items:[]}});
  });
- await p.goto(base+'/static/canvas.html?id='+c.id);await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id&&apiProviders.some(x=>x.id==='deepwhite-local-comfy'));
+ await require('./no-collapse.cjs')(p);await p.goto(base+'/static/canvas.html?id='+c.id);await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id&&apiProviders.some(x=>x.id==='deepwhite-local-comfy'));
  await p.locator('.studio-engine-toolbar').waitFor({state:'attached'});assert.equal(engineStarts,0);
  await pause(300);await p.evaluate(()=>{addGeneratorNode({x:50,y:60});render();});
  await p.locator('.studio-model-trigger').first().click();await p.getByLabel('选择调用渠道',{exact:true}).selectOption('deepwhite-local-comfy');await p.getByRole('option',{name:/Qwen Image 2.1/}).click();

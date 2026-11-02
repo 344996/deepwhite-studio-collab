@@ -135,6 +135,18 @@ const checks = [], errors = [], external = [];
     assert.equal(state.creates, 1);
     assert.equal(state.generation_requests, 0);
     checks.push('退出立即失效生成授权；整个流程只创建一次模拟令牌，未发起付费生成');
+    // U01: registering a new account needs no second login and no API Key.
+    await page.getByRole('button', {name: '登录 / 注册', exact: true}).click();
+    await page.getByRole('button', {name: '创建 API 账户', exact: true}).click();
+    await page.locator('[name=username]').fill('new_person');
+    await page.locator('[name=password]').fill('fixture-only-123');
+    await page.locator('[name=confirm_password]').fill('fixture-only-123');
+    await page.getByRole('button', {name: '创建账户', exact: true}).click();
+    await page.locator('[data-generation-status=ready]').waitFor();
+    const afterRegister = (await (await fetch(base + '/api/providers')).json()).providers.find(item => item.id === pid);
+    assert(afterRegister.has_key && afterRegister.primary && afterRegister.enabled, 'a new account is configured by itself');
+    assert.equal((await (await fetch(base + '/__fixture/state')).json()).registrations, 1);
+    checks.push('新注册账户无需再次登录、无需填写 API Key，自动完成官方 API 和模型配置');
     assert.deepEqual(errors, []);
     assert.deepEqual(external, []);
     const result = {passed: true, checks, browser_errors: errors, external_requests: external,

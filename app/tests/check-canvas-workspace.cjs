@@ -43,8 +43,8 @@ async function undo(redo = false) { await page.evaluate(() => document.activeEle
   for (const kind of process.env.WORKSPACE_KIND ? [process.env.WORKSPACE_KIND] : ['classic','smart']) {
     const id = await fixture(kind);
     await check(kind + ': common rail and unique native workflow entry', async () => {
-      assert.deepEqual(await page.locator('#workspaceCanvasRail>button>span').allTextContents(), ['添加','选择','移动','素材','工作流']);
-      for(const item of await page.locator('#workspaceCanvasRail>button').all()){const box=await item.boundingBox();assert(box.width>=44&&box.height>=44,'labeled tools retain a usable pointer target');}
+      assert.deepEqual(await page.locator('#workspaceCanvasRail>button>span').allTextContents(), kind === 'classic' ? ['添加','历史','选择','移动','素材','工作流'] : ['添加','选择','移动','素材','工作流']);
+      for(const item of await page.locator('#workspaceCanvasRail>button').all()){const box=await item.boundingBox();assert(box.width>=32&&box.height>=32,'tools retain a usable pointer target');}
       assert.equal(await page.locator('[data-workflow-workbench]').count(), 1); assert.equal(await page.locator('#workspaceInspector').count(),0);
       await selectText();await page.evaluate(kind=>{if(kind==='smart'){selectedId='removed-node';selectedIds=[];}else{selected.clear();selected.add('removed-node');}render();},kind);
       assert.equal(await page.locator('#workspaceInspectorToggle').count(),0);

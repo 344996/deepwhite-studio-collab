@@ -18,7 +18,7 @@ async function main(){
   const connections=[{id:'c1',from:'llm1',to:'img1'},{id:'c2',from:'person',to:'gen'},{id:'c3',from:'scene',to:'gen'},{id:'c4',from:'p1',to:'gen'}];
   await h.api('/api/canvases/'+created.id,'PUT',{title:created.title,icon:'layers',nodes,connections,viewport:{x:0,y:0,scale:1},logs:[],settings:{},base_updated_at:created.updated_at,client_id:'fixture'});
   const page=await h.newPage();
-  await page.goto(h.base+'/static/canvas.html?id='+created.id);
+  await require('./no-collapse.cjs')(page);await page.goto(h.base+'/static/canvas.html?id='+created.id);
   await page.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id&&window.StudioStageOne);
   await delay(1500);
 
