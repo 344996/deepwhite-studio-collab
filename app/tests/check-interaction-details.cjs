@@ -224,7 +224,8 @@ async function pressAndCancel(locator) {
     const touch = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'no-preference'});
     await route(touch);const saved = page;page = await touch.newPage();
     // On a phone the cards start below the fold and covers load when they are seen.
-    await ready();await page.locator('.ws-card').first().scrollIntoViewIfNeeded();await home();
+    await ready();await page.waitForFunction(()=>window.StudioWorkspace?.ready);await page.locator('.home-canvas-cover').first().scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelector('.home-canvas-cover>img')?.complete);
     const list=page.getByRole('button',{name:'列表视图',exact:true});
     await list.evaluate(el=>{window.touchClicks=0;el.addEventListener('click',()=>window.touchClicks++);});
     await list.tap();assert.equal(await page.evaluate(()=>window.touchClicks),1);

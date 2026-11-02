@@ -148,7 +148,7 @@
       syncFieldVisibility();
       if(node.type==='generator'&&node.model==='midjourney-imagine'){
         const p=node.studioMjParams||{};
-        trigger.textContent='设置 · '+(window.StudioMidjourney?.summary(node)||[p.size||'1:1','MJ '+(p.version||'8.2'),{relax:'Relax',fast:'Fast',turbo:'Turbo'}[p.speed||'relax'],(node.count||1)+' 次'].join(' / '))+' ▾';trigger.title=trigger.textContent;return;
+        trigger.textContent=(window.StudioMidjourney?.summary(node)||[p.size||'1:1','MJ '+(p.version||'8.2'),{relax:'Relax',fast:'Fast',turbo:'Turbo'}[p.speed||'relax'],(node.count||1)+' 次'].join(' · '))+' ▾';trigger.title=trigger.textContent;return;
       }
       let parts;
       if(enhancedVideo){
@@ -165,7 +165,7 @@
         const ratioText=ratio==='custom'?(customRatio||optionText('.ratio')):ratio==='source'?[optionText('.ratio'),customRatio].filter(Boolean).join(' '):optionText('.ratio');
         parts=[resolution==='custom'||resolution==='auto'?'':ratioText,sizeText,optionText('.quality-select'),(node.count||1)+' 张'];
       }
-      trigger.textContent='设置 · '+parts.filter(Boolean).join(' / ')+' ▾';
+      trigger.textContent=parts.filter(Boolean).join(' · ')+' ▾';
       trigger.title=trigger.textContent;
     };
     const refresh=()=>{summary();requestLayout();};

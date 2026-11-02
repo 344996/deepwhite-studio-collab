@@ -42,7 +42,7 @@
     return params;
   }
   const mjCount=node=>{const count=Number(node.count||1);return Number.isFinite(count)?Math.max(1,Math.min(8,Math.floor(count))):1;};
-  window.StudioMidjourney={params:mjParams,count:mjCount,summary:node=>{const p=mjParams(node,'imagine');return [p.size,'MJ '+p.version,{relax:'Relax',fast:'Fast',turbo:'Turbo'}[p.speed]||p.speed,mjCount(node)+' 次'].join(' / ');}};
+  window.StudioMidjourney={params:mjParams,count:mjCount,summary:node=>{const p=mjParams(node,'imagine');return [p.size,'MJ '+p.version,{relax:'Relax',fast:'Fast',turbo:'Turbo'}[p.speed]||p.speed,mjCount(node)+' 次'].join(' · ');}};
   const labels={prompt:'提示词',task_id:'来源任务编号',index:'选择原结果中的图片',custom_id:'任务按钮编号（可选）',speed:'速度',version:'版本',size:'比例',dimensions:'融合比例',zoom_ratio:'扩展倍数',direction:'平移方向',mask_url:'遮罩图片地址',video_type:'视频规格',animate_mode:'动画方式',motion:'运动幅度',batch_size:'视频数量',end_url:'尾帧图片地址',stylize:'风格化',chaos:'多样性',weird:'奇异度',niji:'动漫模式'};
   const choices={speed:[['relax','Relax'],['fast','Fast'],['turbo','Turbo']],version:['8.2','8.1','7','6.1','5.2','5.1'],size:['1:1','3:4','4:3','9:16','16:9','21:9'],dimensions:[['SQUARE','1:1'],['PORTRAIT','2:3'],['LANDSCAPE','3:2']],zoom_ratio:[1.5,2],direction:[['left','向左'],['right','向右'],['up','向上'],['down','向下']],video_type:[['vid_1.1_i2v_480','480p'],['vid_1.1_i2v_720','720p'],['vid_1.1_i2v_start_end_480','首尾帧 480p'],['vid_1.1_i2v_start_end_720','首尾帧 720p']],animate_mode:[['manual','手动'],['auto','自动']],motion:[['low','低'],['high','高']],batch_size:[1,2,4]};
   const numbers=new Set(['index','zoom_ratio','batch_size','stylize','chaos','weird']);

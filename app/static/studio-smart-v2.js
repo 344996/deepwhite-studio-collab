@@ -174,7 +174,8 @@
     let right=bounds.right-20;const assets=document.getElementById('assetPanel');
     if(assets?.classList.contains('open'))right=Math.min(right,assets.offsetLeft-14,assets.getBoundingClientRect().left-14);
     const inspector=document.getElementById('workspaceInspector');if(inspector&&!inspector.hidden&&innerWidth>900)right=Math.min(right,inspector.getBoundingClientRect().left-14);
-    return {left:Math.max(bounds.left+20,railRect.right+14),top:Math.max(bounds.top+14,head.bottom+14),right,bottom:Math.min(bounds.bottom-20,bottom.getBoundingClientRect().top-14,view.getBoundingClientRect().top-14)};
+    const sideRail=railRect.height>railRect.width;
+    return {left:Math.max(bounds.left+20,sideRail?railRect.right+14:0),top:Math.max(bounds.top+14,head.bottom+14),right,bottom:Math.min(bounds.bottom-20,bottom.getBoundingClientRect().top-14,view.getBoundingClientRect().top-14,sideRail?Infinity:railRect.top-14)};
   }
   function projectRect(node){
     const r=nodeRect(node),shellRect=shell.getBoundingClientRect(),s=viewport.scale;
@@ -256,7 +257,8 @@
     if(menu)candidates.push([menu.left,menu.bottom+12],[menu.right+12,menu.top],[menu.left-width-12,menu.top]);
     if(fitDock?.nodeId===node.id){const dock=fitEditorPosition(safe,width,height);candidates.unshift([dock.left,dock.top]);}
     const map=minimapRect();if(map)candidates.push([map.left-width-12,anchor.top],[center,map.top-height-12]);
-    const ranked=candidates.map(([x,y],index)=>{const left=clamp(x,safe.left,safe.right-width),top=clamp(y,safe.top,safe.bottom-height),rect={left,top,right:left+width,bottom:top+height};return {...rect,cost:Math.abs(left-x)+Math.abs(top-y)+intersect(rect,anchor)*2+(intersect(rect,anchor)>0?1e10:0)+(menu&&intersect(rect,menu)>0?1e9:0)+(intersect(rect,map)>0?1e12:0)+index};}).sort((a,b)=>a.cost-b.cost);
+    const others=nodes.filter(item=>item!==node&&!item.groupId&&item.type!=='smart-group').map(projectRect);
+    const ranked=candidates.map(([x,y],index)=>{const left=clamp(x,safe.left,safe.right-width),top=clamp(y,safe.top,safe.bottom-height),rect={left,top,right:left+width,bottom:top+height};return {...rect,cost:Math.abs(left-x)+Math.abs(top-y)+intersect(rect,anchor)*2+others.reduce((sum,item)=>sum+intersect(rect,item),0)+(intersect(rect,anchor)>0?1e10:0)+(menu&&intersect(rect,menu)>0?1e9:0)+(intersect(rect,map)>0?1e12:0)+index};}).sort((a,b)=>a.cost-b.cost);
     const chosen=ranked[0];
     if(menu&&intersect(chosen,menu)>0){
       const moved=menuPosition(anchor,safe,menu.right-menu.left,menu.bottom-menu.top,chosen);

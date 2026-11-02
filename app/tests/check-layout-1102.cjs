@@ -19,7 +19,7 @@ async function main(){
    const nav=await box(page,'.workspace-nav button');assert.equal(Math.round(nav.height),32);
    const card=await box(page,'#newCanvasBtn');assert.deepEqual([Math.round(card.x),Math.round(card.width),Math.round(card.height)],[280,1120,160]);
    const plus=await box(page,'.home-new-plus');assert.deepEqual([Math.round(plus.width),Math.round(plus.height)],[88,52]);
-   const tile=await box(page,'.workspace-tool-tile');assert.deepEqual([Math.round(tile.width),Math.round(tile.height)],[80,56]);
+   const tile=await box(page,'.workspace-tool-tile');assert.deepEqual([Math.round(tile.width),Math.round(tile.height)],[98,56]);
    assert.equal(await page.locator('.workspace-hero-art').count(),0,'the old hero is gone');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   });
@@ -99,6 +99,17 @@ async function main(){
    const media=await node.locator('.studio-node-media').boundingBox(),composer=await node.locator('.studio-node-composer').boundingBox();
    assert(composer&&composer.y>=media.y+media.height,'the composer is not below the frame');
    assert(composer.width<media.width,'the composer should be slightly narrower than the frame');
+   assert.equal(Math.round(media.width/media.height*100),178,'the frame is 16:9');
+   const ports=await node.locator(':scope>.port').evaluateAll(list=>list.map(p=>{const b=p.getBoundingClientRect();return b.y+b.height/2}));
+   for(const y of ports)assert(Math.abs(y-(media.y+media.height/2))<4,'the handles sit at the middle of the frame');
+   const refChip=await node.locator('.studio-input-icon').boundingBox(),addChip=await node.locator('.studio-creative-add button').first().boundingBox();
+   assert(Math.abs(refChip.y-addChip.y)<3&&refChip.x<addChip.x,'the reference chip leads the chip row');
+   const settings=await node.locator('.studio-image-settings').innerText();assert(!settings.includes('设置'),settings);
+   const footer=await node.locator('.studio-image-footer').evaluate(el=>{const r=el.getBoundingClientRect();return [...el.children].filter(k=>k.offsetWidth).every(k=>{const b=k.getBoundingClientRect();return b.right<=r.right+1&&k.scrollWidth<=k.clientWidth+1})});
+   assert(footer,'every footer item fits, including the price');
+   const area=node.locator('.studio-prompt-input'),expand=node.locator('.studio-prompt-expand'),small=(await area.boundingBox()).height;
+   await expand.click();await delay(100);assert((await area.boundingBox()).height>small*2,'expanding grows the prompt');assert.equal(await expand.getAttribute('aria-pressed'),'true');
+   await expand.click();await delay(100);assert.equal(Math.round((await area.boundingBox()).height),Math.round(small));
    await node.locator('.studio-preview-reference').click();await page.locator('.node[data-id="shape"] .studio-input-popover').waitFor({state:'visible'});await page.keyboard.press('Escape');
   });
   await check('the selection bar can delete, and stays clear of the node',async()=>{

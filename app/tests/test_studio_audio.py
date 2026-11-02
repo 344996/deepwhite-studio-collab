@@ -39,9 +39,9 @@ class AudioContracts(unittest.TestCase):
 
     def test_suno_music_and_sfx_use_distinct_submission_routes(self):
         endpoint, body = generation.audio_body('suno', 'soft piano',
-            {'channel':'music','version':'v5','instrumental':True})
+            {'channel':'music','version':'v6','instrumental':True})
         self.assertEqual(endpoint, '/music/generations')
-        self.assertEqual(body, {'model':'suno','prompt':'soft piano','version':'v5','instrumental':True})
+        self.assertEqual(body, {'model':'suno','prompt':'soft piano','version':'v6','instrumental':True})
         endpoint, body = generation.audio_body('suno-sounds', '远处雷声', {'channel':'sound'})
         self.assertEqual(endpoint, '/music/generations/sounds')
         self.assertEqual(body, {'model':'suno','prompt':'远处雷声'})
@@ -199,6 +199,10 @@ class AudioRecovery(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(client.gets,['https://api.deepwhiteai.com/v1/music/tasks/sfx-task-1'])
         self.assertEqual(result['children'][0]['outputs'],[saved])
 
+    def test_music_cover_image_is_not_a_result(self):
+        result={'urls':['https://cdn.invalid/a.mp3','https://cdn.invalid/a.jpg','https://cdn.invalid/b'],'url_kinds':{'https://cdn.invalid/a.mp3':'audio','https://cdn.invalid/a.jpg':'image','https://cdn.invalid/b':''}}
+        self.assertEqual(generation.result_urls(result,'audio'),['https://cdn.invalid/a.mp3','https://cdn.invalid/b'])
+
     async def test_suno_array_submit_response_polls_music_task_and_saves_tracks(self):
         class Response:
             status_code=200
@@ -223,17 +227,17 @@ class AudioRecovery(unittest.IsolatedAsyncioTestCase):
         generation.save({'id':job_id,'status':'queued','error':'','resolved_model':'suno',
             'base_url':'https://api.deepwhiteai.com','created_at':1,'request':{
                 'provider_id':'provider','kind':'audio','prompt':'柔和钢琴','params':{
-                    'channel':'music','version':'v5','custom':False,'instrumental':True},
+                    'channel':'music','version':'v6','custom':False,'instrumental':True},
                 'references':[],'frame_mode':False},'children':[{'status':'queued'}]})
         saved={'url':'/api/output/track.mp3','kind':'audio','name':'track.mp3'}
         with patch.object(generation,'connection',return_value=('https://api.deepwhiteai.com/v1',{},'https://api.deepwhiteai.com')), \
              patch.object(generation.httpx,'AsyncClient',return_value=client), \
-             patch.object(generation,'persist_media',new=AsyncMock(side_effect=[saved,dict(saved,name='track-2.mp3')])):
+             patch.object(generation,'persist_media',new=AsyncMock(side_effect=[saved,dict(saved,url='/api/output/track-2.mp3',name='track-2.mp3')])):
             await generation.execute(job_id)
         result=generation.read(job_id)
         self.assertEqual(result['status'],'succeeded')
         self.assertEqual(client.posts,[('https://api.deepwhiteai.com/v1/music/generations',{
-            'model':'suno','prompt':'柔和钢琴','version':'v5','custom':False,'instrumental':True})])
+            'model':'suno','prompt':'柔和钢琴','version':'v6','custom':False,'instrumental':True})])
         self.assertEqual(client.gets,['https://api.deepwhiteai.com/v1/music/tasks/suno-task-1'])
         self.assertEqual(len(result['children'][0]['outputs']),2)
 

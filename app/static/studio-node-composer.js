@@ -16,6 +16,8 @@
   },true);
   document.addEventListener('blur',event=>textSessions.delete(event.target),true);
   const element=(tag,cls,text)=>{const item=document.createElement(tag);if(cls)item.className=cls;if(text)item.textContent=text;return item;};
+  const expandedPrompts=new Set();
+  const mediaSizes=new Map();
   const isolate=item=>{for(const type of ['pointerdown','mousedown','dblclick','wheel','keydown'])item.addEventListener(type,event=>event.stopPropagation());return item;};
   function previewDialog(output) {
     // Over another modal the close event (which removes a preview) can lag ~200ms; a quick reopen
@@ -113,6 +115,9 @@
     const body=card.querySelector('.node-body'), composer=body?.querySelector('.generator-body,.video-body')||body?.firstElementChild;
     if(!body||!composer)return card;
     card.classList.add('studio-media-composer-node');composer.classList.add('studio-node-composer');
+    const expand=isolate(element('button','studio-prompt-expand'));expand.type='button';expand.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>';
+    const showExpand=()=>{const open=expandedPrompts.has(node.id);composer.classList.toggle('studio-prompt-expanded',open);expand.title=open?'收起提示词':'展开提示词';expand.setAttribute('aria-label',expand.title);expand.setAttribute('aria-pressed',String(open));};
+    expand.onclick=event=>{event.stopPropagation();if(!expandedPrompts.delete(node.id))expandedPrompts.add(node.id);showExpand();};showExpand();composer.append(expand);
     const stage=element('section','studio-node-media');stage.setAttribute('aria-label',node.type==='video'?'视频预览':'图片预览');
     const outputs=[...(node.generatedOutputs||[]),...outputNodesForSource(node.id).flatMap(output=>output.images||[])].map(item=>{
       const url=typeof item==='string'?item:item.url||item.src;return {...(typeof item==='object'?item:{}),url,kind:(typeof item==='object'&&item.kind)||(node.type==='video'?'video':'image')};
@@ -123,11 +128,22 @@
       const media=element(last.kind==='video'?'video':'img');media.src=last.url;
       if(media.tagName==='VIDEO'){media.controls=true;media.preload='metadata';isolate(media);}else{media.alt='最近生成结果';media.loading='lazy';}
       stage.append(media);
+      const fit=size=>{
+        const width=node.w||600,height=Math.max(200,Math.min(width,width*size.h/size.w));
+        stage.style.height=height+'px';card.style.setProperty('--studio-media-h',height+'px');
+        const label=card.querySelector('.studio-node-dims')||element('span','studio-node-dims');label.textContent=size.w+' × '+size.h;
+        const heading=card.querySelector('.node-title');if(heading&&!label.isConnected)heading.after(label);
+      };
+      const known=mediaSizes.get(last.url);if(known)fit(known);
+      media.addEventListener(media.tagName==='VIDEO'?'loadedmetadata':'load',()=>{
+        const size={w:media.naturalWidth||media.videoWidth,h:media.naturalHeight||media.videoHeight};if(!size.w||!size.h)return;
+        mediaSizes.set(last.url,size);fit(size);if(!known&&typeof renderLinks==='function')renderLinks();
+      },{once:true});
       const open=element('button','studio-preview-open','查看结果'+(unique.length>1?' · '+unique.length+' 项':''));
       open.type='button';open.setAttribute('aria-label','放大预览生成结果');isolate(open);open.onclick=()=>previewDialog(last);stage.append(open);
     } else {
       const icon=element('span','studio-media-placeholder-icon');icon.setAttribute('aria-hidden','true');
-      icon.innerHTML=node.type==='video'?'<svg viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="40" rx="7"/><path d="m27 23 15 9-15 9z"/></svg>':'<svg viewBox="0 0 64 64"><rect x="8" y="10" width="48" height="44" rx="7"/><circle cx="23" cy="24" r="4"/><path d="m9 46 16-15 10 10 9-8 12 13"/></svg>';
+      icon.innerHTML=node.type==='video'?'<svg viewBox="0 0 64 40"><path fill-rule="evenodd" d="M12 2h40a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V8a6 6 0 0 1 6-6Zm15 9v18l15-9Z"/></svg>':'<svg viewBox="0 0 64 40"><circle cx="45" cy="6" r="5.5"/><path d="M1 39 21 10a2.5 2.5 0 0 1 4.1 0L37 27l6-8a2.5 2.5 0 0 1 4 0l16 20Z"/></svg>';
       stage.append(icon,element('p','','尝试：'));
       const reference=element('button','studio-preview-reference');reference.type='button';isolate(reference);
       reference.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5M7 10l5-5 5 5M5 19h14"/></svg><span>'+(node.type==='video'?'图生视频':'图生图')+'</span>';

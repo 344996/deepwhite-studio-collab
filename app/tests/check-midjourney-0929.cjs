@@ -70,7 +70,7 @@ async function main(){
     await nodeA.locator('.studio-mj-panel').waitFor({state:'attached'});await nodeB.locator('.studio-mj-panel').waitFor({state:'attached'});
     await nodeA.getByRole('button',{name:'生成参数设置',exact:true}).click();
     await nodeA.locator('[data-mj-field="size"]').selectOption('16:9');await nodeA.locator('[data-mj-field="speed"]').selectOption('turbo');await nodeA.locator('[data-mj-field="version"]').selectOption('6.1');
-    await page.waitForFunction(()=>document.querySelector('[data-id="mj-a"] .studio-image-settings')?.textContent.includes('16:9 / MJ 6.1 / Turbo / 1 次'));
+    await page.waitForFunction(()=>document.querySelector('[data-id="mj-a"] .studio-image-settings')?.textContent.includes('16:9 · MJ 6.1 · Turbo · 1 次'));
     assert((await nodeB.locator('.studio-image-settings').innerText()).includes('3:4'));assert(!(await nodeA.locator('.studio-image-settings').innerText()).includes('1k'));
     await page.waitForFunction(()=>document.querySelector('[data-id="mj-a"] .studio-regular-price b')?.textContent.includes('16:9 turbo'));
     const quote=quotes.findLast(q=>q.model==='midjourney-imagine'&&q.params.size==='16:9'&&q.params.speed==='turbo');assert(quote);assert.equal(quote.params.version,'6.1');
@@ -119,7 +119,7 @@ async function main(){
       mode='success';await page.reload();await page.locator('#shell:not(.no-canvas) #board').waitFor();await page.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id&&typeof StudioMidjourney!=='undefined');await delay(500);
     }
     await page.evaluate(()=>{nodes=[];connections=[];const n=addGeneratorNode({x:80,y:80});n.id='regular';n.model='deepwhiteai-image-nb-pro';n.studioParamsModel=n.model;n.studioParams={ratio:'4:3',resolution:'2k',resolution_type:'2k'};render();});
-    const regularSummary=await page.locator('[data-id="regular"] .studio-image-settings').innerText();assert(regularSummary.includes('4:3 / 2k')&&!regularSummary.includes('MJ'),regularSummary);
+    const regularSummary=await page.locator('[data-id="regular"] .studio-image-settings').innerText();assert(regularSummary.includes('4:3 · 2k')&&!regularSummary.includes('MJ'),regularSummary);
     // The same submission read-back guard and original-channel recovery also serve the smart canvas.
     const smart=(await api('/api/canvases','POST',{title:'MJ smart isolated fixture',kind:'smart'})).canvas;
     await page.goto(base+'/static/smart-canvas.html?id='+smart.id);await page.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id&&typeof studioAddMj==='function');await delay(500);

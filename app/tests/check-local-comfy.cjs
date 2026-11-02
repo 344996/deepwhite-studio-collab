@@ -36,7 +36,7 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
  await p.getByRole('button',{name:'图片生成设置',exact:true}).click();
  const settings=p.locator('.studio-image-settings-popup:popover-open');await settings.waitFor();
  await settings.getByRole('button',{name:'4:3',exact:true}).click();await settings.getByLabel('采样步数',{exact:true}).selectOption('1');
- await settings.getByRole('button',{name:'关闭图片设置',exact:true}).click();assert((await p.getByRole('button',{name:'图片生成设置',exact:true}).innerText()).includes('4:3 / 30 步'));
+ await settings.getByRole('button',{name:'关闭图片设置',exact:true}).click();assert((await p.getByRole('button',{name:'图片生成设置',exact:true}).innerText()).includes('4:3 · 30 步'));
  assert.equal(await p.locator('.model-select').first().inputValue(),'local-qwen-image-21-edit');
  assert(await p.locator('.studio-model-trigger').first().innerText().then(x=>x.includes('Qwen')));
  await p.locator('.studio-model-trigger').first().click();await p.getByRole('option',{name:/Qwen Image 2.1/}).click();

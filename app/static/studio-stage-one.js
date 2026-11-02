@@ -318,7 +318,7 @@
       const popup=stop(document.createElement('div'));popup.className='studio-image-settings-popup';popup.setAttribute('popover','auto');popup.setAttribute('aria-label','图片生成参数');
       const head=document.createElement('header');const title=document.createElement('strong');title.textContent='生成设置';const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','关闭图片设置');close.onclick=()=>popup.hidePopover();head.append(title,close);
       fields.before(trigger);popup.append(head,fields,box.querySelector('.studio-contract-note'),details);box.append(popup);
-      const summary=()=>{trigger.textContent='设置 · '+[params.ratio,params.resolution_type||params.resolution,params.steps?params.steps+' 步':''].filter(Boolean).join(' / ')+' ▾';};summary();
+      const summary=()=>{trigger.textContent=[params.ratio,params.resolution_type||params.resolution,params.steps?params.steps+' 步':''].filter(Boolean).join(' · ')+' ▾';};summary();
       fields.addEventListener('change',summary);
       for(const key of ['ratio','resolution','resolution_type','background','optimize_prompt']){
         const select=fields.querySelector(`[data-studio-param="${key}"]`);if(!select)continue;

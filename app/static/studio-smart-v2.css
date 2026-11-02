@@ -76,3 +76,6 @@ html.studio-v2-smart .image-wrap:hover>:is(img,.media-video-card),html.studio-v2
 .studio-v2-smart .prompt-node-llm textarea::placeholder{color:var(--dw-muted);opacity:1}
 .studio-v2-smart .prompt-node-llm :is(select,textarea):focus-visible{outline:2px solid var(--dw-gold);outline-offset:2px}
 .studio-v2-smart .prompt-node-llm :is(select,textarea):disabled{opacity:.6;cursor:not-allowed}
+
+/* Inside the more-tools panel the transfer button flows with the other tools. */
+.studio-v2-smart .workspace-extra-tools #smartWorkflowToggle{position:static!important;inset:auto!important;transform:none!important}
