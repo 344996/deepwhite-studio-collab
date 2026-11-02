@@ -35,6 +35,14 @@ class ProviderCapabilities(unittest.TestCase):
         self.assertFalse(report['account_is_generation_credential'])
         self.assertFalse(report['account_required_for_local_editing'])
 
+    def test_account_provider_says_no_api_key_is_needed(self):
+        report = capabilities.describe({**self.provider, 'id':'deepwhite-account-1'})
+        self.assertTrue(report['managed'])
+        self.assertTrue(report['account_is_generation_credential'])
+        self.assertIn('无需填写 API Key', report['notice'])
+        self.assertNotIn('单独配置', report['notice'])
+        self.assertNotIn('无需填写', capabilities.describe(self.provider)['notice'])
+
     def test_custom_url_never_inherits_deepwhite_generation_support(self):
         report = capabilities.describe({**self.provider, 'base_url':'https://custom.invalid/v1'})
         values = {row['kind']:row['status'] for row in report['capabilities']}

@@ -67,14 +67,16 @@ def describe(provider, receipt=None):
         rows.append({'kind': kind, 'label': LABELS[kind], 'status': status,
                      'configured_models': len(models), 'adapted_models': adapted,
                      'note': note, 'live_generation_verified': False})
+    managed = str(provider.get('id') or '').startswith('deepwhite-account-')
     current_receipt = receipt if receipt and receipt.get('address_hash') == _address(provider.get('base_url')) else None
     return {
         'provider_id': provider['id'], 'adapter': 'deepwhite' if deepwhite else 'compatible' if compatible else 'custom',
         'capabilities': rows,
         'connection_check': {k: v for k, v in (current_receipt or {}).items() if k != 'address_hash'} or None,
         'account_required_for_local_editing': False,
-        'account_is_generation_credential': False,
-        'notice': '网站登录管理账户；生成使用此平台单独配置的 API Key。模型列表测试不代表生成验收。',
+        'account_is_generation_credential': managed,
+        'managed': managed,
+        'notice': ('登录账户已自动配置此平台，生成无需填写 API Key。' if managed else '网站登录管理账户；生成使用此平台单独配置的 API Key。') + '模型列表测试不代表生成验收。',
     }
 
 

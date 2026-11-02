@@ -32,6 +32,13 @@ async function main(){
   await check('reloading does not retry again in the same session once it worked',async()=>{
    const before=provisions;await page.reload();await delay(1200);assert.equal(provisions,before);
   });
+  await check('the account card says it is loading instead of being an empty box',async()=>{
+   const slow=await h.newPage();
+   await slow.route('**/api/studio/account',async route=>{await delay(4000);return route.fulfill({json:{username:'tester',generation:{status:'ready'}}});});
+   await slow.goto(h.base+'/static/studio-settings.html');
+   assert.match(await slow.locator('#settingsAccountConnection').innerText(),/正在读取账户状态/);
+   await slow.close();
+  });
   await check('without sessionStorage the automatic retry still happens only once',async()=>{
    const blocked=await h.newPage();let calls=0;
    await blocked.addInitScript(()=>{Object.defineProperty(window,'sessionStorage',{get(){throw new DOMException('blocked','SecurityError');}});});

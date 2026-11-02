@@ -107,7 +107,7 @@
       },
       {
         "file": "studio-canvas-inspector.js",
-        "sha256": "2b32d06be22cf318fa11dd53bc023a85ed22dff2099225d471e218d2534cbccb"
+        "sha256": "49dfd77fb69d9b33424de1c20e474142c1fbe539efdde0859ba970586a0543ce"
       },
       {
         "file": "studio-canvas-v2.js",
@@ -227,7 +227,7 @@
       },
       {
         "file": "studio-provider-capabilities.js",
-        "sha256": "b550db7d77ee7f27cef9148bbc6bab4f2cc334fe7beef5f367073f6e1cb5c45b"
+        "sha256": "f9cc1215ead2c0f37939b90d8c9e4c36eed767d72ffcc6264a5126a6acc711ec"
       },
       {
         "file": "studio-ref-semantics.js",
@@ -259,7 +259,7 @@
       },
       {
         "file": "studio-settings.js",
-        "sha256": "5ec92c9cfd5f490822ed57809c3f7a36326c931ebf2df440b58e9efd967e6add"
+        "sha256": "3b79f6b66e4e918f79ff4b3ff2614bbc5009195c2abd44bf421b755c05cd3ffa"
       },
       {
         "file": "studio-skill-nodes.js",
@@ -306,8 +306,8 @@
         "sha256": "410a8ae72fe845ab5b20de43c48ee2f3723ca9b75d114a159433ebb5994782eb"
       }
     ],
-    "candidateCount": 55931,
-    "candidatesSha256": "0bf12d7ce6b47a8ac3c8baccba138645abd784ab9b1c63f03c9d717e4edb8a9c"
+    "candidateCount": 55949,
+    "candidatesSha256": "543f65460fd539013434da1d2e98380eb6a14156e769e48d5645ec264467a173"
   },
   "cssSha256": "fa0e9de4fe5ef27ae03188ab8c0675acaf9a4389178bc6d7ca90a809fc10fa50"
 }

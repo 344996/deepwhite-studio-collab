@@ -113,6 +113,13 @@ async function main(){
    await node.locator('.studio-preview-reference').click();await page.locator('.node[data-id="shape"] .studio-input-popover').waitFor({state:'visible'});await page.keyboard.press('Escape');
   });
   await check('the selection bar can delete, and stays clear of the node',async()=>{
+   const size=page.viewportSize();
+   for(const height of [size.height,620]){
+    await page.setViewportSize({width:size.width,height});await page.locator('.node[data-id="shape"] .node-title').click();await delay(300);
+    const bar=await box(page,'#studioV2Selection'),composer=await box(page,'.node.selected .studio-node-composer');
+    assert(bar.x+bar.width<=composer.x||composer.x+composer.width<=bar.x||bar.y+bar.height<=composer.y||composer.y+composer.height<=bar.y,'the selection bar covers the composer at height '+height);
+   }
+   await page.setViewportSize(size);await delay(200);
    const before=await page.evaluate(()=>nodes.length);
    await page.locator('#workspaceDeleteNodes').click();await delay(200);
    assert.equal(await page.evaluate(()=>nodes.length),before-1);
