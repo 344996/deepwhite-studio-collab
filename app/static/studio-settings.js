@@ -67,7 +67,7 @@
   $('closeSettings').onclick=()=>{if(parent!==window)parent.postMessage({type:'studio-settings-close'},location.origin);else if(window.studioCanClose())location.href='/';};
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();$('closeSettings').click();}});
   window.addEventListener('beforeunload',e=>{if(dirty||storageDirty||loading){e.preventDefault();e.returnValue='';}});
-  const accountCard=document.createElement('section');accountCard.className='settings-feature-card';accountCard.id='settingsAccountConnection';accountCard.setAttribute('aria-live','polite');$('apiForm').before(accountCard);
+  const accountCard=document.createElement('section');accountCard.className='settings-feature-card';accountCard.id='settingsAccountConnection';accountCard.setAttribute('aria-live','polite');accountCard.textContent='正在读取账户状态…';$('apiForm').before(accountCard);
   // U01: logged in but not authorised for generation is a visible, fixable state, tried once per session.
   // autoTried also guards the page when sessionStorage is unavailable, so the retry can never loop.
   let accountError='',autoTried=false;

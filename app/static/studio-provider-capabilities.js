@@ -28,7 +28,7 @@
       }
       table.append(body);host.append(table);
       const receipt=document.createElement('p');receipt.className='muted';
-      receipt.textContent=item.connection_check?'最近列表检查：'+new Date(item.connection_check.checked_at).toLocaleString()+'，可读 '+item.connection_check.model_count+' 个模型；未验证付费生成。':'此地址尚无成功的模型列表检查记录。';
+      receipt.textContent=item.connection_check?'最近列表检查：'+new Date(item.connection_check.checked_at).toLocaleString()+'，可读 '+item.connection_check.model_count+' 个模型；未验证付费生成。':item.managed?'模型列表随登录账户自动同步。':'此地址尚无成功的模型列表检查记录。';
       host.append(receipt);
     } catch(error) {
       if(run!==generation)return;
