@@ -1,7 +1,7 @@
 /* Shared DeepWhite materials. Legacy gold tokens alias the accent so existing
    tools, saved theme choices and both canvas engines share the same palette. */
 :root {
-  --dw-bg:#141414; --dw-canvas:#141414; --dw-surface:#1f1f1f; --dw-panel:#262626;
+  --dw-bg:#141414; --dw-canvas:#1a1a1a; --dw-surface:#1f1f1f; --dw-panel:#262626;
   --dw-raised:#333333; --dw-hover:#2b2b2b; --dw-ink:#f7f7f7; --dw-muted:#b8b8b8; --dw-faint:#8f8f8f;
   --dw-accent:#b9e7cf; --dw-accent-hover:#cef3df; --dw-accent-soft:#b9e7cf10; --dw-accent-line:#b9e7cf50;
   --dw-gold:var(--dw-accent); --dw-gold-hover:var(--dw-accent-hover); --dw-gold-soft:var(--dw-accent-soft); --dw-gold-line:var(--dw-accent-line); --dw-on-gold:#17271e;

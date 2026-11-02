@@ -56,7 +56,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
   assert(await page.locator('#check').isEnabled());checks.push('Restart launch rejection remains visible and permits retry after the failed state is read');
   restartReject=false;before=restartCalls().length;
   await page.locator('#restart').click();await page.locator('#saved').check();await page.locator('#confirmAction').click();
-  assert(await page.locator('#restart').isDisabled());assert(await page.locator('#check').isDisabled());
+  await page.waitForFunction(()=>document.getElementById('restart').disabled&&document.getElementById('check').disabled);
   await page.locator('#status').getByText('正在安全重启画布，请稍候…',{exact:true}).waitFor();
   assert.deepEqual(restartCalls().at(-1).body,{saved_and_closed:true});
   assert.equal(restartCalls().length,before+1);

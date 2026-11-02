@@ -29,6 +29,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   assert.equal(cfg.enabled,true);
   const seedance=page.getByRole('checkbox',{name:'启用即梦模型 Seedance 2.5'});
   await seedance.check();
+  for(let i=0;i<50&&cfg.models['dreamina-video-seedance-2.5']!==true;i++)await page.waitForTimeout(100);
   assert.equal(cfg.models['dreamina-video-seedance-2.5'],true);
   await page.getByRole('button',{name:'开始授权登录'}).click();
   await page.getByText('MOCK-1234',{exact:true}).waitFor();

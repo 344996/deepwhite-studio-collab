@@ -1,4 +1,5 @@
 (() => {
+  let openInputFor=null;
   const css=document.createElement('link');css.rel='stylesheet';css.href='/static/studio-node-polish.css?v=3';document.head.append(css);
   const draw=renderNode;
   renderNode=node=>{
@@ -47,8 +48,11 @@
     root.studioRefreshReferences();
     const count=()=>{root.studioRefreshReferences();};count();new MutationObserver(count).observe(list,{childList:true,subtree:true});
     for(const event of ['pointerdown','mousedown','dblclick','keydown','wheel']){popup.addEventListener(event,e=>e.stopPropagation());button.addEventListener(event,e=>e.stopPropagation());}
-    button.onclick=()=>{if(popup.matches(':popover-open'))return popup.hidePopover();popup.showPopover();const r=button.getBoundingClientRect();popup.style.left=Math.max(8,Math.min(r.left,innerWidth-popup.offsetWidth-8))+'px';popup.style.top=Math.max(8,Math.min(r.bottom+8,innerHeight-popup.offsetHeight-8))+'px';};
-    popup.addEventListener('toggle',()=>button.setAttribute('aria-expanded',String(popup.matches(':popover-open'))));
+    const placePopup=()=>{const r=button.getBoundingClientRect();popup.style.left=Math.max(8,Math.min(r.left,innerWidth-popup.offsetWidth-8))+'px';popup.style.top=Math.max(8,Math.min(r.bottom+8,innerHeight-popup.offsetHeight-8))+'px';};
+    button.onclick=()=>{if(popup.matches(':popover-open'))return popup.hidePopover();popup.showPopover();placePopup();openInputFor=node.id;};
+    // A canvas render rebuilds the card; an open list comes back instead of closing under the pointer.
+    if(openInputFor===node.id)requestAnimationFrame(()=>{if(openInputFor===node.id&&popup.isConnected&&!popup.matches(':popover-open')){popup.style.animation='none';popup.showPopover();placePopup();}});
+    popup.addEventListener('toggle',()=>{const open=popup.matches(':popover-open');button.setAttribute('aria-expanded',String(open));if(!open&&popup.isConnected&&openInputFor===node.id)openInputFor=null;});
     popup.addEventListener('keydown',e=>{if(e.key==='Escape'){popup.hidePopover();button.focus();}});
     return root;
   };

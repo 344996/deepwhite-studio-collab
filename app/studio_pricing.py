@@ -159,4 +159,9 @@ async def quote_for(request):
                 images=[{'role':'first_frame' if request.frame_mode else ''}]*request.image_count,videos=[1]*request.video_count,audios=[1]*request.audio_count,multimodal=False if request.frame_mode else request.multimodal)
     except HTTPException as exc:
         return {'price':None,'label':'请检查模型或输入','note':exc.detail}
-    return estimate(await snapshot(),mid,request)
+    quote=estimate(await snapshot(),mid,request)
+    # Mureka bills per song and makes two by default.
+    if mid in ('mureka-v8-bgm','mureka-v9-bgm') and quote.get('price') is not None:
+        songs=int(request.params.get('n') or 2)
+        quote.update(price=quote['price']*songs,low=quote['low']*songs,high=quote['high']*songs,label=f"预计 ≈ ¥{quote['price']*songs:.3f}",songs=songs)
+    return quote

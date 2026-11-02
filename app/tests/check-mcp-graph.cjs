@@ -157,7 +157,7 @@ async function main() {
   settingsPage.on('pageerror', error => errors.push(error.message));
   await settingsPage.goto(base + '/settings');
   await settingsPage.locator('[data-tab="control"]').click();
-  assert(await settingsPage.getByText('允许智能体读取项目', {exact: false}).isVisible());
+  await settingsPage.getByText('允许智能体读取项目', {exact: false}).waitFor();
   await settingsPage.screenshot({path: path.join(output, 'settings.png')});
   await api('/api/studio/control/settings', 'PUT', {enabled: false});
   await call('list_projects', {}, true);

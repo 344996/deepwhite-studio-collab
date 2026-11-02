@@ -86,3 +86,79 @@ html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-nod
   html.studio-v2-canvas.studio-workspace-refresh .workspace-canvas-tools{top:64px;right:12px}
   html.studio-v2-canvas.studio-workspace-refresh #quickToolbar #workspaceCanvasRail .v2-rail-divider{display:none}
 }
+
+/* Node fidelity pass: frame 16:9, placeholder and composer measured from the reference node at 1.125 zoom. */
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media{height:338px}
+html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port{top:200px!important}
+html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port.in{left:-34px}
+html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port.out{right:-34px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media:has(>.studio-preview-reference){justify-content:flex-start;padding:166px 24px 0;gap:8px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-media-placeholder-icon{top:88px;width:62px;height:39px;opacity:1;color:var(--dw-grid)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-media-placeholder-icon svg{fill:currentColor;stroke:none}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media>p{margin:0;font-size:14px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media .studio-preview-reference{padding:6px 12px;font-size:14px;font-weight:500}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer{position:relative;flex-flow:row wrap;align-items:center;margin-top:16px;padding:12px 12px 10px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer>*{flex:0 0 100%;min-width:0}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-node-prompt{display:contents}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-node-prompt>*{flex:0 0 100%;min-width:0;box-sizing:border-box}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-prompt-title{display:none}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-reference-strip{order:-3;flex:0 0 auto;margin:0 4px 0 0;gap:4px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-reference-strip .studio-input-icon{width:auto!important;min-width:0;flex:none;height:24px;padding:0 9px!important;border:0!important;border-radius:999px;background:var(--dw-raised)!important;color:var(--dw-muted);font-size:12px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-reference-strip .studio-input-icon:hover{color:var(--dw-ink)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-reference-strip .studio-input-icon svg{display:none}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-reference-strip .studio-input-icon::before{content:"＋ 参考"}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-add{flex:1 1 0;margin:0;padding-right:28px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-add button,html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-add button *{color:var(--dw-muted)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-add button:hover,html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-creative-add button:hover *{color:var(--dw-ink)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-prompt-input{height:64px!important;min-height:64px!important;margin:8px 0 0;resize:none;background:transparent!important;border:0!important;box-shadow:none!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer.studio-prompt-expanded .studio-prompt-input{height:220px!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-prompt-expand{position:absolute;top:12px;right:12px;width:24px;height:24px;padding:4px;border:0;border-radius:6px;background:none;color:var(--dw-muted);cursor:pointer}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-prompt-expand:hover{background:var(--dw-hover);color:var(--dw-ink)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-prompt-expand svg{display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-footer{align-items:center;min-height:32px;padding-top:4px!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-footer-model{flex:0 1 auto;min-width:0;margin-right:2px;padding-right:8px;border-right:1px solid var(--dw-line-strong,var(--dw-node-line))}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-model-trigger{border:0!important;background:none!important;box-shadow:none!important;padding:0 4px!important;font-size:13px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-model-trigger:hover{background:var(--dw-hover)!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-model-icon{width:18px;height:18px;min-width:18px;font-size:8px;border:0!important;background:none!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-settings{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:210px;color:var(--dw-ink);white-space:nowrap}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-settings::before{content:"";flex:none;width:14px;height:9px;border:1.4px solid currentColor;border-radius:2px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-count-inline select{width:auto;padding:0 2px;color:var(--dw-ink)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-regular-price{margin-left:auto;display:inline-flex;align-items:center;gap:4px;color:var(--dw-muted);font-size:12px;white-space:nowrap}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-regular-price::before{content:"";flex:none;width:9px;height:13px;background:currentColor;clip-path:polygon(60% 0,0 58%,44% 58%,34% 100%,100% 38%,54% 38%)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-regular-price b{font-weight:400}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .gen-btn{flex:none;width:30px!important;min-width:30px;height:30px!important;padding:0!important;border-radius:50%}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer:has(.studio-prompt-input:placeholder-shown) .gen-btn{background:var(--dw-faint)!important;color:var(--dw-bg)!important}
+/* The node title carries a plain type glyph rather than the "AI" chip. */
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .studio-node-brand{width:14px;height:14px;min-width:14px;font-size:0;border:0;background:none;color:inherit;box-shadow:none}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .studio-node-brand::before{content:"";display:block;width:100%;height:100%;background:currentColor;clip-path:path("M1 2h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm1 8.5h10L9 6.2 7 8.8 5.6 7.2Z")}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer{padding-top:9px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-prompt-input{height:56px!important;min-height:56px!important;margin-top:6px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-footer>*{flex:0 0 auto;min-width:0}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-footer .studio-footer-model{flex:0 1 auto}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-settings{flex:0 0 auto;width:auto;max-width:none;height:28px;padding:0 6px;border:0!important;background:none!important;box-shadow:none!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-image-settings:hover{background:var(--dw-hover)!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-count-inline select{height:28px;appearance:none;-webkit-appearance:none;text-align:center;padding:0 4px!important}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-regular-price{flex:0 0 auto}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .gen-btn{font-size:14px;line-height:30px}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-model-icon{color:var(--dw-muted)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-media-composer-node>.resize-handle{opacity:0;transition:opacity 120ms ease}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-media-composer-node>.resize-handle:hover,html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-media-composer-node>.resize-handle:focus-visible{opacity:1}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node.selected .node-title{color:var(--dw-muted)!important}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .studio-node-brand{color:var(--dw-muted)}
+html.studio-v2.studio-node-composers.studio-workspace-refresh #nodes .studio-node-composer .studio-count-inline{border:0!important;background:none!important;box-shadow:none!important}
+/* Type glyphs in the title; a model's own logo stays in the model picker. */
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .studio-node-brand>*{display:none}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .node-title{text-align:left!important;margin-right:auto}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node.video-node .studio-node-brand::before{clip-path:path("M1 2h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm4.5 2.5v5l4-2.5Z")}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node.llm-node .studio-node-brand::before{clip-path:path("M2 2h10v3h-1.5V3.5H7.8V11H9.5v1.5h-5V11h1.7V3.5H3.5V5H2Z")}
+/* Measured on a public LibTV canvas: 16px dot grid, solid links, frames that follow the result, 13px titles. */
+html.studio-v2-canvas.studio-workspace-refresh{--dw-link:#86909c;--dw-link-on:#64b4ff}
+html.studio-milk.studio-workspace-refresh,html.studio-v2:not(.studio-graphite):not(.theme-dark):not(.studio-theme-dark).studio-workspace-refresh{--dw-link:var(--dw-muted);--dw-link-on:var(--dw-ink)}
+html.studio-v2-canvas.studio-workspace-refresh .board{background-image:radial-gradient(var(--dw-grid) .5px,transparent .7px)!important}
+html.studio-v2-canvas.studio-workspace-refresh .link:not(.knife-trail):not(.temp){stroke:var(--dw-link)!important;stroke-width:2;opacity:1!important;filter:none!important}
+html.studio-v2-canvas.studio-workspace-refresh .link.link-active:not(.knife-trail):not(.temp){stroke:var(--dw-link-on)!important;stroke-width:2}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-node .node-title{font-size:13px}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .studio-node-dims{flex:none;margin-right:6px;font-size:11px;color:var(--dw-muted);white-space:nowrap}
+html.studio-v2.studio-node-composers.studio-workspace-refresh .studio-node-media{border-radius:12px;border-width:.8px}
+html.studio-v2.studio-node-composers #nodes .studio-media-composer-node>.port{top:calc(31px + var(--studio-media-h,338px)/2)!important}
+html.studio-v2-canvas.studio-workspace-refresh #nodes .node.v2-spatial-group{background:var(--dw-raised)!important;border-color:transparent!important;border-radius:12px}

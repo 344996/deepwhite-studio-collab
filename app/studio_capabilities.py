@@ -47,7 +47,7 @@ def profile(mid,kind):
             f.update(n=option('生成数量',[1,2,3],2),instrumental_id={'label':'伴奏模板 ID','type':'text','max_length':120})
         elif m in ('suno','suno-music','suno-generation'):
             p.update(channel='music',prompt_min=1,prompt_max=5000)
-            f.update(version=option('Suno 版本',['v3.5','v4','v4.5','v4.5+','v4.5-all','v5','v5.5'],'v5'),
+            f.update(version=option('Suno 版本',['v6','v6-wild','v6-mini'],'v6'),
                      custom=option('使用自定义歌词',[False,True],False),instrumental=option('纯音乐',[True,False],True),
                      title={'label':'曲名','type':'text','max_length':120},style={'label':'曲风','type':'text','max_length':500},
                      vocal_gender={'label':'人声偏好','type':'text','max_length':40})
@@ -71,7 +71,7 @@ def profile(mid,kind):
         elif 'qwen-image' in m:
             f['resolution']=option('分辨率',['1k','2k']);p.update(max_images=3,prompt_max=3000)
         elif 'image-nb-' in m:
-            values=['0.5k','1k','2k','4k'] if 'nb-2' in m and 'lite' not in m else ['1k','2k','4k'] if 'pro' in m else ['1k']
+            values=['0.5k','1k','2k','4k'] if 'nb-2' in m and 'lite' not in m and 'lowprice' not in m else ['1k','2k','4k'] if 'pro' in m else ['1k']
             f['resolution']=option('分辨率',values,'1k');p.update(max_images=14,prompt_max=1000 if 'flash' in m else 20000)
         elif 'image-g-v2.5-' in m:
             f['resolution']=option('分辨率',['1k','2k','4k']);p['max_images']=15 if 'lowprice' in m else 16

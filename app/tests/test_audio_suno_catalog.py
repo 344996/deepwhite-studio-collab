@@ -45,9 +45,9 @@ class SunoCatalogTests(unittest.TestCase):
         self.assertEqual(profile('suno-generation', 'audio')['channel'], 'music')
         self.assertNotEqual(profile('suno-generation', 'audio').get('supported'), False)
         req, raw, _ = self.check('suno-generation', ['suno-generation'], 'music')
-        endpoint, body = generation.audio_body(raw, req['prompt'], {**req['params'], 'version': 'v5'})
+        endpoint, body = generation.audio_body(raw, req['prompt'], {**req['params'], 'version': 'v6'})
         self.assertEqual(endpoint, '/music/generations')
-        self.assertEqual((body['model'], body['version']), ('suno', 'v5'))
+        self.assertEqual((body['model'], body['version']), ('suno', 'v6'))
 
     def test_without_any_suno_sound_entry_the_reason_names_the_sound_model(self):
         with self.assertRaises(HTTPException) as caught:

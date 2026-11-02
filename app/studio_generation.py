@@ -379,14 +379,14 @@ def normalize(data,kind):
     if not isinstance(record,dict):record=data
     status=str(record.get('status') or data.get('status') or '').lower()
     state='succeeded' if status in ('success','succeeded','completed') else 'failed' if status in ('fail','failure','failed','error','cancelled','canceled') else 'running'
-    urls=[]
+    urls=[];url_kinds={}
     def collect(obj):
         if isinstance(obj,dict):
             for key,value in obj.items():
                 if key in ('result_url','image_url','image_urls','video_url','video_urls','audio_url','audio_urls','url','urls'):
                     values=value if isinstance(value,list) else [value]
                     for item in values:
-                        if isinstance(item,str) and item.startswith(('https://','http://')) and item not in urls:urls.append(item)
+                        if isinstance(item,str) and item.startswith(('https://','http://')) and item not in urls:urls.append(item);url_kinds[item]=key.split('_')[0] if key.startswith(('image_','video_','audio_')) else ''
                 elif key in ('data','content','metadata','result','output','images','videos','music'):collect(value)
         elif isinstance(obj,list):
             for item in obj:collect(item)
@@ -395,7 +395,13 @@ def normalize(data,kind):
     if not usage and isinstance(record.get('cost'),(int,float)):usage={'amount':record['cost'],'currency':'USD'}
     if not usage and isinstance(record.get('data'),dict):usage=record['data'].get('usage')
     progress=record.get('progress',data.get('progress',0))
-    return {'status':state,'urls':urls,'usage':usage,'progress':progress,'error':record.get('fail_reason') or record.get('error') or record.get('message') or ''}
+    return {'status':state,'urls':urls,'url_kinds':url_kinds,'usage':usage,'progress':progress,'error':record.get('fail_reason') or record.get('error') or record.get('message') or ''}
+
+
+def result_urls(result,kind):
+    # A music result also names its cover image; only media of the requested kind is the result.
+    kinds=result.get('url_kinds') or {}
+    return [url for url in result['urls'] if kinds.get(url,'') in ('',kind)]
 
 
 async def persist_media(client,url,kind,job_id,index,request=None):
@@ -405,7 +411,7 @@ async def persist_media(client,url,kind,job_id,index,request=None):
     async with client.stream('GET',url,follow_redirects=True) as response:
         response.raise_for_status()
         mime=response.headers.get('content-type','').split(';')[0]
-        if mime and mime!='application/octet-stream' and not mime.startswith(kind+'/'):raise HTTPException(502,'平台结果不是有效的媒体文件，请查询平台任务。')
+        if mime and mime not in ('application/octet-stream','binary/octet-stream') and not mime.startswith(kind+'/'):raise HTTPException(502,f'平台结果不是有效的媒体文件（{mime}），请查询平台任务。')
         suffix=mimetypes.guess_extension(mime) or suffix
         name=f'studio-{job_id}-{index}{suffix}';path=Path(core.output_path_for(name));path.parent.mkdir(parents=True,exist_ok=True)
         temp=path.with_suffix(path.suffix+'.part');total=0
@@ -541,7 +547,10 @@ async def execute(job_id):
                         child.update(remote_result=result,remote_status='succeeded');save(job)
                         native_parent_receipt(job)
                     outputs=[]
-                    for i,url in enumerate(result['urls']):outputs.append(await persist_media(client,url,req['kind'],job_id,f'{child_index}-{i}'))
+                    for i,url in enumerate(result_urls(result,req['kind'])):
+                        item=await persist_media(client,url,req['kind'],job_id,f'{child_index}-{i}')
+                        # Platforms may list one file under several result fields; the same content is one result.
+                        if all(o.get('url')!=item.get('url') for o in outputs):outputs.append(item)
                     child.update(status='succeeded',outputs=outputs,usage=result['usage']);job['error']='';save(job)
                 except Exception as exc:
                     # Polling/downloading failures are safely retryable by GET, never a new paid POST.
@@ -689,7 +698,7 @@ async def resume_receipt_only(job_id):
             child.update(remote_result=result,remote_status='succeeded');save(job)
         native_parent_receipt(job)
         outputs=[]
-        for i,url in enumerate(result['urls']):
+        for i,url in enumerate(result_urls(result,'video')):
             outputs.append(await persist_media(client,url,'video',job_id,f'0-{i}'))
         child.update(status='succeeded',outputs=outputs,usage=result.get('usage'))
         job.update(status='succeeded',error='');save(job)

@@ -111,7 +111,7 @@
       },
       {
         "file": "studio-canvas-v2.js",
-        "sha256": "6ca04cef20d7ef57ddc22d1a12196d72caedb61b8b61140e9c1cd273dd0eb619"
+        "sha256": "83d337752145861175a9b013caed1c44ac8885648c0cd9b5ef378f52f67e87da"
       },
       {
         "file": "studio-canvas-workspace.js",
@@ -123,7 +123,7 @@
       },
       {
         "file": "studio-compact-generation.js",
-        "sha256": "17eea7c09e47281566cd5a234e5aad3e089e9dfc86c5f08a549dcc1663ef0879"
+        "sha256": "725ac9ee9222067a82255caa6b7e91f1586e171aa63af410f9e8e0cd58c99273"
       },
       {
         "file": "studio-content-library.js",
@@ -207,7 +207,7 @@
       },
       {
         "file": "studio-node-composer.js",
-        "sha256": "e2238de666f8e2668f7bb41d150f98b88f2b22fb5a0f1f7654598f820c16b3ae"
+        "sha256": "bc3f24161483def2bac41396ccf884dafbaddb7eada6c77534fcd4e8c0a39130"
       },
       {
         "file": "studio-node-editor.js",
@@ -219,7 +219,7 @@
       },
       {
         "file": "studio-node-polish.js",
-        "sha256": "4bf9e3c4579678838c8521485aeef8694651f30370a9a31887295a232a35f77c"
+        "sha256": "93755c8f702c1c5ad5ce8ff5350e7d0cf0ac61d8051f91b8b0605400b15b6c47"
       },
       {
         "file": "studio-preview.js",
@@ -271,11 +271,11 @@
       },
       {
         "file": "studio-smart-v2.js",
-        "sha256": "1e403aa114c0b1391f8203470bb4894f7b7bea2982475f8fd0c4f7e4ed876fcf"
+        "sha256": "cccbb31262c01feb428691cdad1ed39fe3abf0f976823680906e63619718bb70"
       },
       {
         "file": "studio-stage-one.js",
-        "sha256": "aad16ab4117d12be35c5c5a811159c3234820c5bd60d43f8a4107e7d19821f7d"
+        "sha256": "0bed5272866fe54296d5eab48a811e595c3e659bf921547cd5653e15f78ae97a"
       },
       {
         "file": "studio-storage.js",
@@ -291,7 +291,7 @@
       },
       {
         "file": "studio-tools.js",
-        "sha256": "85142f1a77739343c49c3d081850b3c4c124e74dc1460ad363e6d2d4bb180eac"
+        "sha256": "105cb86c8ade567f470e652f0873fd78fe599ef3df038cd462e52d9063e7a7c9"
       },
       {
         "file": "studio-updates.js",
@@ -306,8 +306,8 @@
         "sha256": "410a8ae72fe845ab5b20de43c48ee2f3723ca9b75d114a159433ebb5994782eb"
       }
     ],
-    "candidateCount": 55831,
-    "candidatesSha256": "dcafe3d4301d02d74af4f99231a4e3d49c4d55e337cb23e1a4651ff87ee43c47"
+    "candidateCount": 55931,
+    "candidatesSha256": "0bf12d7ce6b47a8ac3c8baccba138645abd784ab9b1c63f03c9d717e4edb8a9c"
   },
   "cssSha256": "fa0e9de4fe5ef27ae03188ab8c0675acaf9a4389178bc6d7ca90a809fc10fa50"
 }
