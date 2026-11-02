@@ -128,8 +128,9 @@
     } else {
       const icon=element('span','studio-media-placeholder-icon');icon.setAttribute('aria-hidden','true');
       icon.innerHTML=node.type==='video'?'<svg viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="40" rx="7"/><path d="m27 23 15 9-15 9z"/></svg>':'<svg viewBox="0 0 64 64"><rect x="8" y="10" width="48" height="44" rx="7"/><circle cx="23" cy="24" r="4"/><path d="m9 46 16-15 10 10 9-8 12 13"/></svg>';
-      stage.append(icon,element('strong','',node.type==='video'?'视频创作':'图片创作'),element('p','','在下方描述想法，或连接参考素材'));
-      const reference=element('button','studio-preview-reference','＋ 关联参考素材');reference.type='button';isolate(reference);
+      stage.append(icon,element('p','','尝试：'));
+      const reference=element('button','studio-preview-reference');reference.type='button';isolate(reference);
+      reference.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5M7 10l5-5 5 5M5 19h14"/></svg><span>'+(node.type==='video'?'图生视频':'图生图')+'</span>';
       reference.onclick=()=>{const action=card.querySelector('[data-add-ref],.studio-input-icon');if(action)action.click();else card.querySelector('.studio-prompt-input')?.focus();};stage.append(reference);
     }
     if(node.running||['queued','running','paused','failed','uncertain'].includes(node.studioJobState)){

@@ -47,7 +47,7 @@ async function visibleInViewport(selector) {
   await check('Local workspace exposes navigation, creation and optional account without login',async()=>{
     await go('/');assert.equal(await page.locator('.workspace-nav').count(),1);
     await visibleInViewport('#newCanvasBtn');await visibleInViewport('#studioAccountButton');
-    assert.match(await page.locator('.workspace-local-note').innerText(),/本地/);
+    assert.match(await page.locator('.v2-home-footer').innerText(),/本机/);
   });
   const urls={home:'/'};
   // U10: only a classic canvas can be created; an old smart canvas is seeded as existing user data.
@@ -57,7 +57,7 @@ async function visibleInViewport(selector) {
     urls.smart='/static/smart-canvas.html?id='+encodeURIComponent(id);
   });
   for(const kind of ['classic'])await check(`Create ${kind} canvas while logged out`,async()=>{
-    await go('/');await page.locator(`[data-workspace-create="${kind}"]`).click();
+    await go('/');await page.locator('#newCanvasBtn').click();
     await page.locator('#homeCreateDialog input').fill('需求验收 '+kind);
     await page.locator('#homeCreateDialog .ws-create-confirm').click();
     await page.locator('.ws-card').filter({hasText:'需求验收 '+kind}).click();

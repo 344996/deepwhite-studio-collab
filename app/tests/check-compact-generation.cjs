@@ -29,7 +29,7 @@ async function main(){
    }
    if(u.pathname.startsWith('/api/canvas-image-tasks/')&&req.method()==='GET'){const id=decodeURIComponent(u.pathname.replace('/api/canvas-image-tasks/','').replace('by-request/',''));return route.fulfill({status:records.has(id)?200:404,json:records.get(id)||{detail:'Mock record missing'}})}
    if(req.method()==='POST'&&/^\/api\/(?:canvas-|online-image|studio\/(?:generations|mj|runninghub)|runninghub|midjourney)/.test(u.pathname)){blocked.push(u.pathname);return route.fulfill({status:503,json:{detail:'Unexpected task blocked'}})}return route.continue()});
-  await page.goto(base+'/static/canvas.html?id='+c.id);await page.waitForFunction(()=>window.StudioCanvasV2?.ready&&nodes.some(n=>n.id==='image'));await pause(200);
+  await require('./no-collapse.cjs')(page);await page.goto(base+'/static/canvas.html?id='+c.id);await page.waitForFunction(()=>window.StudioCanvasV2?.ready&&nodes.some(n=>n.id==='image'));await pause(200);
   const card=id=>page.locator(`.node[data-id="${id}"]`),popup=id=>card(id).locator('.studio-image-settings-popup'),trigger=id=>card(id).locator('.studio-image-settings'),snapshot=()=>page.evaluate(()=>JSON.parse(JSON.stringify(nodes.find(n=>n.id==='image'))));
   const show=async(id,x=210,y=100)=>{await page.evaluate(({id,x,y})=>{const n=nodes.find(n=>n.id===id);viewport={x:x-n.x,y:y-n.y,scale:1};selected.clear();selected.add(id);applyViewport();refreshSelectionVisuals()},{id,x,y});await pause(140)};
   const open=async id=>{if(!await popup(id).evaluate(el=>el.matches(':popover-open')))await trigger(id).click();await popup(id).waitFor({state:'visible'})};

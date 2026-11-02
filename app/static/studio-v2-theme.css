@@ -1,13 +1,14 @@
 /* Shared DeepWhite materials. Legacy gold tokens alias the accent so existing
    tools, saved theme choices and both canvas engines share the same palette. */
 :root {
-  --dw-bg:#141616; --dw-canvas:#101212; --dw-surface:#1c1f1f; --dw-panel:#242828;
-  --dw-raised:#2e3332; --dw-hover:#2c3230; --dw-ink:#f2f3ef; --dw-muted:#b5bdb9; --dw-faint:#929e98;
+  --dw-bg:#141414; --dw-canvas:#141414; --dw-surface:#1f1f1f; --dw-panel:#262626;
+  --dw-raised:#333333; --dw-hover:#2b2b2b; --dw-ink:#f7f7f7; --dw-muted:#b8b8b8; --dw-faint:#8f8f8f;
   --dw-accent:#b9e7cf; --dw-accent-hover:#cef3df; --dw-accent-soft:#b9e7cf10; --dw-accent-line:#b9e7cf50;
   --dw-gold:var(--dw-accent); --dw-gold-hover:var(--dw-accent-hover); --dw-gold-soft:var(--dw-accent-soft); --dw-gold-line:var(--dw-accent-line); --dw-on-gold:#17271e;
-  --dw-primary:#f1f3ec; --dw-primary-hover:#ffffff; --dw-on-primary:#191e1b;
-  --dw-line:#e0eee413; --dw-line-strong:#e0eee428; --dw-success:#b9e7cf; --dw-danger:#f0a69e;
-  --dw-scrim:#060b0ace; --dw-shadow:#00000040; --dw-grid:#c1d0c418; --dw-blue:#b5ccd8;
+  --dw-primary:#ffffff; --dw-primary-hover:#ffffff; --dw-on-primary:#000000;
+  --dw-line:#ffffff14; --dw-line-strong:#ffffff29; --dw-success:#b9e7cf; --dw-danger:#f0a69e;
+  --dw-scrim:#060b0ace; --dw-shadow:#00000059; --dw-grid:#474747; --dw-blue:#b5ccd8;
+  --dw-node-line:#363636; --dw-node-on:#a8a8a8;
   --dw-fast:150ms; --dw-ease:220ms; --dw-radius:12px; --dw-media-scheme:dark;
   --dw-motion:cubic-bezier(.2,.7,.2,1);
 }
@@ -19,6 +20,7 @@ html.studio-v2:not(.studio-graphite):not(.theme-dark):not(.studio-theme-dark) {
   --dw-primary:#243c2f; --dw-primary-hover:#355440; --dw-on-primary:#ffffff;
   --dw-line:#29452e17; --dw-line-strong:#29452e30; --dw-success:#326546; --dw-danger:#b24738;
   --dw-shadow:#16251b12; --dw-grid:#35452f20; --dw-blue:#416b70; --dw-media-scheme:light;
+  --dw-node-line:var(--dw-line-strong); --dw-node-on:var(--dw-primary);
 }
 html.studio-v2:not(.studio-graphite):not(.studio-milk).theme-dark,
 html.studio-v2:not(.studio-graphite):not(.studio-milk).studio-theme-dark {

@@ -15,7 +15,7 @@ import studio_account_provision
 import studio_catalog
 import uvicorn
 
-state = {'token': None, 'creates': 0, 'generation_requests': 0, 'models_fail': False}
+state = {'token': None, 'creates': 0, 'generation_requests': 0, 'models_fail': False, 'registrations': 0}
 raw = json.loads(studio_catalog.SNAPSHOT.read_text(encoding='utf-8'))
 models = ['deepwhiteai-image-g2-t2i', 'deepwhiteai-image-g2-i2i', 'deepseek-chat']
 credential = 'sk-browser-fixture-only-123456789'
@@ -24,7 +24,9 @@ credential = 'sk-browser-fixture-only-123456789'
 def upstream(request):
     path = request.url.path
     data = {}
-    if path == '/api/user/login':
+    if path == '/api/user/register':
+        state['registrations'] += 1
+    elif path == '/api/user/login':
         data = {'id': 42, 'status': 1}
     elif path == '/api/user/self':
         data = {'id': 42, 'username': '测试账户', 'quota': 1000}
@@ -72,7 +74,7 @@ httpx.AsyncClient = offline_client
 
 @studio_server.app.get('/__fixture/state')
 async def fixture_state():
-    return {'creates': state['creates'], 'generation_requests': state['generation_requests']}
+    return {'creates': state['creates'], 'generation_requests': state['generation_requests'], 'registrations': state['registrations']}
 
 
 @studio_server.app.post('/__fixture/models-failure/{fail}')

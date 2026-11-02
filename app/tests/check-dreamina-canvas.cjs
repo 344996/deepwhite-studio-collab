@@ -26,7 +26,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    if(req.method()==='POST'&&/\/api\/(canvas-(?:image|video)|online-image)/.test(url.pathname))throw Error('Dreamina must use the stage-one generations API');
    return route.continue();
   });
-  await page.goto(base+'/static/canvas.html?id=storagefixture');await page.locator('#shell:not(.no-canvas) #board').waitFor();
+  await require('./no-collapse.cjs')(page);await page.goto(base+'/static/canvas.html?id=storagefixture');await page.locator('#shell:not(.no-canvas) #board').waitFor();
   await page.waitForFunction(()=>typeof apiProviders!=='undefined'&&apiProviders.some(p=>p.id==='dreamina-cli'&&p.enabled));
   await page.evaluate(()=>{nodes=[];connections=[];const n=addGeneratorNode({x:90,y:90});n.apiProvider='dreamina-cli';n.model='dreamina-image-5.0';n.studioRefs=[{url:'/static/examples/standard-character.png',kind:'image',name:'人物参考图'}];render();});
   const imagePrompt=page.getByLabel('图片提示词',{exact:true});await imagePrompt.fill('暖色晨光中的人物近景，电影剧照构图。');

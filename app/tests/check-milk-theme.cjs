@@ -9,7 +9,7 @@ async function api(url,body){const r=await fetch(base+url,body?{method:'POST',he
  browser=await chromium.launch({channel:'msedge',headless:true});const p=await browser.newPage({viewport:{width:1500,height:1100}});p.on('pageerror',e=>errors.push(e.message));
 
  await p.route('**/api/studio/local-engine**',r=>r.fulfill({json:{state:'stopped',owned:false,message:'未开启',settings:{auto_start:false}}}));
- await p.goto(base+'/static/canvas.html?id='+c.id);await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id);await pause(400);
+ await require('./no-collapse.cjs')(p);await p.goto(base+'/static/canvas.html?id='+c.id);await p.waitForFunction(()=>typeof canvas!=='undefined'&&canvas?.id);await pause(400);
  await p.evaluate(()=>{nodes=[];connections=[];viewport={x:0,y:0,scale:0.85};applyViewport();addNode({id:'snap-source',type:'prompt',x:60,y:160,w:300,h:200,text:'参考提示词'});const n=addGeneratorNode({x:570,y:160});n.id='snap-target';render();});
 
  // The canvas theme select sits in the 更多工具 panel of the workspace layout.

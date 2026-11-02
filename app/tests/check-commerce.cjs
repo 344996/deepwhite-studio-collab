@@ -36,7 +36,7 @@ async function api(route,method='GET',data){const r=await fetch(base+route,{meth
    }
    if(url.origin!==base||(req.method()==='POST'&&/\/api\/(canvas-(image|video|llm|comfy)|generate|online-image|midjourney\/)/.test(url.pathname))){forbidden++;return route.abort();}return route.continue();
  });
- await page.goto(`${base}/static/canvas.html?id=${canvasId}`);await page.locator('#shell:not(.no-canvas) #board').waitFor();
+ await require('./no-collapse.cjs')(page);await page.goto(`${base}/static/canvas.html?id=${canvasId}`);await page.locator('#shell:not(.no-canvas) #board').waitFor();
  await page.evaluate(()=>{addGeneratorNode({x:80,y:100});addVideoNode({x:640,y:100});});
  await page.getByLabel('图片提示词',{exact:true}).fill('图片本地提示词：水彩小猫');
  await page.getByLabel('视频提示词',{exact:true}).fill('视频本地提示词：镜头缓缓推进');

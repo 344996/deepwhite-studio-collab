@@ -9,6 +9,7 @@
     if (!home && !smart && !root.classList.contains('studio-v2-canvas')) return;
     root.classList.add('studio-workspace-refresh');
     const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = '/static/studio-workspace.css'; document.head.append(style);
+    if (home) { const layout = document.createElement('link'); layout.rel = 'stylesheet'; layout.href = '/static/studio-home-1102.css?v=1'; document.head.append(layout); }
     const makeButton = (label, icon, action) => {
       const button = document.createElement('button'); button.type = 'button';
       button.innerHTML = `<i data-lucide="${icon}" aria-hidden="true"></i><span>${label}</span>`;
@@ -51,34 +52,38 @@
     if (home) {
       const sidebar = document.querySelector('.ws-sidebar'), main = document.querySelector('.ws-main');
       const heading = document.querySelector('.v2-home-heading'); heading.classList.add('workspace-create-hero');
-      const copy = heading.firstElementChild; copy.className = 'workspace-hero-copy';
-      copy.innerHTML = '<small><span></span> DEEPWHITE · 创作空间</small><h1>让灵感，<br>在画布上发生。</h1><p>从一句提示词，到一个完整的视觉世界。<br>连接想法与素材，开始你的下一幕。</p>';
-      const heroActions = document.createElement('div'); heroActions.className = 'workspace-hero-actions';
-      heroActions.append(newCanvasBtn); copy.append(heroActions);
-      const heroArt = document.createElement('div'); heroArt.className = 'workspace-hero-art'; heroArt.setAttribute('aria-hidden', 'true');
-      // Repository-owned AI samples illustrate the workflow; never masquerade as user work.
-      heroArt.innerHTML = '<div class="workspace-art-wire"></div><div class="workspace-art-prompt"><span><i data-lucide="text-cursor-input"></i> 灵感起点</span><p>暮色中的长街，<br>让故事从这一帧开始。</p><i class="workspace-art-port"></i></div><div class="workspace-art-scene"><img src="/static/design-review/assets/scene-v1.png" alt="" decoding="async" width="1536" height="1024"><span><i data-lucide="image"></i> 场景探索</span><i class="workspace-art-port"></i></div><div class="workspace-art-character"><img src="/static/design-review/assets/character-v1.png" alt="" decoding="async" width="1536" height="1024"><span>CHARACTER STUDY / 01</span></div><small class="workspace-art-caption">提示词 → 画面 → 故事<span>AI 创作示意</span></small>';
-      heading.append(heroArt);
-      const welcome = document.createElement('div'); welcome.className = 'workspace-welcome';
-      welcome.innerHTML = '<div><span>工作空间</span><h2>今天，想创造点什么？</h2></div><span class="workspace-local-badge"><i data-lucide="hard-drive" aria-hidden="true"></i> 本地工作台</span>';
-      heading.before(welcome);
-      const create = kind => {
-        newCanvasBtn.click();
-        document.querySelector(`#homeCreateDialog [data-kind="${kind}"]`)?.click();
-      };
+      newCanvasBtn.className = 'home-new-card'; newCanvasBtn.removeAttribute('data-i18n'); newCanvasBtn.setAttribute('aria-label', '新建画布');
+      newCanvasBtn.innerHTML = '<span class="home-new-plus"><i data-lucide="plus" aria-hidden="true"></i></span><b>新建画布创作</b>';
+      heading.replaceChildren(newCanvasBtn);
       const assets = () => location.assign('/static/studio-assets.html?project=' + encodeURIComponent(currentProjectId || 'default'));
-      const quickstart = document.createElement('nav'); quickstart.className = 'workspace-quickstart'; quickstart.setAttribute('aria-label', '快速开始');
-      for (const [label, icon, action, kind, description] of [
-        ['经典画布', 'layout-dashboard', () => create('classic'), 'classic', '编排与连接灵感'],
-        ['本地资产', 'folder-open', assets, '', '让素材随时就绪'],
-        ['选择 API 服务', 'sliders-horizontal', () => settings.click(), '', '连接创作工具']
-      ]) {
-        const button = makeButton(label, icon, action), text = button.querySelector('span');
-        text.className = 'workspace-quick-copy'; const hint = document.createElement('small'); hint.textContent = description; text.append(hint);
-        const arrow = document.createElement('i'); arrow.dataset.lucide = 'arrow-up-right'; arrow.setAttribute('aria-hidden','true'); button.append(arrow);
-        if (kind) button.dataset.workspaceCreate = kind; quickstart.append(button);
+      const openSettings = tab => window.StudioOpenSettings ? window.StudioOpenSettings(tab) : settings.click();
+      // One click opens a new canvas already holding the nodes for that way of working.
+      async function start(title, starter) {
+        try {
+          const reply = await fetch('/api/canvases', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title, kind: 'classic', project: currentProjectId || 'default'})});
+          const value = await reply.json(); if (!reply.ok) throw new Error(value.detail || '新建画布失败，请重试。');
+          location.assign(`/static/canvas.html?id=${encodeURIComponent(value.canvas.id)}&project=${encodeURIComponent(currentProjectId || 'default')}&starter=${starter}`);
+        } catch (error) { document.getElementById('boardStatus').textContent = error.message; }
       }
-      heading.after(quickstart);
+      const tools = document.createElement('nav'); tools.className = 'workspace-tools workspace-quickstart'; tools.setAttribute('aria-label', '快速开始');
+      for (const [label, icon, action] of [
+        ['图片生成', 'image', () => start('图片生成', 'image')], ['视频生成', 'video', () => start('视频生成', 'video')],
+        ['音频生成', 'audio-lines', () => start('音频生成', 'audio')], ['文本生成', 'type', () => start('文本生成', 'text')],
+        ['RH 工作流', 'workflow', () => start('RH 工作流', 'workflows')], ['ComfyUI', 'sparkles', () => openSettings('comfy')],
+        ['导入素材', 'upload', assets], ['外接智能体', 'bot', () => openSettings('control')]
+      ]) {
+        const button = document.createElement('button'); button.type = 'button'; button.addEventListener('click', action);
+        button.innerHTML = `<span class="workspace-tool-tile"><i data-lucide="${icon}" aria-hidden="true"></i></span><b>${label}</b>`; tools.append(button);
+      }
+      heading.after(tools);
+      const flowsTitle = document.createElement('h3'); flowsTitle.className = 'workspace-flows-title'; flowsTitle.textContent = '常用流程';
+      const flows = document.createElement('nav'); flows.className = 'workspace-flows'; flows.setAttribute('aria-label', '常用流程');
+      // Repository-owned AI samples illustrate each starting point; they never masquerade as user work.
+      for (const [label, cover, starter] of [['分镜与场景', 'scene', 'storyboard'], ['角色设定', 'character', 'character'], ['产品与道具', 'props', 'product'], ['风格参考', 'linen', 'style'], ['图生视频', 'scene', 'img2video']]) {
+        const button = document.createElement('button'); button.type = 'button'; button.addEventListener('click', () => start(label, starter));
+        button.innerHTML = `<img src="/static/home-covers/${cover}.jpg" alt=""><span>${label}</span>`; flows.append(button);
+      }
+      tools.after(flowsTitle, flows);
       const nav = document.createElement('nav'); nav.className = 'workspace-nav'; nav.setAttribute('aria-label', '工作空间');
       const menu = makeButton('导航', 'menu', () => setSidebar(!root.classList.contains('workspace-sidebar-open')));
       menu.id = 'workspaceMenuToggle'; menu.setAttribute('aria-controls', sidebar.id); menu.setAttribute('aria-expanded', 'false');
@@ -94,12 +99,25 @@
         sidebar.setAttribute('aria-label', '工作空间导航');
         if (open) nav.querySelector('button')?.focus();
       }
-      for (const [label, icon, action] of [
-        ['创作工作台', 'house', () => {main.scrollTo({top:0}); newCanvasBtn.focus();}],
-        ['项目画布', 'panels-top-left', () => {document.getElementById('homeSearch').focus();}],
-        ['本地资产', 'folder-open', assets], ['公共画廊', 'images', openGallery], ['API 服务', 'sliders-horizontal', () => settings.click()]
-      ]) nav.append(makeButton(label, icon, () => {setSidebar(false); action();}));
-      nav.firstElementChild.setAttribute('aria-current', 'page'); sidebar.querySelector('.ws-side-head').before(nav);
+      const navGroup = (title, items, host = nav) => {
+        const group = document.createElement('div'); group.className = 'workspace-nav-group';
+        if (title) { const heading = document.createElement('h4'); heading.textContent = title; group.append(heading); }
+        for (const [label, icon, action] of items) group.append(makeButton(label, icon, () => {setSidebar(false); action();}));
+        host.append(group);
+      };
+      navGroup('', [
+        ['首页', 'house', () => {main.scrollTo({top:0}); newCanvasBtn.focus();}],
+        ['项目', 'panels-top-left', () => {document.getElementById('homeSearch').focus();}],
+        ['资产', 'folder-open', assets], ['工作流', 'workflow', () => start('RH 工作流', 'workflows')]
+      ]);
+      navGroup('创作', [['深白画布', 'layers', () => newCanvasBtn.click()], ['外接智能体', 'bot', () => openSettings('control')]]);
+      navGroup('发现', [['公共画廊', 'images', openGallery]]);
+      nav.querySelector('button').setAttribute('aria-current', 'page'); sidebar.querySelector('.ws-side-head').before(nav);
+      const foot = document.createElement('nav'); foot.className = 'workspace-nav-foot'; foot.setAttribute('aria-label', '设置与记录');
+      foot.append(makeButton('API 与设置', 'sliders-horizontal', () => {setSidebar(false); settings.click();}));
+      const trash = document.getElementById('trashEntry'); if (trash) foot.append(trash);
+      foot.append(makeButton('版本更新记录', 'history', () => location.assign('/static/studio-updates.html')));
+      sidebar.append(foot);
       // Native folder/trash entries live outside the new nav. They must release
       // the same drawer before handing keyboard and pointer access back to main.
       sidebar.addEventListener('click', event => {
@@ -127,8 +145,7 @@
         }
       });
       narrow.addEventListener('change', () => setSidebar(false)); setSidebar(false);
-      const note = document.createElement('p'); note.className = 'workspace-local-note'; note.innerHTML = '<i data-lucide="shield-check" aria-hidden="true"></i><span>本地创作，随时开始。登录可连接 API 账户，也支持自选服务。</span>';
-      quickstart.after(note); document.querySelector('.v2-home-footer').textContent = '项目与素材保存在本机，生成内容使用你选择的 API 服务。';
+      document.querySelector('.v2-home-footer').textContent = '项目与素材保存在本机，生成内容使用你选择的 API 服务。';
       document.querySelectorAll('.studio-home-views button').forEach(button => {
         const label = button.textContent; button.setAttribute('aria-label', label); button.title = label;
         button.innerHTML = `<i data-lucide="${button.dataset.view === 'grid' ? 'layout-grid' : 'list'}" aria-hidden="true"></i>`;

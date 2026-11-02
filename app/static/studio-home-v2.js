@@ -16,10 +16,8 @@
   material(); window.addEventListener('storage', material); window.addEventListener('studio-theme-change', material);
   const main = document.querySelector('.ws-main'), topbar = document.querySelector('.ws-topbar');
   const brand = document.querySelector('.studio-brand-bar');
-  if (brand) { topbar.prepend(brand); brand.querySelector('small').textContent = 'DEEPWHITE STUDIO'; }
+  if (brand) { document.querySelector('.ws-sidebar').prepend(brand); brand.querySelector('small').textContent = 'DEEPWHITE STUDIO'; }
   document.querySelector('.ws-side-title').textContent = '项目文件夹';
-  const navigationTitle = document.createElement('div'); navigationTitle.className = 'v2-workspace-title'; navigationTitle.textContent = '我的工作空间';
-  document.querySelector('.ws-sidebar').prepend(navigationTitle);
   document.querySelector('.home-demos')?.remove(); document.querySelector('.home-overview')?.remove();
   const intro = document.querySelector('.home-intro'), search = document.getElementById('homeSearch'), views = document.querySelector('.studio-home-views');
   intro.replaceChildren();
@@ -27,7 +25,7 @@
   heading.innerHTML = '<div><small>YOUR NEXT STORY</small><h1>每个故事，都从这里开始。</h1><p>把灵感留在画布上，继续创造你的下一幕。</p></div>';
   heading.append(newCanvasBtn); intro.append(heading);
   const controls = document.createElement('div'); controls.className = 'v2-home-controls';
-  controls.innerHTML = '<div class="v2-home-section"><h2 id="homeFolderTitle">项目画布</h2><span id="homeResultCount"></span></div>';
+  controls.innerHTML = '<div class="v2-home-section"><div><h2 id="homeFolderTitle">项目画布</h2><span id="homeResultCount"></span></div><div class="home-canvas-tabs" role="group" aria-label="筛选画布"><button type="button" data-tab="all" aria-pressed="true">全部</button><button type="button" data-tab="recent" aria-pressed="false">最近 7 天</button><button type="button" data-tab="pinned" aria-pressed="false">已置顶</button></div></div>';
   const tools = document.createElement('div'); tools.className = 'v2-home-search-tools';
   const searchBox = document.createElement('label'); searchBox.className = 'v2-home-search'; searchBox.innerHTML = '<i data-lucide="search" aria-hidden="true"></i>';
   search.type = 'search'; search.placeholder = '搜索当前文件夹的画布'; searchBox.append(search); tools.append(searchBox, views); controls.append(tools); intro.append(controls);
@@ -35,11 +33,24 @@
   noResults.innerHTML = '<i data-lucide="search" aria-hidden="true"></i><h3>没有找到这张画布</h3><p>换个关键词，或清除搜索继续浏览。</p><button type="button">清除搜索</button>';
   noResults.querySelector('button').onclick = () => { search.value = ''; filter(); search.focus(); }; board.append(noResults);
   const footer = document.createElement('p'); footer.className = 'v2-home-footer'; footer.textContent = '灵感不必完整，先让故事有一个开始。'; main.append(footer);
+  let tab = 'all';
+  const inTab = card => {
+    if (tab === 'pinned') return card.dataset.pinned === '1';
+    if (tab !== 'recent') return true;
+    const updated = Number(card.dataset.updatedAt) || 0;
+    return Date.now() - (updated < 1e12 ? updated * 1000 : updated) < 7 * 864e5;
+  };
+  controls.querySelector('.home-canvas-tabs').onclick = event => {
+    const button = event.target.closest('[data-tab]'); if (!button) return;
+    tab = button.dataset.tab;
+    controls.querySelectorAll('[data-tab]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    filter();
+  };
   function filter() {
     const query = search.value.trim().toLocaleLowerCase(); let count = 0;
-    boardWorld.querySelectorAll('.ws-card').forEach(card => { card.hidden = !card.querySelector('.ws-card-title').textContent.toLocaleLowerCase().includes(query); if (!card.hidden) { count++; watch(card); } });
+    boardWorld.querySelectorAll('.ws-card').forEach(card => { card.hidden = !inTab(card) || !card.querySelector('.ws-card-title').textContent.toLocaleLowerCase().includes(query); if (!card.hidden) { count++; watch(card); } });
     const total = canvasesInProject(currentProjectId).length;
-    noResults.hidden = !query || count > 0 || total === 0;
+    noResults.hidden = (!query && tab === 'all') || count > 0 || total === 0;
     boardEmptyHint.classList.toggle('hidden', total > 0);
     document.getElementById('homeResultCount').textContent = query ? `${count} / ${total} 张画布` : `${total} 张画布`;
     document.getElementById('homeFolderTitle').textContent = currentProject()?.name || '项目画布';
@@ -111,6 +122,7 @@
   const nativeBuild = buildCard;
   buildCard = function(c) {
     const card = nativeBuild(c); card.dataset.coverKey = `${c.project || 'default'}:${c.id}:${c.updated_at || 0}:${c.node_count || 0}`;
+    card.dataset.updatedAt = c.updated_at || 0; card.dataset.pinned = c.pinned ? '1' : '';
     const cover = card.querySelector('.home-canvas-cover');
     cover.innerHTML = '<div class="v2-cover-art" aria-hidden="true"><span></span><span></span><span></span></div><p class="home-cover-excerpt" hidden></p><small>灵感，从这里继续</small>';
     cover.dataset.kind = c.kind === 'smart' ? 'smart' : 'classic';

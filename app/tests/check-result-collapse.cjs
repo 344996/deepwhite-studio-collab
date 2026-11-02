@@ -1,5 +1,5 @@
-/* U03 (handover 2026-10-26), with UI-NEW-01/02: result nodes show the result, name and status;
-   the editor opens for the one selected node. Real mouse clicks only, real classic page, offline
+/* U03 (handover 2026-10-26), with UI-NEW-01/02: image, video, text and audio nodes show only their result,
+   name and live status, before and after generating; the editor opens for the one selected node. Real mouse clicks only, real classic page, offline
    catalogue; nothing is generated. */
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
@@ -18,7 +18,8 @@ async function main(){
    gen('g3',0,900),{id:'out',type:'output',x:1400,y:0,images:[]},
    gen('g4',2100,0,{generatedOutputs:RESULT,studioJobState:'failed',studioJobError:'余额不足，本次未扣费'}),
    gen('m1',2100,900,{model:'midjourney-imagine',generatedOutputs:RESULT,studioMjStatus:'uncertain',studioMjTask:'task_fixture_1'}),
-   {id:'v1',type:'video',x:1400,y:700,studioPrompt:'镜头推进',generatedOutputs:[{url:'/output/u03-result.webm',kind:'video'}]}];
+   {id:'v1',type:'video',x:1400,y:700,studioPrompt:'镜头推进',generatedOutputs:[{url:'/output/u03-result.webm',kind:'video'}]},
+   {id:'l1',type:'llm',x:0,y:1600,userInput:'写一段旁白',outputText:'雨夜的站台，灯光很暖。'},{id:'a1',type:'audio',x:700,y:1600,studioPrompt:'雨声'}];
   await h.api('/api/canvases/'+created.id,'PUT',{title:'u03',icon:'layers',nodes,connections:[{id:'c1',from:'g1',to:'out'}],viewport:{x:525,y:-128,scale:.55},logs:[],settings:{},base_updated_at:created.updated_at,client_id:'fixture'});
   const page=await h.newPage();await page.setViewportSize({width:1280,height:800});
   await page.goto(h.base+'/static/canvas.html?id='+created.id);
@@ -27,11 +28,15 @@ async function main(){
   const clickHead=async id=>{const b=await page.locator(`.node[data-id="${id}"] .node-title`).boundingBox();await page.mouse.click(b.x+b.width/2,b.y+b.height/2);await delay(250);};
   // A point where the empty canvas itself is on top (not a card, toolbar or minimap).
   const blank=async()=>{const p=await page.evaluate(()=>{for(const fy of [.85,.7,.5,.3])for(const fx of [.6,.4,.8,.2]){const x=innerWidth*fx,y=innerHeight*fy;if([board,world,nodesEl,linksEl].includes(document.elementFromPoint(x,y)))return {x,y};}return null;});assert(p,'no empty canvas point');await page.mouse.click(p.x,p.y);await delay(250);};
-  await check('result nodes start collapsed; a node without a result keeps its editor',async()=>{
+  await check('nodes start collapsed, with or without a result',async()=>{
    assert.equal(await editor('g1').isVisible(),false);assert.equal(await editor('g2').isVisible(),false);
    assert.equal(await page.locator('.node[data-id="g1"] .studio-node-media img').isVisible(),true);
    assert.equal(await page.locator('.node[data-id="g1"] .node-title').isVisible(),true);
-   assert.equal(await page.locator('.node[data-id="g3"]').evaluate(c=>c.classList.contains('studio-collapsed')),false);
+   assert.equal(await editor('g3').isVisible(),false,'a node without a result kept its editor open');
+   assert.equal(await page.locator('.node[data-id="g3"] .node-title').isVisible(),true);
+   // Nothing is left below a finished or untouched node: no status line, no empty bar.
+   assert.equal(await page.locator('.node[data-id="g1"] .studio-node-composer').isVisible(),false);
+   assert.equal(await page.locator('.node[data-id="g3"] .studio-node-composer').isVisible(),false);
   });
   await check('a task that needs the user keeps its node open (failed, unconfirmed MJ)',async()=>{
    for(const id of ['g4','m1'])assert.equal(await page.locator(`.node[data-id="${id}"]`).evaluate(c=>c.classList.contains('studio-collapsed')),false,id+' was folded');
@@ -83,6 +88,28 @@ async function main(){
     await page.mouse.click(x,y);await delay(200);
     assert.deepEqual(await page.evaluate(()=>[...selected]),[id],'click at '+x.toFixed(0)+','+y.toFixed(0)+' did not select '+id);
    }
+  });
+  await check('a running task keeps its status line while collapsed, and its editor stays closed',async()=>{
+   await blank();
+   await page.evaluate(()=>{const n=nodes.find(n=>n.id==='g3');n.running=true;n.studioJobState='running';StudioResultCollapse.refresh();});
+   assert.equal(await page.locator('.node[data-id="g3"] .studio-node-composer').isVisible(),true,'the status area was hidden while running');
+   assert.equal(await editor('g3').isVisible(),false);
+   await page.evaluate(()=>{const n=nodes.find(n=>n.id==='g3');n.running=false;n.studioJobState='succeeded';StudioResultCollapse.refresh();});
+   assert.equal(await page.locator('.node[data-id="g3"] .studio-node-composer').isVisible(),false,'a finished status stayed below the node');
+  });
+  await check('text and audio nodes follow the same rule; the generated text stays readable',async()=>{
+   await page.getByRole('button',{name:'适应全部节点 · Shift+1',exact:true}).click();await delay(400);await blank();
+   const text=page.locator('.node[data-id="l1"]'),audio=page.locator('.node[data-id="a1"]');
+   assert.equal(await text.locator('.llm-input-output').isVisible(),false);assert.equal(await audio.locator('.studio-audio-prompt').isVisible(),false);
+   assert.match(await text.locator('.llm-result-output').innerText(),/雨夜的站台/);
+   await clickHead('l1');assert.equal(await text.locator('.llm-input-output').isVisible(),true,'clicking the text node did not open it');
+   await clickHead('a1');assert.equal(await audio.locator('.studio-audio-prompt').isVisible(),true,'clicking the audio node did not open it');
+   assert.equal(await text.locator('.llm-input-output').isVisible(),false,'the text node stayed open after picking another');
+  });
+  await check('a node just added from the menu opens at once',async()=>{
+   await blank();const p=await page.evaluate(()=>{for(const fy of [.85,.7,.5,.3])for(const fx of [.6,.4,.8,.2]){const x=innerWidth*fx,y=innerHeight*fy;if([board,world,nodesEl,linksEl].includes(document.elementFromPoint(x,y)))return {x,y};}return null;});
+   await page.mouse.dblclick(p.x,p.y);await page.locator('#createMenu.open [data-studio-add="image"]').click();await delay(300);
+   assert.equal(await page.locator('.node.selected .studio-prompt-input').isVisible(),true);
   });
   assert.deepEqual(h.errors,[]);assert.deepEqual(h.external,[]);
  }catch(e){console.error(h.log().slice(-2000));throw e;}

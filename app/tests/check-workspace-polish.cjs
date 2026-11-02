@@ -127,11 +127,11 @@ async function reachable(locator, label, minimum = 36) {
 
   await check('real local project cards, prompt data and covers load without account or generation', async () => {
     await readyHome(project.id);
-    assert.equal(await page.locator('.workspace-nav button').count(), 5);
+    assert.deepEqual(await page.locator('.workspace-nav button').allInnerTexts(), ['首页', '项目', '资产', '工作流', '深白画布', '外接智能体', '公共画廊']);
     assert.equal(await page.locator('.ws-card').count(), 3);
     await page.waitForFunction(() => document.querySelectorAll('.home-canvas-cover img').length === 3 &&
       [...document.querySelectorAll('.home-canvas-cover img')].every(image => image.complete && image.naturalWidth > 0));
-    assert.deepEqual(await page.locator('.workspace-quickstart [data-workspace-create]').evaluateAll(items => items.map(item => item.dataset.workspaceCreate)), ['classic'], 'U10: no smart canvas quick start');
+    assert.equal(await page.locator('.workspace-quickstart button').filter({hasText:'智能画布'}).count(), 0, 'U10: no smart canvas quick start');
     assert.deepEqual(writes, [], 'viewing cards does not change saved documents');
     assert.equal((await api('/api/canvases/' + records[0].id)).canvas.nodes[0].text, records[0].prompt);
   });
@@ -141,7 +141,7 @@ async function reachable(locator, label, minimum = 36) {
       await page.setViewportSize({width, height:1000});
       await noOverflow(page, 'home grid ' + width);
       await reachable(page.locator('#newCanvasBtn'), 'primary create ' + width);
-      for (const kind of ['classic']) await reachable(page.locator('[data-workspace-create="' + kind + '"]'), kind + ' quick create ' + width); // U10: no smart quick create
+      for (const kind of ['classic']) await reachable(page.locator('#newCanvasBtn'), kind + ' quick create ' + width); // U10: no smart quick create
       await reachable(page.locator('.v2-home-search'), 'project search ' + width, 30);
       const clippedCopy = await page.locator('.workspace-quick-copy, .workspace-quick-copy small').evaluateAll(items => items
         .filter(el => el.scrollWidth > el.clientWidth + 1).map(el => ({text:el.textContent, width:el.clientWidth, content:el.scrollWidth})));
@@ -232,7 +232,7 @@ async function reachable(locator, label, minimum = 36) {
       assert(await sidebar.evaluate(el => el.inert));
       assert(await toggle.evaluate(el => el === document.activeElement));
       await toggle.click();
-      await page.locator('.workspace-nav').getByRole('button', {name:'项目画布', exact:true}).click();
+      await page.locator('.workspace-nav').getByRole('button', {name:'项目', exact:true}).click();
       assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
       assert(await page.locator('#homeSearch').evaluate(el => el === document.activeElement));
     }
@@ -285,7 +285,7 @@ async function reachable(locator, label, minimum = 36) {
 
   await check('quick actions create classic canvases (U10: smart is retired) with correct project and persistent titles', async () => {
     for (const kind of ['classic']) {
-      const trigger = page.locator('[data-workspace-create="' + kind + '"]');
+      const trigger = page.locator('#newCanvasBtn');
       await trigger.click();
       const dialog = page.locator('#homeCreateDialog');
       await dialog.waitFor();
@@ -334,7 +334,7 @@ async function reachable(locator, label, minimum = 36) {
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       });
       const actual = await page.evaluate(() => {
-        const style = getComputedStyle(document.querySelector('.workspace-create-hero'));
+        const style = getComputedStyle(document.querySelector('#newCanvasBtn'));
         return {background:style.backgroundColor, foreground:style.color, milk:document.documentElement.classList.contains('studio-milk')};
       });
       backgrounds[theme] = actual.background;
@@ -353,7 +353,7 @@ async function reachable(locator, label, minimum = 36) {
   });
 
   await check('navigation opens local assets and public gallery configuration without invented actions', async () => {
-    await page.locator('.workspace-nav').getByRole('button', {name:'本地资产', exact:true}).click();
+    await page.locator('.workspace-nav').getByRole('button', {name:'资产', exact:true}).click();
     await page.waitForURL('**/static/studio-assets.html?project=' + project.id);
     await page.locator('#assetList').waitFor({state:'attached'});
     await page.waitForFunction(() => !document.getElementById('projectLabel').textContent.includes('正在读取'));

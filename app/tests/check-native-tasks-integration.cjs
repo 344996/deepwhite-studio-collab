@@ -16,7 +16,7 @@ async function startServer(){
 }
 async function stopServer(){if(!server||server.exitCode!==null)return;const child=server;await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Exact fixture server did not stop')),8000);child.once('close',()=>{clearTimeout(timer);resolve();});child.kill();});}
 async function until(read,accept,label){for(let i=0;i<160;i++){const value=await read();if(accept(value))return value;await delay(100);}throw Error('Timeout: '+label);}
-async function open(c){await page.goto(base+'/static/'+(c.kind==='smart'?'smart-canvas.html':'canvas.html')+'?id='+c.id);await page.waitForFunction(id=>canvas?.id===id&&window.StudioSave&&window.StudioNativeTasks,c.id);await delay(250);}
+async function open(c){await require('./no-collapse.cjs')(page);await page.goto(base+'/static/'+(c.kind==='smart'?'smart-canvas.html':'canvas.html')+'?id='+c.id);await page.waitForFunction(id=>canvas?.id===id&&window.StudioSave&&window.StudioNativeTasks,c.id);await delay(250);}
 async function attempts(id){return page.evaluate(id=>Object.values(nodes.find(n=>n.id===id)?.studioLegacyAttempts||{}),id);}
 async function newest(id,accept){return until(async()=>(await attempts(id)).at(-1),a=>a&&accept(a),'attempt for '+id);}
 async function persisted(c,nodeId,predicate){return until(async()=>(await api('/api/canvases/'+c.id)).canvas.nodes.find(n=>n.id===nodeId),predicate,'saved '+nodeId);}

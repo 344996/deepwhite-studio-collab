@@ -43,7 +43,7 @@ async function fixture(title, kind = 'classic') {
   if (kind === 'smart') {
     await api('/api/canvases/' + canvas.id, 'PUT', {...canvas, base_updated_at: canvas.updated_at,
       nodes: [{id: 'smart-text', type: 'smart-prompt', x: 120, y: 160, w: 316, h: 240, title: '滚动测试', text: '智能画布的长文本。\n'.repeat(100), llmEnabled: false}], connections: [], viewport: {x: 0, y: 0, scale: 1}});
-    await page.goto(base + '/static/smart-canvas.html?id=' + canvas.id);
+    await require('./no-collapse.cjs')(page);await page.goto(base + '/static/smart-canvas.html?id=' + canvas.id);
     await page.waitForFunction(id => canvas?.id === id && window.StudioSmartV2, canvas.id);
     await page.locator('[data-id="smart-text"] .prompt-node-text').waitFor(); await sleep(150); return;
   }
@@ -85,7 +85,7 @@ async function main() {
     await api('/api/studio/settings/sync-models', 'POST', {id: 'offline', name: 'Phase 1 offline fixture', base_url: 'https://api.deepwhiteai.com/v1', api_key: 'offline-fixture', enabled: true, primary: true});
     browser = await chromium.launch({headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? {executablePath: process.env.CHROMIUM_EXECUTABLE} : {})});
     const context = await browser.newContext({viewport: {width: 1500, height: 1000}, reducedMotion: 'reduce'});
-    page = await context.newPage(); page.setDefaultTimeout(10000); page.on('pageerror', error => errors.push(error.message));
+    page = await context.newPage(); await require('./no-collapse.cjs')(page); page.setDefaultTimeout(10000); page.on('pageerror', error => errors.push(error.message));
     await context.route('**/*', route => {
       const request = route.request(), url = new URL(request.url());
       if (url.origin !== base) {external.push(url.origin); return route.abort();}

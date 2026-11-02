@@ -13,7 +13,7 @@ async function main(){
    {id:'v',type:'video',x:80,y:700,apiProvider:'deepwhite',studioPrompt:'雨夜'}];
   await h.api('/api/canvases/'+created.id,'PUT',{title:'favorites',icon:'layers',nodes,connections:[],viewport:{x:0,y:0,scale:.8},logs:[],settings:{},base_updated_at:created.updated_at,client_id:'fixture'});
   const page=await h.newPage();
-  const open=async id=>{await page.goto(h.base+'/static/canvas.html?id='+created.id);await page.waitForFunction(()=>window.StudioStageOne&&document.querySelector('.node[data-id="g"] .studio-model-trigger'));await delay(900);
+  const open=async id=>{await require('./no-collapse.cjs')(page);await page.goto(h.base+'/static/canvas.html?id='+created.id);await page.waitForFunction(()=>window.StudioStageOne&&document.querySelector('.node[data-id="g"] .studio-model-trigger'));await delay(900);
    await page.locator(`.node[data-id="${id}"] .studio-model-trigger`).first().click();await page.locator('#studioModelPicker').waitFor();};
   const pressed=()=>page.locator('#studioModelPicker .studio-picker-scope [aria-pressed="true"]').innerText();
   const rows=()=>page.locator('#studioModelPicker .studio-picker-option b').allInnerTexts();

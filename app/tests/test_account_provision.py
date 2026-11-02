@@ -54,6 +54,10 @@ class AccountProvisionTests(unittest.TestCase):
         self.create_timeout = ''
         self.disabled = False
         self.creates = 0
+        self.one_time = False
+        self.regenerates = 0
+        self.key_reads = 0
+        self.regenerate_refused = False
         transport = httpx.MockTransport(self.upstream)
         account.TRANSPORT = provision.KEY_TRANSPORT = transport
         app = FastAPI()
@@ -104,8 +108,16 @@ class AccountProvisionTests(unittest.TestCase):
                     self.tokens[self.uid] = {'id': self.uid + 100, 'name': body['name'], 'user_id': self.uid, 'expired_time': -1}
                 if self.create_timeout:
                     raise httpx.ReadTimeout(SECRET, request=request)
+                if self.one_time and self.create_timeout != 'empty':
+                    data = {'key': SECRET + str(self.uid)}
+            elif path.endswith('/regenerate'):
+                self.regenerates += 1
+                if self.regenerate_refused: return httpx.Response(200, json={'success': False, 'message': '今日重新生成次数已用完'})
+                data = {'key': SECRET + str(self.uid)}
             elif path.endswith('/key'):
+                self.key_reads += 1
                 if self.legacy: return httpx.Response(404, json={'success': False})
+                if self.one_time: return httpx.Response(410, json={'success': False, 'message': 'This token is no longer recoverable.'})
                 data = {'key': SECRET + str(self.uid)}
             else:
                 data = {**self.tokens[self.uid], 'key': SECRET + str(self.uid) if self.legacy else 'sk-****'}
@@ -117,6 +129,44 @@ class AccountProvisionTests(unittest.TestCase):
         else:
             self.fail('Unexpected upstream request: ' + request.method + ' ' + path)
         return httpx.Response(200, json={'success': True, 'data': data}, headers={'set-cookie': 'session=synthetic-only; Path=/'})
+
+    def test_a_key_shown_once_at_creation_is_used_without_asking_again(self):
+        # The official site: POST /api/token/ returns the key once and keeps only a hash.
+        self.one_time = True
+        result = self.login()
+        self.assertEqual(result['generation']['status'], 'ready', result)
+        self.assertEqual(core.provider_env_key_value(result['generation']['provider_id']), SECRET + '10')
+        self.assertEqual((self.creates, self.key_reads, self.regenerates), (1, 0, 0))
+
+    def test_an_existing_token_that_cannot_be_read_again_gets_a_new_key(self):
+        # The next login: the token exists, its key is gone (HTTP 410), so a replacement is generated.
+        self.one_time = True
+        self.login()
+        self.client.post('/api/studio/account/logout')
+        self.requests.clear()
+        result = self.login()
+        self.assertEqual(result['generation']['status'], 'ready', result)
+        self.assertEqual(core.provider_env_key_value(result['generation']['provider_id']), SECRET + '10')
+        self.assertEqual((self.creates, self.key_reads, self.regenerates), (1, 1, 1), 'no second token, one replacement')
+
+    def test_a_token_marked_unrecoverable_skips_the_doomed_read(self):
+        self.one_time = True
+        self.login()
+        self.client.post('/api/studio/account/logout')
+        self.tokens[self.uid]['key_recoverable'] = False
+        self.key_reads = 0
+        self.assertEqual(self.login()['generation']['status'], 'ready')
+        self.assertEqual((self.key_reads, self.regenerates), (0, 1))
+
+    def test_a_refused_replacement_says_what_the_site_said(self):
+        self.one_time = True
+        self.login()
+        self.client.post('/api/studio/account/logout')
+        self.regenerate_refused = True
+        generation = self.login()['generation']
+        self.assertEqual(generation['status'], 'action_required')
+        self.assertIn('今日重新生成次数已用完', generation['message'])
+        self.assertEqual(generation['retryable'], True)
 
     def login(self):
         response = self.client.post('/api/studio/account/login', json={'username': 'fixture', 'password': 'synthetic-password'})

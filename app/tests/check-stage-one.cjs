@@ -32,7 +32,7 @@ async function openArrange(){await page.locator('#studioArrangeToggle0929').clic
    if(req.method()==='POST'&&/\/api\/(canvas-(image|video|llm)|online-image|studio\/mj\/submit)/.test(url.pathname))throw Error('Unexpected legacy generation route');
    return route.continue();
  });
- await page.goto(`${base}/static/canvas.html?id=${canvasId}`);await page.locator('#shell:not(.no-canvas) #board').waitFor();
+ await require('./no-collapse.cjs')(page);await page.goto(`${base}/static/canvas.html?id=${canvasId}`);await page.locator('#shell:not(.no-canvas) #board').waitFor();
  await page.evaluate(()=>{const n=addGeneratorNode({x:80,y:100});n.model='deepwhiteai-image-g2';render();});
  await page.getByLabel('图片提示词',{exact:true}).fill('一只猫站在窗边，柔和晨光。');
  await openParameters();const resolution=page.getByRole('group',{name:'分辨率',exact:true});await resolution.waitFor();assert.equal(await resolution.getByRole('button').count(),1);assert.equal(await resolution.getByRole('button',{name:'1k',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.locator('select[data-studio-param="resolution"] option').count(),1);await closeParameters();

@@ -144,11 +144,12 @@
     }
   }
 
-  function showLogin(body, message, dialogElement, initialMessage = '') {
+  function showLogin(body, message, dialogElement, initialMessage = '', username = '') {
     body.replaceChildren();
     const form = document.createElement('form');
     form.innerHTML = '<input name="username" autocomplete="username" placeholder="API 网站用户名或邮箱" required maxlength="128"><input name="password" type="password" autocomplete="current-password" placeholder="密码" required maxlength="256"><input name="code" placeholder="两步验证码" autocomplete="one-time-code" hidden disabled><button type="submit">登录并连接 API</button><p>本地画布可直接使用，无需登录。登录后会为当前账户创建或复用此画布的专用生成令牌，并自动同步模型；调用按 API 网站账户余额计费。密码不保存，生成授权只保留在本次会话内，最多 12 小时。也可在设置中使用自己的其他 API。</p>';
     form.setAttribute('aria-label', 'API 网站登录');
+    form.elements.username.value = username;
     for (const [name, label] of [['username','用户名'],['password','密码'],['code','两步验证码']]) form.elements[name].setAttribute('aria-label', label);
     const signup = document.createElement('button'); signup.type = 'button'; signup.className = 'dw-link-button'; signup.textContent = '创建 API 账户';
     signup.onclick = async () => { try { const caps = await api('account/capabilities'); if (!caps.registration_available) throw Error(caps.turnstile_check ? 'API 网站要求安全验证，请前往网站完成注册。' : 'API 网站当前未开放此注册方式。'); showRegistration(body, message, dialogElement, caps); } catch (error) { message.textContent = error.message; } };
@@ -192,15 +193,26 @@
     };
     form.onsubmit = async event => {
       event.preventDefault(); const button = form.querySelector('button[type="submit"]'); button.disabled = true; message.textContent = '正在创建账户…';
+      const credentials = {username: form.elements.username.value.trim(), password: form.elements.password.value};
       try {
-        const result = await api('account/register', 'POST', {
-          username: form.elements.username.value.trim(), password: form.elements.password.value,
+        await api('account/register', 'POST', {
+          username: credentials.username, password: credentials.password,
           confirm_password: form.elements.confirm_password.value, email: form.elements.email.value.trim(),
           verification_code: form.elements.verification_code.value.trim(),
           agree_terms: form.elements.agree_terms.checked, agree_privacy: form.elements.agree_privacy.checked
         });
         if (timer) clearInterval(timer);
-        showLogin(body, message, dialogElement, result.message || '账号已创建，请使用新账号登录。');
+        // U01: a new account goes straight on to login and the official API setup, with nothing to retype.
+        message.textContent = '账号已创建，正在登录并自动配置官方 API…';
+        try {
+          const login = await api('account/login', 'POST', credentials);
+          if (login.two_factor) throw Error('此账户需要两步验证。');
+          await refresh(); providersChanged();
+          if (!account) throw Error('账户信息读取失败。');
+          dialogElement.close(); await openAccount();
+        } catch (error) {
+          showLogin(body, message, dialogElement, '账号已创建，但自动登录没有完成：' + error.message + ' 请在下方登录。', credentials.username);
+        }
       } catch (error) { message.textContent = error.message; }
       finally { if (button.isConnected) button.disabled = false; }
     };

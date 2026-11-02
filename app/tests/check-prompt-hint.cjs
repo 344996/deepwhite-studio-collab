@@ -13,7 +13,7 @@ async function main(){
   await h.api('/api/canvases/'+created.id,'PUT',{title:'prompt hint',icon:'layers',nodes,connections:[],viewport:{x:0,y:0,scale:1},logs:[],settings:{},base_updated_at:created.updated_at,client_id:'fixture'});
   const page=await h.newPage();const posts=[];
   page.on('request',r=>{if(r.method()==='POST'&&/\/api\/(studio\/generations|canvas-|online-image)/.test(r.url()))posts.push(r.url());});
-  await page.goto(h.base+'/static/canvas.html?id='+created.id);
+  await require('./no-collapse.cjs')(page);await page.goto(h.base+'/static/canvas.html?id='+created.id);
   await page.waitForFunction(()=>window.StudioStageOne&&document.querySelector('.node[data-id="g"] .studio-prompt-input'));await delay(800);
   const hint=()=>page.evaluate(()=>{const el=document.querySelector('.node[data-id="g"] .studio-prompt-count');return el&&getComputedStyle(el).display!=='none'&&!el.hidden?el.textContent:'';});
   const button=page.locator('.node[data-id="g"] .gen-btn');
